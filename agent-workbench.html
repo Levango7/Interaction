@@ -649,10 +649,22 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
  /* 形态 A B1：IDE 化三壳（menubar / tabbar / statusbar），栏高令牌 DESIGN-SYSTEM §2.2。
    过渡态：topbar 仍在（B5 退役），四横带并存；本批只迁 logo + 模式胶囊，零行为变化。
    断点允许集 1023/767/479，不新增值。 */
-.menubar{height:var(--mb-h);display:flex;align-items:center;gap:var(--space-1);
+.menubar{height:var(--mb-h);display:flex;align-items:center;gap:var(--space-1);position:relative;
   padding:0 var(--space-2);background:var(--panel);border-bottom:1px solid var(--line);flex:none}
-.menubar .mi{padding:2px var(--space-2);border-radius:var(--radius-md);color:var(--muted);cursor:pointer}
+.menubar .mb-sp{flex:1}
+.menubar .mi{padding:2px var(--space-2);border-radius:var(--radius-md);color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;min-height:22px}
 .menubar .mi:hover{background:var(--accent-soft)}
+.menubar .mi svg{width:14px;height:14px}
+/* B6：专注态按钮按下去要能看见（aria-pressed 是唯一事实源，不给类名第二份状态） */
+.menubar .mi[aria-pressed="true"]{color:var(--accent);background:var(--accent-soft)}
+/* B6：帮助菜单浮层——脱离流、右锚 menubar 下缘；[hidden] 优先，不靠类切换 */
+.help-menu{position:absolute;top:calc(var(--mb-h) - 2px);right:var(--space-2);z-index:var(--z-popover);
+  display:flex;flex-direction:column;min-width:180px;padding:var(--space-1);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-2)}
+.help-menu[hidden]{display:none}
+.help-item{min-height:28px;padding:0 var(--space-2);border:0;background:transparent;color:var(--text);
+  font-size:var(--fs-xs);text-align:left;border-radius:var(--radius-sm);cursor:pointer}
+.help-item:hover{background:var(--accent-soft)}
 .tabbar{height:var(--tb-h);display:flex;align-items:center;gap:var(--space-2);
   padding:0 var(--space-2);background:var(--panel);border-bottom:1px solid var(--line);flex:none}
 .tabs{display:flex;align-items:center;gap:var(--space-1);flex:1;min-width:0;overflow-x:auto}
@@ -5286,6 +5298,13 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   body:has(.main.page-recycle) .tabbar,
   body:has(.main.page-recycle) .composer,
   body:has(.main.page-recycle) .statusbar{display:none}
+  /* B6 专注模式（faFocusToggle）：用户主动切换，与上面「页面驱动」取并集 ——
+     进设置页仍自动隐；手动开专注后退出页面也不残留（两条件各管各的，互不覆盖）。
+     选择器与上八条同构（menubar 保留），不引入第二套命名。 */
+  body.is-focus .chat-panel,
+  body.is-focus .tabbar,
+  body.is-focus .composer,
+  body.is-focus .statusbar{display:none}
 }
 
 /* 右栏「今日任务」：≥1024 常驻；以下为共享视觉 */
@@ -5562,6 +5581,21 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   <!-- 形态 A B1：menubar 壳（IDE 化三壳之一）。logo 从 topbar 迁入；mi 文字菜单内容清单＝功能设计 §8 待决②，B1 留空（防空窗假控件）。 -->
   <header class="menubar">
     <div class="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M40 18.2A17 17 0 1 1 29.8 8"/><circle cx="24" cy="24" r="4.5" fill="currentColor" stroke="none"/><circle cx="38.8" cy="9.2" r="3.5" fill="currentColor" stroke="none"/></svg></span> <span data-i18n="app.name">Agent 工坊</span></div>
+    <div class="mb-sp"></div>
+    <!-- B6：帮助菜单（§8 待决②结案）—— 四项全转既有真入口，无自造面板：
+         快捷键说明→openCmd()／诊断报告→openDiagIssue()／用户手册→仓库文档外链／
+         关于本应用→openDrawer()+_switchSetTab("set-about")（设置页既有 #set-about 卡）。 -->
+    <button type="button" class="mi" id="btnHelpMenu" data-action="faMenuOpen" aria-haspopup="menu" aria-expanded="false" aria-controls="helpMenu" data-i18n="menu.help">帮助</button>
+    <!-- B6：专注模式（原型 .imbtn 口径——窄屏外其余 mi 隐藏，本钮保留） -->
+    <button type="button" class="mi imbtn" id="btnFocus" data-action="faFocusToggle" aria-pressed="false" data-i18n-title="menu.focus" data-i18n-aria="menu.focus" title="专注模式" aria-label="专注模式">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+    </button>
+    <div class="help-menu" id="helpMenu" role="menu" aria-labelledby="btnHelpMenu" hidden>
+      <button type="button" class="help-item" role="menuitem" data-help-item="hotkeys" data-i18n="menu.hotkeys">快捷键说明</button>
+      <button type="button" class="help-item" role="menuitem" data-help-item="diag" data-i18n="menu.diag">诊断报告</button>
+      <button type="button" class="help-item" role="menuitem" data-help-item="manual" data-i18n="menu.manual">用户手册</button>
+      <button type="button" class="help-item" role="menuitem" data-help-item="about" data-i18n="menu.about">关于本应用</button>
+    </div>
   </header>
   <!-- 形态 A B1：tabbar 壳。模式胶囊整块从 topbar 剪贴迁入（id/类名不变 ⇒ _renderUiModePill 零 JS 随行）；tabs 槽由 B2 视图注册表填。 -->
   <div class="tabbar">
@@ -8192,6 +8226,12 @@ const MESSAGES = {
     "settings.nav.data": "数据",
     "settings.nav.integration": "集成",
     "settings.nav.about": "关于",
+    "menu.help": "帮助",
+    "menu.focus": "专注模式",
+    "menu.hotkeys": "快捷键说明",
+    "menu.diag": "诊断报告",
+    "menu.manual": "用户手册",
+    "menu.about": "关于本应用",
     "ai.config.title": "AI 配置",
     "ai.config.desc": "兼容 OpenAI 接口格式（OpenAI / DeepSeek / 通义 / 豆包 等均可），Key 仅存本机浏览器。",
     "ai.config.enableLabel": "启用 AI 对话",
@@ -12391,6 +12431,12 @@ const MESSAGES = {
     "settings.nav.data": "Data",
     "settings.nav.integration": "Integrations",
     "settings.nav.about": "About",
+    "menu.help": "Help",
+    "menu.focus": "Focus mode",
+    "menu.hotkeys": "Keyboard shortcuts",
+    "menu.diag": "Diagnostics report",
+    "menu.manual": "User manual",
+    "menu.about": "About this app",
     "ai.config.title": "AI Config",
     "ai.config.desc": "Compatible with OpenAI API format (OpenAI / DeepSeek / Tongyi / Doubao etc.). Key stored locally only.",
     "ai.config.enableLabel": "Enable AI Chat",
@@ -19246,6 +19292,7 @@ const DATA_KEY_REGISTRY = [
   { key: "agent_dock", kind: "c", sync: true, backup: true },   // 本机控制状态（agentDock 各段显隐，同批）
   { key: "subagents", kind: "m", sync: false, backup: true },   // 本机元数据（Multi-Agent P1：子代理注册表/最近 20 条；运行台账不上云，与 sync_changelog 同口径）
   { key: "form_a_rr_sec", kind: "c", sync: true, backup: true },   // 本机控制状态（形态 A B4：右栏分节折叠态＝收起节 id 数组；继承已删 rail_tab 的 sync 口径）
+  { key: "form_a_focus", kind: "c", sync: true, backup: true },   // 本机控制状态（形态 A B6：专注模式开关 "1"/""；偏好随备份走，与页面驱动在 CSS 取并集）
   { key: "sceneViewMode", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "last_open", kind: "m", sync: true, backup: true },   // 本机元数据
   { key: "cmd_recent", kind: "m", sync: true, backup: true },   // 本机元数据
@@ -45989,7 +46036,9 @@ document.addEventListener("click", function(e){
   setTopbarMoreOpen(false);
 });
 document.addEventListener("keydown", function(e){
-  if(e.key === "Escape") setTopbarMoreOpen(false);
+  if(e.key !== "Escape") return;
+  setTopbarMoreOpen(false);
+  _helpMenuClose();   /* B6：Esc 收帮助菜单（复用同一口子，不新开监听） */
 });
 // 空态引导按钮委托（data-empty-action）：与快捷键 N 同款行为——切场景 + 聚焦新建表单
 document.addEventListener("click", function(e){
@@ -46003,6 +46052,56 @@ document.addEventListener("click", function(e){
     render(); focusTaskTitleInput();
   }
 });
+/* 形态 A B6：帮助菜单 + 专注模式（用户 11-14 裁「加专注模式按钮」+「一组帮助菜单」）。
+   菜单四项全部转发既有真入口，不自造面板 —— B1 之所以把 mi 留空，就是不做空窗假控件：
+     快捷键说明 → openCmd()（命令面板本就带快捷键提示，同源不重写）
+     诊断报告 → openDiagIssue()（src/ui-backup-stats.js 既有）
+     用户手册 → 仓库 docs/user-manual.md 外链（应用内无手册页，不伪造本地页）
+     关于本应用 → openDrawer() + _switchSetTab("set-about")（设置页既有 #set-about 卡）
+   专注态 = body.is-focus；与页面驱动（body:has(...) 八条）在 CSS 层取并集，互不覆盖。 */
+function _helpMenuEls(){ return { menu: $("#helpMenu"), btn: $("#btnHelpMenu") }; }
+function _helpMenuOpen(){
+  const el = _helpMenuEls(); if(!el.menu || !el.btn) return;
+  el.menu.hidden = false; el.btn.setAttribute("aria-expanded", "true");
+  const first = el.menu.querySelector(".help-item"); if(first) first.focus();
+}
+function _helpMenuClose(){
+  const el = _helpMenuEls(); if(!el.menu || el.menu.hidden) return;
+  el.menu.hidden = true; if(el.btn) el.btn.setAttribute("aria-expanded", "false");
+}
+function _helpMenuToggle(){
+  const el = _helpMenuEls(); if(!el.menu) return;
+  if(el.menu.hidden) _helpMenuOpen(); else _helpMenuClose();
+}
+function _focusOn(){ return document.body.classList.contains("is-focus"); }
+function _applyFocus(on){
+  document.body.classList.toggle("is-focus", !!on);
+  const b = $("#btnFocus"); if(b) b.setAttribute("aria-pressed", on ? "true" : "false");
+  /* 存布尔：save/load 走 JSON，存字符串会变成 '"1"'，读回不是同一件事 */
+  save(PREFIX + "form_a_focus", !!on);
+}
+function _helpRun(item){
+  _helpMenuClose();
+  if(item === "hotkeys"){ if(typeof openCmd === "function") openCmd(); return; }
+  if(item === "diag"){ if(typeof openDiagIssue === "function") openDiagIssue(); return; }
+  if(item === "manual"){
+    window.open("https://github.com/Levango7/Interaction/blob/main/docs/user-manual.md", "_blank", "noopener");
+    return;
+  }
+  if(item === "about"){
+    if(typeof openDrawer === "function") openDrawer();
+    if(typeof _switchSetTab === "function") _switchSetTab("set-about");
+  }
+}
+/* 冷启动按持久化恢复专注态：只读应用，不写回（否则每次启动白触发一次同步） */
+(function(){
+  try{
+    if(load(PREFIX + "form_a_focus", false) === true){
+      document.body.classList.add("is-focus");
+      const b = $("#btnFocus"); if(b) b.setAttribute("aria-pressed", "true");
+    }
+  }catch(_e){ /* 存储不可用 ⇒ 默认非专注态 */ }
+})();
 /* 形态 A B2（功能设计 §2）：data-action 委托表 —— 形态 A 新增控件统一走这张表，
    既有绑定（data-rail-done / data-empty-action 等）原路径不动（B4 起 data-rail-tab 分页
    已退役，右栏折叠改走本表 faRrSec）。
@@ -46016,13 +46115,25 @@ const FORM_A_ACTIONS = {
   /* B3：底部 composer 折叠键（__aiPanelToggle 由 src/ai-retry.js bindChatPanel 暴露） */
   faCmpToggle: function(){ const t = window.__aiPanelToggle; if(typeof t === "function") t(); },
   /* B4：右栏分节折叠键（_railSecToggle 由 src/render-widgets.js 定义） */
-  faRrSec: function(el){ _railSecToggle(el.getAttribute("data-rr-sec")); }
+  faRrSec: function(el){ _railSecToggle(el.getAttribute("data-rr-sec")); },
+  /* B6：帮助菜单开合 + 专注态切换（§8 待决② 与 B4 遗留两条结案，用户 11-14 裁） */
+  faMenuOpen: function(){ _helpMenuToggle(); },
+  faFocusToggle: function(){ _applyFocus(!_focusOn()); }
 };
 document.addEventListener("click", function(e){
   const act = e.target && e.target.closest ? e.target.closest("[data-action]") : null;
-  if(!act) return;
-  const fn = FORM_A_ACTIONS[act.getAttribute("data-action")];
-  if(fn) fn(act, e);
+  if(act){
+    const name = act.getAttribute("data-action");
+    /* B6：除帮助按钮自己外，点任何 action 都先收菜单（避免浮层悬着） */
+    if(name !== "faMenuOpen") _helpMenuClose();
+    const fn = FORM_A_ACTIONS[name];
+    if(fn){ fn(act, e); return; }
+  }
+  /* B6：帮助菜单项走独立分派 —— 四个动作是一次性转发，不进 FORM_A_ACTIONS 键表，
+     否则 lint-bindings 会让它们看起来像可绑定的通用 action。 */
+  const hi = e.target && e.target.closest ? e.target.closest("[data-help-item]") : null;
+  if(hi){ _helpRun(hi.getAttribute("data-help-item")); return; }
+  _helpMenuClose();
 });
 // 全部已读 / 清空
 $("#msgMarkAllRead").onclick = function(){ markAllMessagesRead(); renderMsgPanel(); };
