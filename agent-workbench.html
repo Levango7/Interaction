@@ -5323,14 +5323,19 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   border:0;background:transparent;color:var(--muted);font-size:var(--fs-xs);cursor:pointer;
   border-radius:var(--radius-md);text-align:left}
 .task-rail-more:hover{background:var(--surface-hover);color:var(--text)}
-/* 2026-10-23：右栏分页（今日 / Agent / 文件）。MCP 暂不列：它仍未接线，不展示假能力。 */
-.task-rail-tabs{display:flex;gap:2px;flex:1;min-width:0}
-.task-rail-tab{border:0;background:transparent;color:var(--muted);font-size:var(--fs-2xs);
-  padding:var(--space-1) var(--space-1h);border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap}
-.task-rail-tab:hover{background:var(--surface-hover);color:var(--text)}
-.task-rail-tab.is-on{background:var(--panel2);color:var(--text);font-weight:600}
-.task-rail-pane{display:flex;flex-direction:column;min-height:0;flex:1;overflow:hidden}
-.task-rail-pane.u-hidden{display:none!important}
+/* 形态 A B4（2026-11-13）：四节堆叠取代四 tab 分页（用户裁选项甲：现状 pane 转节）。
+   折叠态持久化 form_a_rr_sec（收起节 id 数组）；MCP 仍不列——它仍未接线，不展示假能力（沿用 2026-10-23 口径）。 */
+.task-rail-secs{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}
+.rr-sec{border-bottom:1px solid var(--line)}
+.rr-sec > h4{margin:0}
+.rr-sec-toggle{display:flex;align-items:center;gap:6px;width:100%;border:0;background:transparent;
+  padding:var(--space-1h) var(--space-2);font-size:var(--fs-2xs);font-weight:600;color:var(--muted);
+  letter-spacing:.04em;cursor:pointer;user-select:none;text-align:left}
+.rr-sec-toggle:hover{background:var(--surface-hover);color:var(--text)}
+.rr-sec-toggle::after{content:"▾";margin-left:auto;color:var(--muted)}
+.rr-sec.closed .rr-sec-toggle::after{content:"▸"}
+.rr-sec.closed .rr-body{display:none}
+.rr-body{padding:0 var(--space-1) var(--space-1);display:flex;flex-direction:column;gap:6px;min-height:0}
 .rail-sec-title{display:flex;align-items:center;gap:var(--space-1);padding:var(--space-1h) var(--space-2);
   font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.04em}
 .rail-list{list-style:none;margin:0;padding:0 var(--space-1);display:flex;flex-direction:column;gap:1px;overflow-y:auto}
@@ -5402,8 +5407,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
      与 work 模式同一位置——三态之一的「中栏全高」消除。chat-panel-rail 同理走基线（≥768 本就 none）。 */
   .body.code-mode .task-rail{grid-column:3;grid-row:1;width:auto;min-height:0}
   /* P2-5（2026-11-02）：code 模式的能力面在右下 agentDock（同源数据 + 2.5s 活轮询），
-     右栏 Agent tab 是同一批数据的静态副本——藏掉，避免两个入口两份渲染互相漂移。 */
-  .body.code-mode .task-rail [data-rail-tab="agent"]{display:none}
+     右栏 Agent 节是同一批数据的静态副本——藏掉，避免两个入口两份渲染互相漂移。
+     B4 起纯 CSS 藏整节，不再改折叠持久化态（旧「agent tab 让位回今日」的状态栈写入随之退役）。 */
+  .body.code-mode .task-rail [data-rr-sec="agent"]{display:none}
   .body.code-mode .agent-dock{display:flex;flex-direction:column;min-height:0;max-height:38vh;
     grid-column:3;grid-row:2;border-top:1px solid var(--line);overflow-y:auto;
     background:color-mix(in srgb,var(--panel) 72%,transparent);padding:var(--space-2)}
@@ -5731,23 +5737,34 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <!-- 右栏：今日任务轨（2026-10-21 布局 v2；≥1024 常驻，<1024 由顶栏按钮滑出） -->
     <aside class="task-rail" id="taskRail" data-i18n-aria="a11y.taskRail" aria-label="今日任务">
       <div class="task-rail-head">
-        <div class="task-rail-tabs" role="tablist" data-i18n-aria="rail.tabsAria" aria-label="右栏分页">
-          <button type="button" class="task-rail-tab is-on" data-rail-tab="today" role="tab" aria-selected="true" data-i18n="rail.tab.today">今日</button>
-          <button type="button" class="task-rail-tab" data-rail-tab="agent" role="tab" aria-selected="false" data-i18n="rail.tab.agent">Agent</button>
-          <button type="button" class="task-rail-tab" data-rail-tab="files" role="tab" aria-selected="false" data-i18n="rail.tab.files">文件</button>
-          <button type="button" class="task-rail-tab" data-rail-tab="sessions" role="tab" aria-selected="false" data-i18n="dock.sessions">会话</button>
-        </div>
         <span class="task-rail-count" id="taskRailCount">0</span>
         <button type="button" class="task-rail-add" id="taskRailAdd" data-i18n-title="taskRail.add" title="新建任务" data-i18n-aria="taskRail.add" aria-label="新建任务">+</button>
         <button type="button" class="task-rail-collapse" id="taskRailCollapse" data-i18n-title="taskRail.collapse" title="收起任务栏" data-i18n-aria="taskRail.collapse" aria-label="收起任务栏">›</button>
       </div>
-      <div class="task-rail-pane" data-rail-pane="today">
-        <ul class="task-rail-list" id="taskRailList"></ul>
-        <button type="button" class="task-rail-more" id="taskRailMore" data-i18n="taskRail.more">全部任务</button>
+      <!-- 形态 A B4（2026-11-13）：四节堆叠取代四 tab 分页（用户裁选项甲：现状 pane 转节）。
+           每节 h4 内一个 faRrSec 按钮管折叠，折叠态持久化 form_a_rr_sec（收起节 id 数组）。
+           首节 today 即原 renderTaskRail；其余三节壳迁 id 留（#railAgentPane 等）。 -->
+      <div class="task-rail-secs">
+        <section class="rr-sec" data-rr-sec="today">
+          <h4><button type="button" class="rr-sec-toggle" data-action="faRrSec" data-rr-sec="today" aria-expanded="true" data-i18n="rail.tab.today">今日</button></h4>
+          <div class="rr-body">
+            <ul class="task-rail-list" id="taskRailList"></ul>
+            <button type="button" class="task-rail-more" id="taskRailMore" data-i18n="taskRail.more">全部任务</button>
+          </div>
+        </section>
+        <section class="rr-sec" data-rr-sec="agent">
+          <h4><button type="button" class="rr-sec-toggle" data-action="faRrSec" data-rr-sec="agent" aria-expanded="true" data-i18n="rail.tab.agent">Agent</button></h4>
+          <div class="rr-body" id="railAgentPane"></div>
+        </section>
+        <section class="rr-sec" data-rr-sec="files">
+          <h4><button type="button" class="rr-sec-toggle" data-action="faRrSec" data-rr-sec="files" aria-expanded="true" data-i18n="rail.tab.files">文件</button></h4>
+          <div class="rr-body" id="railFilesPane"></div>
+        </section>
+        <section class="rr-sec" data-rr-sec="sessions">
+          <h4><button type="button" class="rr-sec-toggle" data-action="faRrSec" data-rr-sec="sessions" aria-expanded="true" data-i18n="dock.sessions">会话</button></h4>
+          <div class="rr-body" id="railSessionPane"></div>
+        </section>
       </div>
-      <div class="task-rail-pane u-hidden" data-rail-pane="agent" id="railAgentPane"></div>
-      <div class="task-rail-pane u-hidden" data-rail-pane="files" id="railFilesPane"></div>
-      <div class="task-rail-pane u-hidden" data-rail-pane="sessions" id="railSessionPane"></div>
     </aside>
     <div class="task-rail-backdrop" id="taskRailBackdrop" hidden></div>
     <!-- Code 模式（2026-10-26）：右栏下半 = 进程/技能/MCP/工作流 停靠栏（仅 .body.code-mode 且 ≥1024px 显示，
@@ -8782,7 +8799,6 @@ const MESSAGES = {
     "side.group.system": "系统",
     "side.group.today": "今日",
     "taskRail.title": "今日",
-    "rail.tabsAria": "右栏分页",
     "rail.tab.today": "今日",
     "formA.tabToday": "今日",
     "formA.addTab": "新建标签页",
@@ -12982,7 +12998,6 @@ const MESSAGES = {
     "side.group.system": "System",
     "side.group.today": "Today",
     "taskRail.title": "Today",
-    "rail.tabsAria": "Right rail tabs",
     "rail.tab.today": "Today",
     "formA.tabToday": "Today",
     "formA.addTab": "New Tab",
@@ -19230,7 +19245,7 @@ const DATA_KEY_REGISTRY = [
   { key: "uimode", kind: "c", sync: true, backup: true },   // 本机控制状态（Work/Code 模式偏好，2026-10-26 Code 模式批次）
   { key: "agent_dock", kind: "c", sync: true, backup: true },   // 本机控制状态（agentDock 各段显隐，同批）
   { key: "subagents", kind: "m", sync: false, backup: true },   // 本机元数据（Multi-Agent P1：子代理注册表/最近 20 条；运行台账不上云，与 sync_changelog 同口径）
-  { key: "rail_tab", kind: "c", sync: true, backup: true },   // 本机控制状态
+  { key: "form_a_rr_sec", kind: "c", sync: true, backup: true },   // 本机控制状态（形态 A B4：右栏分节折叠态＝收起节 id 数组；继承已删 rail_tab 的 sync 口径）
   { key: "sceneViewMode", kind: "c", sync: true, backup: true },   // 本机控制状态
   { key: "last_open", kind: "m", sync: true, backup: true },   // 本机元数据
   { key: "cmd_recent", kind: "m", sync: true, backup: true },   // 本机元数据
@@ -25714,40 +25729,46 @@ function renderTaskRail(){
   _renderRailAgent();
   _renderRailFiles();
   _renderRailSessions();
-  _applyRailTab();
+  _applyRailSec();
 }
 
-/* ---------- 右栏分页（2026-10-23）：今日 / Agent / 文件 ----------
+/* ---------- 右栏分节（形态 A B4，2026-11-13）：今日 / Agent / 文件 / 会话 四节堆叠 ----------
  * 只展示真实能力：技能来自 listEnabledSkills（真的注入提示词）、文件来自 getRagFiles；
  * MCP 自 2026-10-23 起是真能力（远端工具按勾选注入 + 命名空间路由），但它的发现/勾选/状态都在
- * 设置 → 扩展里做；轨道只留"看和勾"，不在这里重复一份（两份清单必然漂移）。 */
-const RAIL_TABS = ["today", "agent", "files", "sessions"];
+ * 设置 → 扩展里做；轨道只留"看和勾"，不在这里重复一份（两份清单必然漂移）。
+ * 分页（data-rail-tab / data-rail-pane / rail_tab 键）同批退役：节折叠态持久化
+ * form_a_rr_sec（收起的节 id 数组），默认全展开。 */
+const RAIL_SECS = ["today", "agent", "files", "sessions"];
 /** 宽屏判据（>=1024px）：三栏网格（code/design 模式）只在宽屏生效，窄屏强制单栏。
  *  下面 taskRail 折叠 IIFE 原有一份同名局部（语义相同），统一用这一份避免漂移。 */
 const isWide = ()=> (window.innerWidth || 0) >= 1024;
-function _railTabGet(){
-  try{ const v = load(PREFIX + "rail_tab", "today"); return RAIL_TABS.indexOf(v) >= 0 ? v : "today"; }
-  catch(_e){ return "today"; }
+function _railSecClosedSet(){
+  try{
+    const arr = load(PREFIX + "form_a_rr_sec", []);
+    const list = Array.isArray(arr) ? arr : [];
+    return new Set(list.filter(function(id){ return RAIL_SECS.indexOf(id) >= 0; }));
+  }catch(_e){ return new Set(); }
 }
-function _railTabSet(tab){
-  if(RAIL_TABS.indexOf(tab) < 0) return;
-  save(PREFIX + "rail_tab", tab);
-  _applyRailTab();
+function _railSecSetClosed(id, closed){
+  if(RAIL_SECS.indexOf(id) < 0) return;
+  const set = _railSecClosedSet();
+  if(closed) set.add(id); else set.delete(id);
+  save(PREFIX + "form_a_rr_sec", Array.from(set));
+  _applyRailSec();
 }
-function _applyRailTab(){
+/* 表单节折叠按钮（data-action="faRrSec"）的入口：翻转单节并落盘。 */
+function _railSecToggle(id){ _railSecSetClosed(id, !_railSecClosedSet().has(id)); }
+function _applyRailSec(){
   const rail = $("#taskRail");
   if(!rail) return;
-  const tab = _railTabGet();
-  rail.querySelectorAll("[data-rail-tab]").forEach(function(b){
-    const on = b.getAttribute("data-rail-tab") === tab;
-    b.classList.toggle("is-on", on);
-    b.setAttribute("aria-selected", on ? "true" : "false");
+  const closed = _railSecClosedSet();
+  rail.querySelectorAll(".rr-sec").forEach(function(sec){
+    const id = sec.getAttribute("data-rr-sec");
+    const isClosed = closed.has(id);
+    sec.classList.toggle("closed", isClosed);
+    const btn = sec.querySelector("button[data-action='faRrSec']");
+    if(btn) btn.setAttribute("aria-expanded", isClosed ? "false" : "true");
   });
-  rail.querySelectorAll("[data-rail-pane]").forEach(function(p){
-    p.classList.toggle("u-hidden", p.getAttribute("data-rail-pane") !== tab);
-  });
-  const cnt = $("#taskRailCount"); if(cnt) cnt.classList.toggle("u-hidden", tab !== "today");
-  const add = $("#taskRailAdd"); if(add) add.classList.toggle("u-hidden", tab !== "today");
 }
 function _renderRailAgent(){
   const el = $("#railAgentPane");
@@ -25897,13 +25918,7 @@ function _bindTaskRail(){
   const rail = $("#taskRail");
   if(!rail || rail._bound) return;
   rail._bound = true;
-  const tabWrap = rail.querySelector(".task-rail-tabs");
-  if(tabWrap){
-    tabWrap.addEventListener("click", function(e){
-      const btn = e.target && e.target.closest ? e.target.closest("[data-rail-tab]") : null;
-      if(btn) _railTabSet(btn.getAttribute("data-rail-tab"));
-    });
-  }
+  /* 节折叠（B4 起）：走 ui-global-events.js 的 FORM_A_ACTIONS.faRrSec 全局委托，本块不再绑定 */
   const body = document.querySelector(".body");
   const app = document.querySelector(".app");
   const setOpen = (open)=>{
@@ -29353,9 +29368,8 @@ function applyUIMode(){
   _renderUiModePill();
   if(code){
     /* P2-5：code 模式的能力面是右下 agentDock（进程/技能/MCP/工作流，2.5s 活轮询）；
-       右栏 Agent tab 渲染的是同一批数据的静态副本——本模式藏掉（CSS），若正停在 agent tab
-       就切回「今日」，避免留一个被藏掉的死面板。 */
-    if(_railTabGet() === "agent") _railTabSet("today");
+       右栏 Agent 节渲染的是同一批数据的静态副本——本模式由 CSS 藏掉整节。B4 起不再改
+       任何持久化态（旧「agent tab 让位回今日」的状态栈写入随分页退役）。 */
     renderSessionDock(); renderAgentDock();
     _agentDockSig = _agentDockSignature();
     /* Multi-Agent Phase 2：Code 模式下 2.5s 轮询能力停靠——子代理运行中的步数/状态实时可见
@@ -45990,7 +46004,8 @@ document.addEventListener("click", function(e){
   }
 });
 /* 形态 A B2（功能设计 §2）：data-action 委托表 —— 形态 A 新增控件统一走这张表，
-   既有绑定（data-rail-tab / data-empty-action 等）原路径不动。
+   既有绑定（data-rail-done / data-empty-action 等）原路径不动（B4 起 data-rail-tab 分页
+   已退役，右栏折叠改走本表 faRrSec）。
    faRailToggle 不重写行为，只把点击转给原按钮 #btnTaskRail（同仓「行项不重写行为」惯例）。
    覆盖门禁：scripts/lint-bindings.mjs 扫 HTML＋src 发射并集 ⇄ 本表键集双向包含。 */
 const FORM_A_ACTIONS = {
@@ -45999,7 +46014,9 @@ const FORM_A_ACTIONS = {
   faTabClose: function(el){ formATabClose(el.getAttribute("data-tab-id")); },
   faRailToggle: function(){ const b = $("#btnTaskRail"); if(b) b.click(); },
   /* B3：底部 composer 折叠键（__aiPanelToggle 由 src/ai-retry.js bindChatPanel 暴露） */
-  faCmpToggle: function(){ const t = window.__aiPanelToggle; if(typeof t === "function") t(); }
+  faCmpToggle: function(){ const t = window.__aiPanelToggle; if(typeof t === "function") t(); },
+  /* B4：右栏分节折叠键（_railSecToggle 由 src/render-widgets.js 定义） */
+  faRrSec: function(el){ _railSecToggle(el.getAttribute("data-rr-sec")); }
 };
 document.addEventListener("click", function(e){
   const act = e.target && e.target.closest ? e.target.closest("[data-action]") : null;
