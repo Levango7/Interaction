@@ -146,7 +146,8 @@ document.addEventListener("click", function(e){
   }
 });
 /* 形态 A B2（功能设计 §2）：data-action 委托表 —— 形态 A 新增控件统一走这张表，
-   既有绑定（data-rail-tab / data-empty-action 等）原路径不动。
+   既有绑定（data-rail-done / data-empty-action 等）原路径不动（B4 起 data-rail-tab 分页
+   已退役，右栏折叠改走本表 faRrSec）。
    faRailToggle 不重写行为，只把点击转给原按钮 #btnTaskRail（同仓「行项不重写行为」惯例）。
    覆盖门禁：scripts/lint-bindings.mjs 扫 HTML＋src 发射并集 ⇄ 本表键集双向包含。 */
 const FORM_A_ACTIONS = {
@@ -155,7 +156,9 @@ const FORM_A_ACTIONS = {
   faTabClose: function(el){ formATabClose(el.getAttribute("data-tab-id")); },
   faRailToggle: function(){ const b = $("#btnTaskRail"); if(b) b.click(); },
   /* B3：底部 composer 折叠键（__aiPanelToggle 由 src/ai-retry.js bindChatPanel 暴露） */
-  faCmpToggle: function(){ const t = window.__aiPanelToggle; if(typeof t === "function") t(); }
+  faCmpToggle: function(){ const t = window.__aiPanelToggle; if(typeof t === "function") t(); },
+  /* B4：右栏分节折叠键（_railSecToggle 由 src/render-widgets.js 定义） */
+  faRrSec: function(el){ _railSecToggle(el.getAttribute("data-rr-sec")); }
 };
 document.addEventListener("click", function(e){
   const act = e.target && e.target.closest ? e.target.closest("[data-action]") : null;

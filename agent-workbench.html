@@ -5323,14 +5323,19 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   border:0;background:transparent;color:var(--muted);font-size:var(--fs-xs);cursor:pointer;
   border-radius:var(--radius-md);text-align:left}
 .task-rail-more:hover{background:var(--surface-hover);color:var(--text)}
-/* 2026-10-23：右栏分页（今日 / Agent / 文件）。MCP 暂不列：它仍未接线，不展示假能力。 */
-.task-rail-tabs{display:flex;gap:2px;flex:1;min-width:0}
-.task-rail-tab{border:0;background:transparent;color:var(--muted);font-size:var(--fs-2xs);
-  padding:var(--space-1) var(--space-1h);border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap}
-.task-rail-tab:hover{background:var(--surface-hover);color:var(--text)}
-.task-rail-tab.is-on{background:var(--panel2);color:var(--text);font-weight:600}
-.task-rail-pane{display:flex;flex-direction:column;min-height:0;flex:1;overflow:hidden}
-.task-rail-pane.u-hidden{display:none!important}
+/* 形态 A B4（2026-11-13）：四节堆叠取代四 tab 分页（用户裁选项甲：现状 pane 转节）。
+   折叠态持久化 form_a_rr_sec（收起节 id 数组）；MCP 仍不列——它仍未接线，不展示假能力（沿用 2026-10-23 口径）。 */
+.task-rail-secs{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}
+.rr-sec{border-bottom:1px solid var(--line)}
+.rr-sec > h4{margin:0}
+.rr-sec-toggle{display:flex;align-items:center;gap:6px;width:100%;border:0;background:transparent;
+  padding:var(--space-1h) var(--space-2);font-size:var(--fs-2xs);font-weight:600;color:var(--muted);
+  letter-spacing:.04em;cursor:pointer;user-select:none;text-align:left}
+.rr-sec-toggle:hover{background:var(--surface-hover);color:var(--text)}
+.rr-sec-toggle::after{content:"▾";margin-left:auto;color:var(--muted)}
+.rr-sec.closed .rr-sec-toggle::after{content:"▸"}
+.rr-sec.closed .rr-body{display:none}
+.rr-body{padding:0 var(--space-1) var(--space-1);display:flex;flex-direction:column;gap:6px;min-height:0}
 .rail-sec-title{display:flex;align-items:center;gap:var(--space-1);padding:var(--space-1h) var(--space-2);
   font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.04em}
 .rail-list{list-style:none;margin:0;padding:0 var(--space-1);display:flex;flex-direction:column;gap:1px;overflow-y:auto}
@@ -5402,8 +5407,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
      与 work 模式同一位置——三态之一的「中栏全高」消除。chat-panel-rail 同理走基线（≥768 本就 none）。 */
   .body.code-mode .task-rail{grid-column:3;grid-row:1;width:auto;min-height:0}
   /* P2-5（2026-11-02）：code 模式的能力面在右下 agentDock（同源数据 + 2.5s 活轮询），
-     右栏 Agent tab 是同一批数据的静态副本——藏掉，避免两个入口两份渲染互相漂移。 */
-  .body.code-mode .task-rail [data-rail-tab="agent"]{display:none}
+     右栏 Agent 节是同一批数据的静态副本——藏掉，避免两个入口两份渲染互相漂移。
+     B4 起纯 CSS 藏整节，不再改折叠持久化态（旧「agent tab 让位回今日」的状态栈写入随之退役）。 */
+  .body.code-mode .task-rail [data-rr-sec="agent"]{display:none}
   .body.code-mode .agent-dock{display:flex;flex-direction:column;min-height:0;max-height:38vh;
     grid-column:3;grid-row:2;border-top:1px solid var(--line);overflow-y:auto;
     background:color-mix(in srgb,var(--panel) 72%,transparent);padding:var(--space-2)}
@@ -5731,23 +5737,34 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <!-- 右栏：今日任务轨（2026-10-21 布局 v2；≥1024 常驻，<1024 由顶栏按钮滑出） -->
     <aside class="task-rail" id="taskRail" data-i18n-aria="a11y.taskRail" aria-label="今日任务">
       <div class="task-rail-head">
-        <div class="task-rail-tabs" role="tablist" data-i18n-aria="rail.tabsAria" aria-label="右栏分页">
-          <button type="button" class="task-rail-tab is-on" data-rail-tab="today" role="tab" aria-selected="true" data-i18n="rail.tab.today">今日</button>
-          <button type="button" class="task-rail-tab" data-rail-tab="agent" role="tab" aria-selected="false" data-i18n="rail.tab.agent">Agent</button>
-          <button type="button" class="task-rail-tab" data-rail-tab="files" role="tab" aria-selected="false" data-i18n="rail.tab.files">文件</button>
-          <button type="button" class="task-rail-tab" data-rail-tab="sessions" role="tab" aria-selected="false" data-i18n="dock.sessions">会话</button>
-        </div>
         <span class="task-rail-count" id="taskRailCount">0</span>
         <button type="button" class="task-rail-add" id="taskRailAdd" data-i18n-title="taskRail.add" title="新建任务" data-i18n-aria="taskRail.add" aria-label="新建任务">+</button>
         <button type="button" class="task-rail-collapse" id="taskRailCollapse" data-i18n-title="taskRail.collapse" title="收起任务栏" data-i18n-aria="taskRail.collapse" aria-label="收起任务栏">›</button>
       </div>
-      <div class="task-rail-pane" data-rail-pane="today">
-        <ul class="task-rail-list" id="taskRailList"></ul>
-        <button type="button" class="task-rail-more" id="taskRailMore" data-i18n="taskRail.more">全部任务</button>
+      <!-- 形态 A B4（2026-11-13）：四节堆叠取代四 tab 分页（用户裁选项甲：现状 pane 转节）。
+           每节 h4 内一个 faRrSec 按钮管折叠，折叠态持久化 form_a_rr_sec（收起节 id 数组）。
+           首节 today 即原 renderTaskRail；其余三节壳迁 id 留（#railAgentPane 等）。 -->
+      <div class="task-rail-secs">
+        <section class="rr-sec" data-rr-sec="today">
+          <h4><button type="button" class="rr-sec-toggle" data-action="faRrSec" data-rr-sec="today" aria-expanded="true" data-i18n="rail.tab.today">今日</button></h4>
+          <div class="rr-body">
+            <ul class="task-rail-list" id="taskRailList"></ul>
+            <button type="button" class="task-rail-more" id="taskRailMore" data-i18n="taskRail.more">全部任务</button>
+          </div>
+        </section>
+        <section class="rr-sec" data-rr-sec="agent">
+          <h4><button type="button" class="rr-sec-toggle" data-action="faRrSec" data-rr-sec="agent" aria-expanded="true" data-i18n="rail.tab.agent">Agent</button></h4>
+          <div class="rr-body" id="railAgentPane"></div>
+        </section>
+        <section class="rr-sec" data-rr-sec="files">
+          <h4><button type="button" class="rr-sec-toggle" data-action="faRrSec" data-rr-sec="files" aria-expanded="true" data-i18n="rail.tab.files">文件</button></h4>
+          <div class="rr-body" id="railFilesPane"></div>
+        </section>
+        <section class="rr-sec" data-rr-sec="sessions">
+          <h4><button type="button" class="rr-sec-toggle" data-action="faRrSec" data-rr-sec="sessions" aria-expanded="true" data-i18n="dock.sessions">会话</button></h4>
+          <div class="rr-body" id="railSessionPane"></div>
+        </section>
       </div>
-      <div class="task-rail-pane u-hidden" data-rail-pane="agent" id="railAgentPane"></div>
-      <div class="task-rail-pane u-hidden" data-rail-pane="files" id="railFilesPane"></div>
-      <div class="task-rail-pane u-hidden" data-rail-pane="sessions" id="railSessionPane"></div>
     </aside>
     <div class="task-rail-backdrop" id="taskRailBackdrop" hidden></div>
     <!-- Code 模式（2026-10-26）：右栏下半 = 进程/技能/MCP/工作流 停靠栏（仅 .body.code-mode 且 ≥1024px 显示，

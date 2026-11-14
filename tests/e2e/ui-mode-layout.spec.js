@@ -34,8 +34,8 @@ const probeCodeMode = () => {
   };
   const main = q("#main"), wrap = q(".main-wrap"), chat = q("#chatPanel");
   const dock = q("#agentDock"), sd = q("#sessionDock");
-  const agentTab = q('#taskRail [data-rail-tab="agent"]');
-  const todayTab = q('#taskRail [data-rail-tab="today"]');
+  const agentSec = q('#taskRail [data-rr-sec="agent"]');
+  const todaySec = q('#taskRail [data-rr-sec="today"]');
   return {
     bodyClass: q(".body").className,
     mainDisplay: main ? getComputedStyle(main).display : null,
@@ -46,8 +46,8 @@ const probeCodeMode = () => {
     dockDisplay: dock ? getComputedStyle(dock).display : null,
     dock: dock ? box(dock) : null,
     sdDisplay: sd ? getComputedStyle(sd).display : null,
-    agentTabDisplay: agentTab ? getComputedStyle(agentTab).display : null,
-    todayTabDisplay: todayTab ? getComputedStyle(todayTab).display : null,
+    agentSecDisplay: agentSec ? getComputedStyle(agentSec).display : null,
+    todaySecDisplay: todaySec ? getComputedStyle(todaySec).display : null,
     vw: window.innerWidth, vh: window.innerHeight,
   };
 };
@@ -88,9 +88,9 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
     expect(g.chat.x, "聊天坞应在中栏内（左缘）").toBeGreaterThanOrEqual(g.wrap.x - 1);
     expect(g.chat.x + g.chat.w, "聊天坞应在中栏内（右缘）").toBeLessThanOrEqual(g.wrap.x + g.wrap.w + 1);
 
-    /* ---- P2-5：右栏 Agent tab 让位 agentDock ---- */
-    expect(g.agentTabDisplay, "code 模式右栏 Agent tab 应隐藏").toBe("none");
-    expect(g.todayTabDisplay, "「今日」tab 不应被误伤").not.toBe("none");
+    /* ---- P2-5：右栏 Agent 节让位 agentDock（B4 起按节藏，不再按 tab） ---- */
+    expect(g.agentSecDisplay, "code 模式右栏 Agent 节应隐藏").toBe("none");
+    expect(g.todaySecDisplay, "「今日」节不应被误伤").not.toBe("none");
 
     /* ---- 两个 dock 在位（左下会话 / 右下能力面） ---- */
     expect(g.sdDisplay, "sessionDock 应显示").not.toBe("none");

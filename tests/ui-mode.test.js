@@ -191,25 +191,28 @@ describe("模式切换器：胶囊分段开关与窄屏保护（P2-3/P2-8）", (
   });
 });
 
-describe("Code 模式：右栏 Agent tab 让位 agentDock（P2-5）", () => {
-  it("12: 停在 agent tab 时进 code → 自动切回「今日」", () => {
-    /* load() 走 JSON.parse，存储值必须是 JSON 串（见 loadApp 约定） */
-    const win = boot({ [PREFIX + "rail_tab"]: JSON.stringify("agent") });
-    expect(win._railTabGet()).toBe("agent");
+describe("Code 模式：右栏 Agent 节让位 agentDock（P2-5）", () => {
+  it("12: 进 code 不改右栏任何节的折叠态（纯 CSS 藏 Agent 节，状态栈零写入）", () => {
+    /* load() 走 JSON.parse，存储值必须是 JSON 串（见 loadApp 约定）。
+       预置 agent 节收起：进 code 后该状态原样保留——B4 起藏节是 CSS 的活，
+       不再像旧分页那样写「agent tab 让位回今日」的状态栈。 */
+    const win = boot({ [PREFIX + "form_a_rr_sec"]: JSON.stringify(["agent"]) });
+    expect(win._railSecClosedSet().has("agent")).toBe(true);
     win.toggleUIMode();
     expect(bodyEl(win).classList.contains("code-mode")).toBe(true);
-    expect(win._railTabGet()).toBe("today");
-    /* 回 work 后 agent tab 仍可选（tab 按钮恢复由 CSS 控制，这里只验状态栈） */
+    expect(win._railSecClosedSet().has("agent")).toBe(true);
+    /* 回 work 后折叠态仍在（出模式不弹开）；折叠 API 仍可正常翻转 */
     win.setUIMode("work");
-    expect(win._railTabGet()).toBe("today");
-    win._railTabSet("agent");
-    expect(win._railTabGet()).toBe("agent");
+    expect(win._railSecClosedSet().has("agent")).toBe(true);
+    win._railSecSetClosed("agent", false);
+    expect(win._railSecClosedSet().has("agent")).toBe(false);
   });
 
-  it("13: 停在今日/文件 tab 时进 code 不改 tab", () => {
-    const win = boot({ [PREFIX + "rail_tab"]: JSON.stringify("files") });
+  it("13: 停在 today/files 节折叠态时进 code 不改折叠态", () => {
+    const win = boot({ [PREFIX + "form_a_rr_sec"]: JSON.stringify(["today", "files"]) });
     win.toggleUIMode();
-    expect(win._railTabGet()).toBe("files");
+    expect(win._railSecClosedSet().has("today")).toBe(true);
+    expect(win._railSecClosedSet().has("files")).toBe(true);
   });
 });
 
@@ -278,7 +281,8 @@ describe("三模式契约 S5：离开 code 必清能力轮询定时器", () => {
 describe("三模式契约 S6：切换模式零业务数据写入（仅 uimode）", () => {
   it("16: 三模式各切一轮，localStorage 键值差集 = {wb_agent_uimode}；全循环完全复原", () => {
     /* 预置业务键（任务/笔记/聊天/会话/子代理/图/配置），覆盖契约 §6 的键空间清单；
-       rail_tab 预置 today，避免「进 code 时 agent tab 让位」这条视图态写入混入差集。
+       form_a_rr_sec 预置空数组，避免右栏折叠态意外写入混入差集（B4 起进 code 模式零右栏写入；
+       旧 rail_tab「agent tab 让位」写入已随分页退役，见例 12）。
        ⚠️ ai_sessions / ai_active_session 必须预置：getSessions() 是**懒加载 + 首启迁移**
        （无键时从旧 chats[sc] 迁出默认会话并落盘，`src/data-links.js:545-562`）——
        那是**首次渲染时的一次性业务初始化**，不是「切换模式」产生的写入；
@@ -287,7 +291,7 @@ describe("三模式契约 S6：切换模式零业务数据写入（仅 uimode）
       /* uimode 预置：默认值 "work" 是惰性读取、未落盘；不预置的话切一个来回
          会把 uimode 首次持久化，那就是契约允许的唯一写入而非违约。预置后基线才真稳态。 */
       [PREFIX + "uimode"]: JSON.stringify("work"),
-      [PREFIX + "rail_tab"]: JSON.stringify("today"),
+      [PREFIX + "form_a_rr_sec"]: JSON.stringify([]),
       [PREFIX + "tasks"]: JSON.stringify([{ id: "t1", title: "任务一", done: false }]),
       [PREFIX + "notes"]: JSON.stringify([{ id: "n1", text: "笔记一" }]),
       [PREFIX + "chat_office"]: JSON.stringify([{ role: "user", content: "工作缓冲", createdAt: "2026-10-26T10:00:00.000Z" }]),

@@ -3,6 +3,22 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-13 · **UI 形态 A B4：右栏分节化（四 tab 分页 → 四节堆叠，用户裁选项甲）**
+
+_用户 11-13 裁定「选项甲（现状三 pane 转节）开工 B4」（功能设计 docs/ui-form-a-functional.md §6）。右栏从四 tab 分页改为四节堆叠：首节 today＝renderTaskRail 原样搬，其余三节壳迁 id 留（`#railAgentPane`/`#railFilesPane`/`#railSessionPane`）；折叠态＝收起节 id 数组，新键 `wb_agent_form_a_rr_sec`（kind:"c" sync:true backup:true，继承已删 `rail_tab` 的 sync 口径），旧键 `rail_tab` 连登记原子同批删（data-keys-registry 守卫双向）。如实披露：原型「产出 / 网页速览」两节不落地（无数据源映射，留 §8 待决）；code 模式藏 Agent 节由「写折叠态让位」简化为「纯 CSS 藏节，状态栈零写入」（行为简化，ui-mode 例 12/13 随实现改写）。_
+
+- **`agent-workbench.html`**：`.task-rail-tabs/.task-rail-pane` 分页 markup + CSS 整族退役 → `.task-rail-secs` 四节堆叠（`.rr-sec` section + h4 内 `button[data-action=faRrSec][data-rr-sec=id]` + `.rr-body`）；首节 today＝原 renderTaskRail 内容原样搬（`#taskRailList`/`#taskRailMore` 留）；`#taskRailCount`/`#taskRailAdd`/`#taskRailCollapse` 留栏头行；code 模式藏 Agent 节改纯 CSS（`.body.code-mode .task-rail [data-rr-sec="agent"]{display:none}`）
+- **`src/render-widgets.js`**：状态栈 `RAIL_TABS/_railTabGet/_railTabSet/_applyRailTab` → `RAIL_SECS/_railSecClosedSet/_railSecSetClosed/_railSecToggle/_applyRailSec`（脏值过滤 + 节间独立 + 往返持久化）；renderTaskRail 尾调换名；`_bindTaskRail` tabWrap 绑定块退役（折叠走 ui-global-events 全局委托）；toggleUIMode 删「进 code 改 rail_tab」一行
+- **`src/ui-global-events.js`**：`FORM_A_ACTIONS` 5⇄5→6⇄6 加 `faRrSec`（转 `_railSecToggle`）；注释记 data-rail-tab 分页退役
+- **`src/data-links.js`**：`wb_agent_form_a_rr_sec` 登记（kind:"c" sync:true backup:true；值＝收起节 id 数组 JSON）；`rail_tab` 条目连登记删
+- **`src/core-i18n.js`**：`rail.tabsAria` zh/en 两键删（分页 aria 随 tab 退役，零消费残留）
+- **`tests/rail-tabs.test.js` → `tests/rail-sections.test.js`（git mv + 整体重写，5 例）**：默认四节全展开 + today 内容原样（`#taskRailList`/`#taskRailMore`，无 MCP 假能力）；Agent 节真实技能 + AI 状态 + 折叠/展开往返持久化 + 节间独立；文件节知识库文件 + `#railOpenKb`；会话节真实会话 + is-active + data-rail-sess 切会话；新增窄判例：脏值过滤 `["bogus","agent"]→["agent"]` + 退役键 rail_tab 残留不被读
+- **`tests/ui-mode.test.js`**：例 12/13 随实现改写（「进 code 不改任何节折叠态」——seed form_a_rr_sec，断言 `_railSecClosedSet` 零写入 + `_railSecSetClosed` 翻转可用）；S6 seed 换键
+- **`tests/e2e/ui-mode-layout.spec.js` / `tests/e2e/ui-agent-parity.spec.js`**：选择器随形态改写（`[data-rail-tab]` → `section[data-rr-sec]`；断言升级为节级 display:none / 折叠-展开往返 toBeHidden→toBeVisible）
+- **`tests/lint-bindings.test.js`**：FORM_A_ACTIONS 键数 5→6（faRrSec 入列）
+- **验证**：全量 vitest 244 文件 2668 例＝3 failed / 2665 passed——3 红全＝prod-startup-guard A/B/C（本 worktree 缺 server 依赖 express MODULE_NOT_FOUND；`git stash` 净树 base 对照同 3 红同因 ⇒ base 继承环境面、零本批回归；server-sms-providers 文件级收集失败同 B3 回执口径不计）；定向 4 文件（rail-sections/ui-mode/lint-bindings/data-keys-registry）41 例绿；`npm run lint` rc=0（12 警告与 B1 基线同构、零新增）；lint-bindings 6⇄6；窄变异自证：删 faRrSec handler rc=1／HTML 发射改名 rc=1／还原 rc=0（两文件 cmp 字节同）；e2e 四 spec（ui-mode-layout/ui-agent-parity/layout-v2/topbar-overflow）44 passed rc=0；freeze-i18n 死键 417 基线持平（新增 0）；check:source-state ✓ 40/40（HTML 681KB 源码态）
+- **高共写面声明**：workflow / package-lock（root+electron）/ server/src / electron/ / 根 node_modules / `server/config.json` / `_probe/` 本批零改动；零短信额度消耗；零凭据落盘（本批无凭据接触）
+
 ### 2026-11-12 · **UI 形态 A B2：视图注册表 + data-action 委托 + lint-bindings 双向包含门禁（首落 4 键）**
 
 _用户 11-12 裁定「这条线归你做」后首个代码批（功能设计 docs/ui-form-a-functional.md §1/§2/§6；B1 几何批已合 main `6f20119`）。视图注册表 `_formATabs` 默认 `[{id:"today",scene:"office",title:"今日"}]`——§1 字面 `scene:"today"` 在 SCENARIOS 7 键中不存在（src/core-shared.js:225），切它会崩进 render() 兜底卡，裁为真实落地页 office（与 src/data-links.js:437 默认 active 同口径），id/title 仍按文档字面；功能文档 §1 同批改齐并披露该裁。_

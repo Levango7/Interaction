@@ -30,10 +30,12 @@
 ## 2. data-action 绑定覆盖
 
 - 现状：无 data-action 约定；委托在 `src/ui-global-events.js:62/126/137` + render 时逐元素绑定
-  （`data-rail-tab` `src/render-widgets.js:460`、`data-move/data-del/data-chain-sc` `src/ui-scene-bind.js:36-75`）。
+  （`data-move/data-del/data-chain-sc` `src/ui-scene-bind.js:36-75` 等；`data-rail-tab` 分页已于 B4 退役，
+  右栏折叠改走 `faRrSec` 委托）。
 - 设计：形态 A 新增控件一律走 `data-action`，集中一张表
   `FORM_A_ACTIONS = {faTabSwitch, faTabAdd, faTabClose, faRailToggle, faRrSec, faCmpToggle, faImmersive, faMenuOpen}`
-  挂在 `ui-global-events.js` 委托分支；既有绑定（data-rail-tab 等）原路径不动。
+  挂在 `ui-global-events.js` 委托分支；既有绑定（data-move/data-del/data-chain-sc 等）原路径不动
+  （B4 起 data-rail-tab 分页退役，右栏折叠统一走本表 faRrSec）。
 - 覆盖门禁：新脚本 `scripts/lint-bindings.mjs` 静态扫 `agent-workbench.html` 的 `[data-action]` ⇄
   `FORM_A_ACTIONS` 键集，**双向包含**，缺一边即红。窄变异自证：临时删一个 handler 引用 → 门红；恢复 → 绿
   （同 #134 窄变异口径）。
@@ -79,8 +81,10 @@
 - **B2 视图注册表 + data-action 委托 + lint-bindings 门禁**（含窄变异自证）。
 - **B3 Composer 迁移**：旧 `#chatPanel` → 底部 composer（单行收起态 + 展开 40vh + Esc + 焦点规则）；
   `chat_panel_collapsed` 语义映射到 composer 态；沉浸页 `:has()` 扩展落地。
-- **B4 右栏分节化**：今日任务轨首节（`renderTaskRail` `src/render-widgets.js:244` 原样搬）+ 其余节
-  h4 折叠持久化（新键登记）。
+- **B4 右栏分节化（已落地 2026-11-13，用户裁选项甲）**：今日任务轨首节（`renderTaskRail`
+  `src/render-widgets.js:244` 原样搬）+ 其余三节壳迁 id 留 + h4 折叠持久化（新键 `wb_agent_form_a_rr_sec`，
+  kind:"c" sync:true backup:true，值＝收起节 id 数组 JSON；旧键 `rail_tab` 连登记原子同批删）。
+  原型「产出 / 网页速览」两节不落地（无数据源映射，留 §8 待决）。
 - **B5 topbar 退役 + 旧坞 CSS 清理 + draw-responsive 判据重写 + 六档探针入 e2e**。
 - 每批：`scripts/claim-check.mjs --as WorkBuddy <路径>` 显式路径 → 改 → 本地门禁 → 窄变异 → commit；
   代码阶段与 ZCode DL-O24 ACTIVE（`src/render-overview.js` / `agent-workbench.html` / `CHANGELOG.md`）
@@ -98,4 +102,5 @@
 
 - tab 序默认持久化跨重启；若要会话内即弃则删 `wb_form_a_tabs` 登记。
 - 菜单栏轻菜单内容清单（原型是占位）：视图 / 帮助 / 快捷键三组是否够了。
-- 右栏非首节（产出 / 网页速览）的数据源映射（`renderTaskRail` 之外的取数路径）。
+- 右栏非首节（产出 / 网页速览）的数据源映射（`renderTaskRail` 之外的取数路径）。B4 已落地今日 / Agent /
+  文件 / 会话四节（选项甲：现状三 pane 转节），原型这两节仍待本条映射。
