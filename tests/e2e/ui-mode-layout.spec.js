@@ -236,4 +236,47 @@ test.describe("沉浸页 :has() 六选择器族（B3 §4，真 :has() 引擎）"
       expect(restored.statusbar, `[${cls}] 撤 class 后 .statusbar 应恢复显示`).not.toBe("none");
     }
   });
+
+  /* B6：专注态是「用户主动」，与上面两组「页面驱动」取并集——两个条件各管各的，互不覆盖。
+     这条必须在真 :has() 引擎里跑：jsdom 只断言得了 class，display 真值只能在这里守。 */
+  test("B6 专注态与页面驱动取并集：用户主动态不被页面进出覆盖", async ({ page }) => {
+    await page.goto(APP_URL);
+    await page.waitForSelector("#chatPanel", { timeout: 15_000 });
+
+    const shellsDisplay = () => page.evaluate(() => {
+      const cs = (s) => { const el = document.querySelector(s); return el ? getComputedStyle(el).display : "MISSING"; };
+      return { tabbar: cs(".tabbar"), composer: cs(".composer"), statusbar: cs(".statusbar") };
+    });
+    const SHELLS = ["tabbar", "composer", "statusbar"];
+
+    /* 1) 手动开专注 ⇒ 三壳 hidden */
+    await page.evaluate(() => document.body.classList.add("is-focus"));
+    await page.waitForTimeout(100);
+    const focusOn = await shellsDisplay();
+    for (const k of SHELLS) expect(focusOn[k], `[is-focus] ${k} 应 display:none`).toBe("none");
+
+    /* 2) 专注同时进沉浸页 ⇒ 仍 hidden（并集，不互相抵消） */
+    await page.evaluate(() => document.querySelector("#drawer").classList.add("drawer-page"));
+    await page.waitForTimeout(100);
+    const both = await shellsDisplay();
+    for (const k of SHELLS) expect(both[k], `[is-focus + drawer-page] ${k} 应仍 none`).toBe("none");
+
+    /* 3) 退出沉浸页但专注还在 ⇒ 仍 hidden（页面驱动退出不能顺手关掉用户主动态） */
+    await page.evaluate(() => document.querySelector("#drawer").classList.remove("drawer-page"));
+    await page.waitForTimeout(100);
+    const stillFocus = await shellsDisplay();
+    for (const k of SHELLS) expect(stillFocus[k], `撤页面后 ${k} 应仍 none（专注未退）`).toBe("none");
+
+    /* 4) 关专注 ⇒ 恢复三种壳 */
+    await page.evaluate(() => document.body.classList.remove("is-focus"));
+    await page.waitForTimeout(100);
+    const restored = await shellsDisplay();
+    for (const k of SHELLS) expect(restored[k], `关专注后 ${k} 应恢复显示`).not.toBe("none");
+
+    /* 5) 反向对照：页面驱动单独仍有效（证明并集没把旧路径弄坏） */
+    await page.evaluate(() => document.querySelector("#main").classList.add("page-recycle"));
+    await page.waitForTimeout(100);
+    expect((await shellsDisplay()).tabbar, "单靠 page-recycle 也必须 hidden").toBe("none");
+    await page.evaluate(() => document.querySelector("#main").classList.remove("page-recycle"));
+  });
 });

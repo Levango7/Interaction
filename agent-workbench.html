@@ -649,10 +649,22 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
  /* 形态 A B1：IDE 化三壳（menubar / tabbar / statusbar），栏高令牌 DESIGN-SYSTEM §2.2。
    过渡态：topbar 仍在（B5 退役），四横带并存；本批只迁 logo + 模式胶囊，零行为变化。
    断点允许集 1023/767/479，不新增值。 */
-.menubar{height:var(--mb-h);display:flex;align-items:center;gap:var(--space-1);
+.menubar{height:var(--mb-h);display:flex;align-items:center;gap:var(--space-1);position:relative;
   padding:0 var(--space-2);background:var(--panel);border-bottom:1px solid var(--line);flex:none}
-.menubar .mi{padding:2px var(--space-2);border-radius:var(--radius-md);color:var(--muted);cursor:pointer}
+.menubar .mb-sp{flex:1}
+.menubar .mi{padding:2px var(--space-2);border-radius:var(--radius-md);color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;min-height:22px}
 .menubar .mi:hover{background:var(--accent-soft)}
+.menubar .mi svg{width:14px;height:14px}
+/* B6：专注态按钮按下去要能看见（aria-pressed 是唯一事实源，不给类名第二份状态） */
+.menubar .mi[aria-pressed="true"]{color:var(--accent);background:var(--accent-soft)}
+/* B6：帮助菜单浮层——脱离流、右锚 menubar 下缘；[hidden] 优先，不靠类切换 */
+.help-menu{position:absolute;top:calc(var(--mb-h) - 2px);right:var(--space-2);z-index:var(--z-popover);
+  display:flex;flex-direction:column;min-width:180px;padding:var(--space-1);
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-2)}
+.help-menu[hidden]{display:none}
+.help-item{min-height:28px;padding:0 var(--space-2);border:0;background:transparent;color:var(--text);
+  font-size:var(--fs-xs);text-align:left;border-radius:var(--radius-sm);cursor:pointer}
+.help-item:hover{background:var(--accent-soft)}
 .tabbar{height:var(--tb-h);display:flex;align-items:center;gap:var(--space-2);
   padding:0 var(--space-2);background:var(--panel);border-bottom:1px solid var(--line);flex:none}
 .tabs{display:flex;align-items:center;gap:var(--space-1);flex:1;min-width:0;overflow-x:auto}
@@ -5286,6 +5298,13 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   body:has(.main.page-recycle) .tabbar,
   body:has(.main.page-recycle) .composer,
   body:has(.main.page-recycle) .statusbar{display:none}
+  /* B6 专注模式（faFocusToggle）：用户主动切换，与上面「页面驱动」取并集 ——
+     进设置页仍自动隐；手动开专注后退出页面也不残留（两条件各管各的，互不覆盖）。
+     选择器与上八条同构（menubar 保留），不引入第二套命名。 */
+  body.is-focus .chat-panel,
+  body.is-focus .tabbar,
+  body.is-focus .composer,
+  body.is-focus .statusbar{display:none}
 }
 
 /* 右栏「今日任务」：≥1024 常驻；以下为共享视觉 */
@@ -5562,6 +5581,21 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   <!-- 形态 A B1：menubar 壳（IDE 化三壳之一）。logo 从 topbar 迁入；mi 文字菜单内容清单＝功能设计 §8 待决②，B1 留空（防空窗假控件）。 -->
   <header class="menubar">
     <div class="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M40 18.2A17 17 0 1 1 29.8 8"/><circle cx="24" cy="24" r="4.5" fill="currentColor" stroke="none"/><circle cx="38.8" cy="9.2" r="3.5" fill="currentColor" stroke="none"/></svg></span> <span data-i18n="app.name">Agent 工坊</span></div>
+    <div class="mb-sp"></div>
+    <!-- B6：帮助菜单（§8 待决②结案）—— 四项全转既有真入口，无自造面板：
+         快捷键说明→openCmd()／诊断报告→openDiagIssue()／用户手册→仓库文档外链／
+         关于本应用→openDrawer()+_switchSetTab("set-about")（设置页既有 #set-about 卡）。 -->
+    <button type="button" class="mi" id="btnHelpMenu" data-action="faMenuOpen" aria-haspopup="menu" aria-expanded="false" aria-controls="helpMenu" data-i18n="menu.help">帮助</button>
+    <!-- B6：专注模式（原型 .imbtn 口径——窄屏外其余 mi 隐藏，本钮保留） -->
+    <button type="button" class="mi imbtn" id="btnFocus" data-action="faFocusToggle" aria-pressed="false" data-i18n-title="menu.focus" data-i18n-aria="menu.focus" title="专注模式" aria-label="专注模式">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+    </button>
+    <div class="help-menu" id="helpMenu" role="menu" aria-labelledby="btnHelpMenu" hidden>
+      <button type="button" class="help-item" role="menuitem" data-help-item="hotkeys" data-i18n="menu.hotkeys">快捷键说明</button>
+      <button type="button" class="help-item" role="menuitem" data-help-item="diag" data-i18n="menu.diag">诊断报告</button>
+      <button type="button" class="help-item" role="menuitem" data-help-item="manual" data-i18n="menu.manual">用户手册</button>
+      <button type="button" class="help-item" role="menuitem" data-help-item="about" data-i18n="menu.about">关于本应用</button>
+    </div>
   </header>
   <!-- 形态 A B1：tabbar 壳。模式胶囊整块从 topbar 剪贴迁入（id/类名不变 ⇒ _renderUiModePill 零 JS 随行）；tabs 槽由 B2 视图注册表填。 -->
   <div class="tabbar">

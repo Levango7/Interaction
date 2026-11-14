@@ -131,7 +131,9 @@ document.addEventListener("click", function(e){
   setTopbarMoreOpen(false);
 });
 document.addEventListener("keydown", function(e){
-  if(e.key === "Escape") setTopbarMoreOpen(false);
+  if(e.key !== "Escape") return;
+  setTopbarMoreOpen(false);
+  _helpMenuClose();   /* B6：Esc 收帮助菜单（复用同一口子，不新开监听） */
 });
 // 空态引导按钮委托（data-empty-action）：与快捷键 N 同款行为——切场景 + 聚焦新建表单
 document.addEventListener("click", function(e){
@@ -145,6 +147,56 @@ document.addEventListener("click", function(e){
     render(); focusTaskTitleInput();
   }
 });
+/* 形态 A B6：帮助菜单 + 专注模式（用户 11-14 裁「加专注模式按钮」+「一组帮助菜单」）。
+   菜单四项全部转发既有真入口，不自造面板 —— B1 之所以把 mi 留空，就是不做空窗假控件：
+     快捷键说明 → openCmd()（命令面板本就带快捷键提示，同源不重写）
+     诊断报告 → openDiagIssue()（src/ui-backup-stats.js 既有）
+     用户手册 → 仓库 docs/user-manual.md 外链（应用内无手册页，不伪造本地页）
+     关于本应用 → openDrawer() + _switchSetTab("set-about")（设置页既有 #set-about 卡）
+   专注态 = body.is-focus；与页面驱动（body:has(...) 八条）在 CSS 层取并集，互不覆盖。 */
+function _helpMenuEls(){ return { menu: $("#helpMenu"), btn: $("#btnHelpMenu") }; }
+function _helpMenuOpen(){
+  const el = _helpMenuEls(); if(!el.menu || !el.btn) return;
+  el.menu.hidden = false; el.btn.setAttribute("aria-expanded", "true");
+  const first = el.menu.querySelector(".help-item"); if(first) first.focus();
+}
+function _helpMenuClose(){
+  const el = _helpMenuEls(); if(!el.menu || el.menu.hidden) return;
+  el.menu.hidden = true; if(el.btn) el.btn.setAttribute("aria-expanded", "false");
+}
+function _helpMenuToggle(){
+  const el = _helpMenuEls(); if(!el.menu) return;
+  if(el.menu.hidden) _helpMenuOpen(); else _helpMenuClose();
+}
+function _focusOn(){ return document.body.classList.contains("is-focus"); }
+function _applyFocus(on){
+  document.body.classList.toggle("is-focus", !!on);
+  const b = $("#btnFocus"); if(b) b.setAttribute("aria-pressed", on ? "true" : "false");
+  /* 存布尔：save/load 走 JSON，存字符串会变成 '"1"'，读回不是同一件事 */
+  save(PREFIX + "form_a_focus", !!on);
+}
+function _helpRun(item){
+  _helpMenuClose();
+  if(item === "hotkeys"){ if(typeof openCmd === "function") openCmd(); return; }
+  if(item === "diag"){ if(typeof openDiagIssue === "function") openDiagIssue(); return; }
+  if(item === "manual"){
+    window.open("https://github.com/Levango7/Interaction/blob/main/docs/user-manual.md", "_blank", "noopener");
+    return;
+  }
+  if(item === "about"){
+    if(typeof openDrawer === "function") openDrawer();
+    if(typeof _switchSetTab === "function") _switchSetTab("set-about");
+  }
+}
+/* 冷启动按持久化恢复专注态：只读应用，不写回（否则每次启动白触发一次同步） */
+(function(){
+  try{
+    if(load(PREFIX + "form_a_focus", false) === true){
+      document.body.classList.add("is-focus");
+      const b = $("#btnFocus"); if(b) b.setAttribute("aria-pressed", "true");
+    }
+  }catch(_e){ /* 存储不可用 ⇒ 默认非专注态 */ }
+})();
 /* 形态 A B2（功能设计 §2）：data-action 委托表 —— 形态 A 新增控件统一走这张表，
    既有绑定（data-rail-done / data-empty-action 等）原路径不动（B4 起 data-rail-tab 分页
    已退役，右栏折叠改走本表 faRrSec）。
@@ -158,13 +210,25 @@ const FORM_A_ACTIONS = {
   /* B3：底部 composer 折叠键（__aiPanelToggle 由 src/ai-retry.js bindChatPanel 暴露） */
   faCmpToggle: function(){ const t = window.__aiPanelToggle; if(typeof t === "function") t(); },
   /* B4：右栏分节折叠键（_railSecToggle 由 src/render-widgets.js 定义） */
-  faRrSec: function(el){ _railSecToggle(el.getAttribute("data-rr-sec")); }
+  faRrSec: function(el){ _railSecToggle(el.getAttribute("data-rr-sec")); },
+  /* B6：帮助菜单开合 + 专注态切换（§8 待决② 与 B4 遗留两条结案，用户 11-14 裁） */
+  faMenuOpen: function(){ _helpMenuToggle(); },
+  faFocusToggle: function(){ _applyFocus(!_focusOn()); }
 };
 document.addEventListener("click", function(e){
   const act = e.target && e.target.closest ? e.target.closest("[data-action]") : null;
-  if(!act) return;
-  const fn = FORM_A_ACTIONS[act.getAttribute("data-action")];
-  if(fn) fn(act, e);
+  if(act){
+    const name = act.getAttribute("data-action");
+    /* B6：除帮助按钮自己外，点任何 action 都先收菜单（避免浮层悬着） */
+    if(name !== "faMenuOpen") _helpMenuClose();
+    const fn = FORM_A_ACTIONS[name];
+    if(fn){ fn(act, e); return; }
+  }
+  /* B6：帮助菜单项走独立分派 —— 四个动作是一次性转发，不进 FORM_A_ACTIONS 键表，
+     否则 lint-bindings 会让它们看起来像可绑定的通用 action。 */
+  const hi = e.target && e.target.closest ? e.target.closest("[data-help-item]") : null;
+  if(hi){ _helpRun(hi.getAttribute("data-help-item")); return; }
+  _helpMenuClose();
 });
 // 全部已读 / 清空
 $("#msgMarkAllRead").onclick = function(){ markAllMessagesRead(); renderMsgPanel(); };

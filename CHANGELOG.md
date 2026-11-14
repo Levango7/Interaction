@@ -3,6 +3,20 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-14 · **UI 形态 A B6：专注模式 + 帮助菜单（§8 三条待决结案）**
+
+_用户 11-14 两句裁定：「加专注模式按钮（推荐）」+「一组「帮助」菜单（推荐）」。_
+
+- **`agent-workbench.html`**：menubar 右侧加「帮助」（`data-action="faMenuOpen"`，`aria-haspopup="menu"` + `aria-expanded`）与「专注」（`data-action="faFocusToggle"`，`aria-pressed` 为唯一状态源）；`.help-menu` 浮层四项；新增 `body.is-focus` 隐藏规则——与 `body:has(...)` 八条**同构取并集**，不覆盖页面驱动（进设置页仍自动隐）。
+- **`src/ui-global-events.js`**：`FORM_A_ACTIONS` 6→8（`faMenuOpen` / `faFocusToggle`）；菜单三路收起（Esc / 外点 / 选项后）+ 开菜单首项获焦；`_helpRun` 四项全转发既有真入口（`openCmd` / `openDiagIssue` / 手册外链 / `openDrawer`+`_switchSetTab("set-about")`），不自造面板（保持 B1 留空「不做空窗假控件」的原意）。
+- **`src/data-links.js`**：`wb_agent_form_a_focus` 登记（kind:"c" sync:true backup:true，布尔值；存字符串会被 JSON 变成 `"1"`，读回不是同一件事）。
+- **`src/core-i18n.js`**：`menu.*` 6 键 zh/en（help / focus / hotkeys / diag / manual / about）。
+- **`tests/form-a-menu.test.js`（新，12 例）**：控件与键表 / 菜单四项顺序 / 开合三路 / 四项分派 / 专注态读写与冷启动恢复 / 两条反向对照（未登记 help-item 不产生行为、点 action 先收菜单）。
+- **`tests/lint-bindings.test.js`**：基线 6→8。
+- **`docs/ui-form-a-functional.md`**：§2 键清单改实名（`faImmersive`→`faFocusToggle`，语义是「用户主动切专注」而非页面驱动沉浸页）；§6 补 B6；§8 三条待决全部结案。
+- **验证**：全量 `npm run test:local` **245 文件 241 passed / 2 failed** —— 两红与本批零相关，是本树缺 server 依赖的预存环境性（`tests/server-sms-providers.test.js` 文件级 + `tests/prod-startup-guard.test.js` A/B/C，根因 `Cannot find module 'express'`，与 B4 同批同签名）；本批新测试在全量里 **✓ 12 tests**。`npm run lint` **rc=0**（eslint + 11 道门，`lint-bindings` 6⇄8 实链通过）；窄变异两条均精确打红——删 `faMenuOpen` handler ⇒ `lint-bindings` 3 例红、去 `save(...)` ⇒ 专注态落盘断言红，均已还原。
+- **高共写面声明**：`CHANGELOG.md` 仅 `[Unreleased]` 追加本节；workflow / package-lock / node_modules / server / electron 零改动。
+
 ### 2026-11-13 · **UI 形态 A B4：右栏分节化（四 tab 分页 → 四节堆叠，用户裁选项甲）**
 
 _用户 11-13 裁定「选项甲（现状三 pane 转节）开工 B4」（功能设计 docs/ui-form-a-functional.md §6）。右栏从四 tab 分页改为四节堆叠：首节 today＝renderTaskRail 原样搬，其余三节壳迁 id 留（`#railAgentPane`/`#railFilesPane`/`#railSessionPane`）；折叠态＝收起节 id 数组，新键 `wb_agent_form_a_rr_sec`（kind:"c" sync:true backup:true，继承已删 `rail_tab` 的 sync 口径），旧键 `rail_tab` 连登记原子同批删（data-keys-registry 守卫双向）。如实披露：原型「产出 / 网页速览」两节不落地（无数据源映射，留 §8 待决）；code 模式藏 Agent 节由「写折叠态让位」简化为「纯 CSS 藏节，状态栈零写入」（行为简化，ui-mode 例 12/13 随实现改写）。_

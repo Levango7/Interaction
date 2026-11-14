@@ -99,7 +99,7 @@ describe("窄变异自证（§2：删 handler / 去发射 必须翻红）", () =
 
   it("基线：真实三处源双向包含（绿）", () => {
     expect(checkBindings({ used: baseline, handlers }).ok).toBe(true);
-    expect(handlers).toHaveLength(6); // B2 首落 4 键 + B3 faCmpToggle + B4 faRrSec（faMenuOpen 待 §8、faImmersive 待应用层定）
+    expect(handlers).toHaveLength(8); // B2 首落 4 键 + B3 faCmpToggle + B4 faRrSec + B6 faMenuOpen/faFocusToggle（§8 已结案）
   });
 
   it("变异①：删一个 handler 引用 ⇒ 门红（死控件面）", () => {

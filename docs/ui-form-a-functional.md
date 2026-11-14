@@ -33,7 +33,8 @@
   （`data-move/data-del/data-chain-sc` `src/ui-scene-bind.js:36-75` 等；`data-rail-tab` 分页已于 B4 退役，
   右栏折叠改走 `faRrSec` 委托）。
 - 设计：形态 A 新增控件一律走 `data-action`，集中一张表
-  `FORM_A_ACTIONS = {faTabSwitch, faTabAdd, faTabClose, faRailToggle, faRrSec, faCmpToggle, faImmersive, faMenuOpen}`
+  `FORM_A_ACTIONS = {faTabSwitch, faTabAdd, faTabClose, faRailToggle, faRrSec, faCmpToggle, faMenuOpen, faFocusToggle}`
+  （B6 起原型里的 `faImmersive` 定名为 `faFocusToggle`——语义是「用户主动切专注」，不是页面驱动的沉浸页）
   挂在 `ui-global-events.js` 委托分支；既有绑定（data-move/data-del/data-chain-sc 等）原路径不动
   （B4 起 data-rail-tab 分页退役，右栏折叠统一走本表 faRrSec）。
 - 覆盖门禁：新脚本 `scripts/lint-bindings.mjs` 静态扫 `agent-workbench.html` 的 `[data-action]` ⇄
@@ -86,6 +87,10 @@
   kind:"c" sync:true backup:true，值＝收起节 id 数组 JSON；旧键 `rail_tab` 连登记原子同批删）。
   原型「产出 / 网页速览」两节不落地（无数据源映射，留 §8 待决）。
 - **B5 topbar 退役 + 旧坞 CSS 清理 + draw-responsive 判据重写 + 六档探针入 e2e**。
+- **B6 专注模式 + 帮助菜单（2026-11-14 落地，用户两句裁定）**：menubar 右侧「帮助」（`faMenuOpen`，
+  菜单四项转既有真入口）与「专注」（`faFocusToggle`，`body.is-focus` 与页面驱动取并集，落盘
+  `wb_agent_form_a_focus` 布尔）；Esc / 外点 / 选项后三路收起，开菜单首项获焦。
+  `FORM_A_ACTIONS` 6→8，`lint-bindings` 基线同批改；测试 `tests/form-a-menu.test.js` 12 例。
 - 每批：`scripts/claim-check.mjs --as WorkBuddy <路径>` 显式路径 → 改 → 本地门禁 → 窄变异 → commit；
   代码阶段与 ZCode DL-O24 ACTIVE（`src/render-overview.js` / `agent-workbench.html` / `CHANGELOG.md`）
   按并集约定或等释放，不硬接管；回执批走 CHANGELOG [Unreleased] + 板面 RELEASED 行 + 推 main 双 run 绿。
@@ -100,7 +105,14 @@
 
 ## 8. 待决（实现批遇到即停回用户）
 
-- tab 序默认持久化跨重启；若要会话内即弃则删 `wb_form_a_tabs` 登记。
-- 菜单栏轻菜单内容清单（原型是占位）：视图 / 帮助 / 快捷键三组是否够了。
-- 右栏非首节（产出 / 网页速览）的数据源映射（`renderTaskRail` 之外的取数路径）。B4 已落地今日 / Agent /
-  文件 / 会话四节（选项甲：现状三 pane 转节），原型这两节仍待本条映射。
+- **[B2 已结案]** tab 序默认持久化跨重启：裁「持久化、不上云」（`wb_agent_form_a_tabs`，
+  kind:"d" sync:false backup:true）；要会话内即弃就删该键，不做开关。
+- **[B6 已结案，2026-11-14 用户裁]** 菜单栏轻菜单内容清单：**不做三组**，只做一组「帮助」四项
+  —— 快捷键说明（转 `openCmd`，命令面板本就带快捷键提示）/ 诊断报告（转 `openDiagIssue`）/
+  用户手册（仓库 `docs/user-manual.md` 外链）/ 关于本应用（`openDrawer` + `_switchSetTab("set-about")`）。
+  四项全部转发既有真入口、不自造面板；视图组与左栏既有入口重复、快捷键组已由命令面板承载 ⇒ 不重复建设。
+- **[B6 同批结案]** 原型里的「沉浸页演示」按钮：应用侧原为**页面驱动**（`body:has(...)` 八条），
+  照原型加按钮会语义打架 ⇒ 裁「加专注模式按钮」，`body.is-focus` 与页面驱动**取并集**，
+  两者各管各的、互不覆盖（进设置页仍自动隐；手动开专注退出页面也不残留）。
+- **[B4 已结案]** 右栏非首节（产出 / 网页速览）：原型两节无数据源映射，裁「不落地」；
+  右栏四节＝今日 / Agent / 文件 / 会话（选项甲，现状三 pane 转节）。
