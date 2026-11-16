@@ -3,6 +3,16 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-16 · **聊天区信息架构改造（核心两刀）：运行态/会话管理迁出 Composer + Code 中栏分屏**
+
+_用户 11-16 连续追问「聊天区为什么还有那么多东西、能不能移到别的地方、消息气泡应该放在哪」。真浏览器量测坐实：CODE 与 WORK 的聊天区完全相同（1440×900 下 `#chatPanel` 均贴底 168px 坞、`#chat` 在收起态 `display:none`、气泡根本没有位置）。用户裁「核心两刀」，并在知悉 11-02「主客颠倒」旧判据后**二次裁刀2＝中栏分屏**（非全高对话），明确不推翻「工作面居中」。这是纯 UI/UX 改造，`src/` 一行未改。_
+
+- **刀1 · 控件按职责归位（DOM 搬移，绑定零改）**：① 会话管理按钮 `#chatSessionBtn` 从 AI 面板头部迁到顶栏 `menubar`——它是「导航」不是消息；用独立 `.mi-session` 类，窄屏不随其它文字菜单隐藏，会话入口不丢失；id/title/aria/i18n 全沿用，`onclick` 按 ID 命中零改 JS。② 上下文预算芯片 `#ctxBudgetChip` 从 Composer 输入行迁到状态栏右侧常驻——它是「状态」不是输入控件；作为 `#statusbar` 的直接子节点、与 `.foot-bar` 平级，`appendFoot()` 只 remove/append `:scope > .foot-bar` 故不碰它，`renderCtxBudgetChip()` 按 ID 命中零改 JS。**未迁**的进度条/思考中/取消：它们本就在 `form#chatForm` 之外（属消息区运行态），主流 Agent 也正是把 generating/stop 放在输入区附近，强塞 24px 状态栏会撑破窄屏布局——如实保留，不为对齐示意图牺牲可用性。
+- **刀2 · Code 模式上/下半屏（纯 CSS，仅 `.body.code-mode` 作用域）**：覆盖贴底坞基线——上半 `#main` 工作面改 `flex:1 1 auto;min-height:0;overflow-y:auto`（可滚）、下半 `#chatPanel` 改 `position:static;flex:0 0 50%;max-height:none`（各占约半屏）；`#chat` 与运行态条无视 `.collapsed` 强制 `display:flex`，气泡常驻可见；折叠键 `#chatPanelCollapse` 在分屏态隐藏（布局固定、无折叠概念）。**工作面仍居中在上、可滚、有高度**，不推翻 11-02「主客颠倒」修复；work 贴底坞 / design 画布零影响（真浏览器复测 WORK 模式 chat 仍 168px坞、`#chat` 仍 `display:none`）。
+- **判据随实现同提交改写（非放宽）**：`tests/e2e/ui-mode-layout.spec.js` 原钉「贴底坞 sticky / ≤40vh / 顶缘>45%」随布局退役，重写为「两段各 >42% 中栏高、`#chat` `display:flex` 且高>80px 落在对话区内、折叠键 `none`、会话按钮在 menubar、芯片在 statusbar」；新增 5 个探针对应字段。**变异测试证明新断言有射程**：把 `#chat` 常驻规则 `display:flex→none` ⇒ `msgsDisplay` 断言精确打红；还原后回绿、注入态字节一致。（首个变异「删 `.collapsed .chat` 覆盖」未打红——因当前折叠偏好是展开、panel 不带 `.collapsed`，如实记录并改用有效变异。）
+- **验证**：刀1 相关五文件单测 **35/35 passed**；`ui-mode-layout.spec.js` e2e **12/12 passed**（含分屏几何 + 模式胶囊 + 窄屏 + 沉浸 :has()）；`npm run lint` **rc=0**（CSS 结构配平 / 断点 9 值 / lint-bindings 8⇄8 / 假回执 0）；真浏览器 1440×900 量测分屏生效（`#main` 890×384 上 / `#chatPanel` 890×384 下 / `#chat` 890×198 `display:flex` 气泡常驻），会话按钮可见（menubar 内 30×22）并截图核观感。全量 `npm test` **246 文件 243 passed / 2 failed、2686 tests 2674 passed / 3 failed**：3 红＝`prod-startup-guard` A/B/C + `server-sms-providers` 文件级，单跑坐实 `Cannot find module 'express'`（`MODULE_NOT_FOUND`，本树缺 server 依赖的**预存环境性**，与 B3/B4/B6/刀2 历批同签名），本批零相关、判据零放宽。跑后 `src:extract` 往返 + `check:source-state` ✓ 689KB 源码态。
+- **高共写面声明**：`agent-workbench.html`（仅 DOM 搬移 + CSS，无 src 块内容改动）、`tests/e2e/ui-mode-layout.spec.js`、`CHANGELOG.md`、`docs/agent-board.md` 四文件；`src/` / workflow / 两份 `package-lock` / node_modules / server / electron 零改动。
+
 ### 2026-11-16 · **刀 2 e2e 红第二批：工作流 / 移动端改走工作台 tile（首修余下的 5 条）**
 
 _`bf926be` 推后 CI `43836202029` 的 e2e 腿 5 failed / 245 passed / 2 flaky / 5 skipped。读 job 原始日志：4 条确定性红在 `workflow.spec.js`（desktop + tablet 各「完整用户流程」「smoke」），1 条在 `mobile.spec.js`；根因同属刀 2「场景退出侧栏」——第一批只对齐了启动等待与 nav-pages-smoke，漏了这两处**用户路径本身**。另 2 条 flaky 为 `i18n` 15s 判别等待与 `rag-hybrid` 30s `waitRagReady`（重试均转绿），既有已知饥饿型抖动，本批不改。_

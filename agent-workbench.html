@@ -657,6 +657,14 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .menubar .mi svg{width:14px;height:14px}
 /* B6：专注态按钮按下去要能看见（aria-pressed 是唯一事实源，不给类名第二份状态） */
 .menubar .mi[aria-pressed="true"]{color:var(--accent);background:var(--accent-soft)}
+/* 2026-11-16：会话管理入口从 AI 面板头部迁到顶栏。独立类 .mi-session 不套 .mi——
+   窄屏 `@media(max-width:767px){.menubar .mi{display:none}}` 只隐藏文字菜单，本钮在窄屏也保留，
+   保证「浏览/切换会话」不因搬家而丢失（原入口在聊天抽屉里，现顶栏常驻更易达）。
+   外观沿用 .mi 的 22px 图标档，不新增色值。 */
+.menubar .mi-session{padding:2px var(--space-2);border-radius:var(--radius-md);color:var(--muted);cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;min-height:22px;background:transparent;border:0}
+.menubar .mi-session:hover{background:var(--accent-soft);color:var(--text)}
+.menubar .mi-session svg{width:14px;height:14px}
 /* B6：帮助菜单浮层——脱离流、右锚 menubar 下缘；[hidden] 优先，不靠类切换 */
 .help-menu{position:absolute;top:calc(var(--mb-h) - 2px);right:var(--space-2);z-index:var(--z-popover);
   display:flex;flex-direction:column;min-width:180px;padding:var(--space-1);
@@ -683,6 +691,9 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   padding:0 var(--space-2);background:var(--panel);border-top:1px solid var(--line);
   color:var(--muted);font-size:var(--fs-xs);flex:none}
 .statusbar .foot-bar{flex:1 1 auto;min-width:0}
+/* 2026-11-16：上下文预算芯片迁入状态栏。覆盖 .ctx-budget-chip 的 align-self:center（那是输入行用的），
+   状态栏是横向 flex，芯片靠右；窄屏（foot-bar 三列换行）时压缩省略，不撑破 24px 栏高。 */
+.statusbar .status-ctx-chip{flex:0 1 auto;align-self:center;margin-left:auto;max-width:34vw}
 /* ≤767：mi 文字菜单隐藏（B1 mi 容器空，规则先落、B2 填项后生效；复用 MAIN 断点 767，不新增值。
    窄变异登记：临时删本条 ⇒ 320 档 menubar 溢出，本机无浏览器栈自证，押 CI 窄屏探针）。 */
 @media (max-width:767px){
@@ -5442,8 +5453,25 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
      收起工具行（code 模式右栏已有今日任务，顶部待办栏是重复信息）。 */
   .body.code-mode .main-wrap{grid-column:2;grid-row:1 / span 2;min-height:0;min-width:0}
   .body.code-mode .main-wrap>.toolbar-row{display:none}
-  /* 聊天面板不另外写规则：≥1024 必然命中 5155 的贴底对话坞块（sticky 底、收起态一行），
-     与 work 模式同一位置——三态之一的「中栏全高」消除。chat-panel-rail 同理走基线（≥768 本就 none）。 */
+  /* ===== 2026-11-16 中栏分屏（用户「核心两刀」刀2 二次裁决＝分屏，非全高对话）=====
+     code 模式中栏 = 上半工作面（#main，可滚）+ 下半对话区（#chatPanel，气泡常驻各占约一半）。
+     与 work 模式贴底坞的区别：对话不再是「可折叠的一行输入坞」，而是常驻下半屏——
+     工作面始终居中在上（不推翻 11-02「主客颠倒」修复），气泡常在下方（解决「消息气泡没位置」）。
+     纯 CSS 覆盖，只在 .body.code-mode 作用域生效：work 贴底坞 / design 画布零影响。
+     折叠键在分屏态隐藏（无折叠概念，布局固定）；#chat 与运行态条无视 .collapsed 强制常驻——
+     这是「气泡常驻可见」的产品裁决，不是放宽折叠判据（折叠行为在 work 模式原样保留）。 */
+  .body.code-mode .main-wrap{overflow:hidden}
+  .body.code-mode .main-wrap>.main{flex:1 1 auto;min-height:0;overflow-y:auto}
+  .body.code-mode .main-wrap>.chat-panel{
+    position:static;flex:0 0 50%;max-height:none;min-height:0;
+    overflow:hidden;border-top:1px solid var(--line)}
+  .body.code-mode .main-wrap>.chat-panel .chat,
+  .body.code-mode .main-wrap>.chat-panel.collapsed .chat{
+    display:flex;flex:1 1 auto;max-height:none;min-height:0;overflow-y:auto}
+  .body.code-mode .main-wrap>.chat-panel .chat-toolbar,
+  .body.code-mode .main-wrap>.chat-panel.collapsed .chat-toolbar{display:flex}
+  .body.code-mode .main-wrap>.chat-panel #chatPanelCollapse{display:none}
+  .body.code-mode .main-wrap>.chat-panel .chat-input-area{max-height:none}
   .body.code-mode .task-rail{grid-column:3;grid-row:1;width:auto;min-height:0}
   /* P2-5（2026-11-02）：code 模式的能力面在右下 agentDock（同源数据 + 2.5s 活轮询），
      右栏 Agent 节是同一批数据的静态副本——藏掉，避免两个入口两份渲染互相漂移。
@@ -5602,6 +5630,11 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   <header class="menubar">
     <div class="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M40 18.2A17 17 0 1 1 29.8 8"/><circle cx="24" cy="24" r="4.5" fill="currentColor" stroke="none"/><circle cx="38.8" cy="9.2" r="3.5" fill="currentColor" stroke="none"/></svg></span> <span data-i18n="app.name">Agent 工坊</span></div>
     <div class="mb-sp"></div>
+    <!-- 聊天区信息架构改造（2026-11-16）：会话管理是「导航」不是消息，从 AI 面板头部迁到应用顶栏。
+         id / title / aria / data-i18n-* 全部沿用，#chatSessionBtn 的 onclick 绑定按 ID 命中，零改 JS。
+         用独立的 .mi-session 类（不套 .mi）——窄屏 `@media(max-width:767px){.menubar .mi{display:none}}`
+         隐藏其它文字菜单时，会话管理入口仍需保留（窄屏也能浏览/切换会话）。 -->
+    <button type="button" class="mi mi-session" id="chatSessionBtn" data-i18n-title="a11y.sessionMgmt" title="会话管理" data-i18n-aria="a11y.openSessionMgmt" aria-label="打开会话管理"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="17" y2="12"/><line x1="3" y1="18" x2="13" y2="18"/></svg></button>
     <!-- B6：帮助菜单（§8 待决②结案）—— 四项全转既有真入口，无自造面板：
          快捷键说明→openCmd()／诊断报告→openDiagIssue()／用户手册→仓库文档外链／
          关于本应用→openDrawer()+_switchSetTab("set-about")（设置页既有 #set-about 卡）。 -->
@@ -5744,9 +5777,8 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
           <span data-i18n="chat.aiAssistant">AI 助手</span>
         </span>
         <!-- v1.10.0b：大模型选择器已下放到输入区（夹在 textarea 与发送之间，缩为 inline） -->
-        <!-- v2.0：会话管理入口（多 Session 存储层的浏览/管理弹窗）；v2.4.0 头部按钮改 SVG 图标 -->
-        <button class="chat-panel-collapse chat-ic-btn u-mr-1" id="chatSessionBtn" type="button" data-i18n-title="a11y.sessionMgmt" title="会话管理" data-i18n-aria="a11y.openSessionMgmt" aria-label="打开会话管理"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="17" y2="12"/><line x1="3" y1="18" x2="13" y2="18"/></svg></button>
-        <!-- v3.6.3：全站折叠/展开按钮共用同一个箭头 path「M15 18l-6-6 6-6」（原生朝左），形状来源单一；
+        <!-- 2026-11-16：会话管理按钮已迁到应用顶栏 menubar（导航归导航）；本头部只留标题 + 折叠。
+             v3.6.3：全站折叠/展开按钮共用同一个箭头 path「M15 18l-6-6 6-6」（原生朝左），形状来源单一；
              方向由 CSS transform 决定，规则是「箭头指向面板的移动方向」，左右互为镜像：
                左侧栏  展开 → 点击向左收起 → 朝左「<」（不旋转）    折叠 → 点击向右展开 → 朝右「>」（rotate 180）
                右侧栏  展开 → 点击向右收起 → 朝右「>」（rotate 180） 折叠 → 点击向左展开 → 朝左「<」（不旋转）
@@ -5774,7 +5806,6 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
           <button class="chat-attach-btn" id="chatAttachBtn" type="button" data-i18n-title="a11y.addAttachment" title="添加文本附件" data-i18n-aria="a11y.addAttachment" aria-label="添加文本附件">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
           </button>
-          <span class="ctx-budget-chip" id="ctxBudgetChip" data-i18n-aria="chat.budget.aria" aria-label="上下文预算占用"></span>
           <div class="chat-input-right">
             <select id="chatModelSelect" class="chat-model-inline" data-i18n-aria="a11y.selectModel" aria-label="选择 AI 模型" data-i18n-title="a11y.switchProfile" title="切换大模型 Profile"></select>
             <button class="chat-send-btn" id="chatSendBtn" type="submit" data-mode="send" data-i18n-title="a11y.send" title="发送" data-i18n-aria="a11y.sendMsg" aria-label="发送消息">
@@ -5866,7 +5897,12 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 
 <!-- 形态 A B1：statusbar 壳（IDE 三壳之一）。页脚由 appendFoot 写入（.foot-bar 三列）；
      原 .main > .foot / .overview-grid > .foot 死规与 .foot 基础样式（drawer 路径仍在用）留 B5 topbar 退役批同清。 -->
-<footer class="statusbar" id="statusbar"></footer>
+<footer class="statusbar" id="statusbar">
+  <!-- 2026-11-16：上下文预算芯片是「状态」不是输入控件，从 Composer 输入行迁到状态栏右侧常驻。
+       它是 #statusbar 的直接子节点、与 .foot-bar 平级——appendFoot() 只 remove/append
+       `:scope > .foot-bar`，本节点不受影响。渲染走 renderCtxBudgetChip() 的 $("#ctxBudgetChip")，按 ID 命中零改 JS。 -->
+  <span class="ctx-budget-chip status-ctx-chip" id="ctxBudgetChip" data-i18n-aria="chat.budget.aria" aria-label="上下文预算占用"></span>
+</footer>
 
 <!-- v1.15：侧栏功能组恢复为 图表（直接入口）+ 应用（独立页）+ 市场（独立页）。
      应用页含 日历/天气/闹钟/萌宠；指针特效已移入设置页。 -->
