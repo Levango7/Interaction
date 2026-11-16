@@ -693,14 +693,23 @@ function openSideSheet(groupGid){
   if(!g) return;
   /* 刀 2：work 组只剩「工作台」一个入口 ⇒ 底栏按钮直接导航，不开抽屉（抽屉里组头与入口同名无意义） */
   if(groupGid === "work"){ setActive("workbench"); render(); return; }
-  /* 2026-11-17（主流 Agent 化）：底栏「助手」组不再开导航抽屉，直接唤起 AI 聊天抽屉。
-     理由＝主流 Agent 的底部「对话」tab 就是打开对话，不是再弹一层导航；
-     且 assistant 组只有 aiNode 一个入口（打开 AI 配置页），放抽屉里等于"点助手先看到菜单再点一次"。
-     AI 配置页入口仍在：底栏「更多」组 → AI，及侧栏「助手/AI」。
-     __aiPanelExpand 由 ai-retry.js bindChatPanel 暴露，窄屏内部分支走 setChatDrawer(true)，
-     与 rail 展开键同一条真实通路（不新造抽屉逻辑）。 */
+  /* 2026-11-17（主流 Agent 化）：底栏「助手」＝对话 tab，**已配置**时直接唤起 AI 聊天抽屉，
+     不再先弹一层导航菜单（主流 Agent 的底部「对话」tab 点下去就是对话）。
+     ⚠️ 未配置时必须仍走抽屉：`aiNode`（AI 配置页）只挂在 assistant 组，
+     若一律直达聊天，移动端就**再也到不了 AI 配置页**——mobile.spec 的
+     「助手组 → 抽屉 → AI 页」正守这条（CI 环境无 Key ⇒ 走抽屉 ⇒ 该用例保持绿）。
+     故按 cfg.enabled 分流：已配置→聊天；未配置→抽屉（用户能进去填 Key）。
+     __aiPanelExpand 由 ai-retry.js bindChatPanel 暴露，窄屏内部走 setChatDrawer(true)，
+     与 rail 展开键同一条真实通路。 */
   if(groupGid === "assistant"){
-    try{ if(typeof window.__aiPanelExpand === "function"){ window.__aiPanelExpand(); return; } }catch(_e){ /* 展开失败则回退到开抽屉，不让点击变成无反应 */ }
+    /* 判定用 aiReadyProfile()，不是裸 cfg.enabled —— 后者只说明"开关打开"，
+       真正能对话还要求有效 profile（base + key）；只开了开关没填 Key 时直达聊天=开口即废。
+       未 ready ⇒ 落到下面开抽屉（AI 配置页可达，mobile.spec 那条用例正是这个前提）。 */
+    let _aiReady = null;
+    try{ _aiReady = (typeof aiReadyProfile === "function") ? aiReadyProfile() : null; }catch(_e){ _aiReady = null; }
+    if(_aiReady){
+      try{ if(typeof window.__aiPanelExpand === "function"){ window.__aiPanelExpand(); return; } }catch(_e){ /* 展开失败则回退开抽屉，不让点击变成无反应 */ }
+    }
   }
   _mobSheetGroup = g.gid; // v3.4.5：存 gid 与 _mobCurrentGroup 对齐
   if(title) title.textContent = g.name;
