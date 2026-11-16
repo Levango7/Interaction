@@ -147,41 +147,46 @@ describe("UI 一致性 · 侧栏高亮状态机（uiView）", () => {
     expect(h.activeCount).toBe(1);
   });
 
-  it("指南页点击场景按钮 → gear/help 均不高亮，且场景按钮高亮", () => {
+  it("指南页点击工作台按钮 → gear/help 均不高亮，且工作台入口高亮", () => {
+    /* 刀 2（2026-11-13）：场景不再进侧栏（收为单一「工作台」入口）；高亮链改钉工作台入口。
+       ⚠️ click 后 #side 被 render() 整体换过 innerHTML，btn 已脱页 —— 高亮必须重新查询。 */
     __test.renderHelp();
-    const btn = win.document.querySelector('#side .nav-item[data-sc="office"]');
+    const btn = win.document.querySelector('#side .nav-item[data-sc="workbench"]');
     expect(btn).toBeTruthy();
     btn.click();
     const h = highlightState();
     expect(h.gear).toBe(false);
     expect(h.help).toBe(false);
-    expect(h.sc.office).toBe(true);
     expect(h.activeCount).toBe(1);
+    const after = win.document.querySelector('#side .nav-item[data-sc="workbench"]');
+    expect(after.classList.contains("active")).toBe(true);
   });
 
-  it("全链路 openDrawer → renderHelp → 场景 render 后无高亮残留", () => {
+  it("全链路 openDrawer → renderHelp → 工作台 render 后无高亮残留", () => {
     __test.openDrawer();
     expect(highlightState().gear).toBe(true);
     __test.renderHelp();
     const h1 = highlightState();
     expect(h1.help).toBe(true);
     expect(h1.gear).toBe(false);
-    __test.setActive("office");
+    __test.setActive("workbench");
     __test.render();
     const h2 = highlightState();
     expect(h2.gear).toBe(false);
     expect(h2.help).toBe(false);
-    expect(h2.sc.office).toBe(true);
+    expect(win.document.querySelector('#side .nav-item[data-sc="workbench"]').classList.contains("active")).toBe(true);
     expect(h2.activeCount).toBe(1);
   });
 
-  it("主视图下场景高亮正常（uiView===\"main\"）", () => {
-    __test.setActive("study");
+  it("主视图下工作台入口高亮正常（uiView===\"main\"）", () => {
+    /* 刀 2（2026-11-13）：场景退出侧栏 ⇒ 钉工作台入口高亮 + 场景键全灭（不再有误高亮）。 */
+    __test.setActive("workbench");
     __test.render();
     const h = highlightState();
     expect(h.gear).toBe(false);
     expect(h.help).toBe(false);
-    expect(h.sc.study).toBe(true);
+    expect(Object.values(h.sc).every((v) => v === false), "场景键应全灭（侧栏已无场景入口）").toBe(true);
+    expect(win.document.querySelector('#side .nav-item[data-sc="workbench"]').classList.contains("active")).toBe(true);
     expect(h.activeCount).toBe(1);
   });
 });

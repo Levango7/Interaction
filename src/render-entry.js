@@ -96,6 +96,9 @@ function render(){
        而"忘密码"这件事在界面上根本无处可去（服务端也没有端点，见 auth.js 的注释）。 */
     if(active==="authreset"){ renderAuthReset(); appendFoot(); return; }
     if(active==="timeline"){ renderTimelinePage(); appendFoot(); return; } // v3.4.7 批次五：任务时间轴页
+    /* 刀 2（2026-11-16 接手续做）：work 组 7 场景 + 场景联动收为单一「工作台」入口后的落地页。
+       场景选择的事实源仍是 active + _formATabs（B2 注册表），本页只是入口面。 */
+    if(active==="workbench"){ renderWorkbenchPage(); appendFoot(); return; }
     const cfg=getCfg();
     // v1.9.7：标题块（renderSceneHead）独立成卡置于最前——消息栏正下方即场景标题，与后续内容块分离
     // v3.0：功能菜单（renderSceneFeatNav）独立于标题栏，置于标题卡与主内容之间
@@ -252,6 +255,57 @@ function formATabClose(id){
   _saveFormATabs();
   if(closedActive){ setActive(tabs[0].scene); }
   render();
+}
+
+/* 刀 2（2026-11-16 接手续做）：工作台 tile 的入口。有同场景 tab 就切过去（幂等，重复点不叠 tab），
+   没有就追加一个场景视图。tab 标题取场景名（与 _formATabsDefault 的「今日」字面不同——
+   这里是场景视图，不是默认视图的复制品）。 */
+function formATabOpenScene(scene){
+  if(typeof scene !== "string" || !scene) return;
+  const tabs = getFormATabs();
+  const hit = tabs.filter(function(x){ return x.scene === scene; })[0];
+  if(hit){ formATabSwitch(hit.id); return; }
+  const s = SCENARIOS[scene];
+  tabs.push({ id:"view-"+Date.now()+"-"+tabs.length, scene:scene, title:s ? s.name : scene });
+  _saveFormATabs();
+  if(active !== scene){ setActive(scene); }
+  render();
+}
+
+/* ---------- 刀 2（2026-11-16 接手续做）：工作台页（左栏 work 组收口后的单一入口） ----------
+ * 7 场景 + 场景联动 = 8 个 tile；点 tile = 开/切该场景的形态 A tab（formATabOpenScene）。
+ * 场景级数据（未完成任务数 / 启用联动数）与旧侧栏 cnt 同口径：getActiveTasks / getLinks。
+ * 不做第二份场景状态机——tile 只是指向 active 的入口，与 chainpage 页内 tab 同惯例。 */
+function renderWorkbenchPage(){
+  const open = getActiveTasks();
+  const tiles = ORDER.map(function(sc){
+    const s = SCENARIOS[sc]; if(!s) return "";
+    const n = open.filter(function(x){ return x.sc===sc && x.status!=="done"; }).length;
+    return '<button type="button" class="wb-tile" data-tile-sc="'+esc(sc)+'" style="--sc:'+scCss(s.color)+'">'
+      + '<span class="wb-tile-ic">'+(s.icon||"")+'</span>'
+      + '<span class="wb-tile-nm">'+esc(s.name)+'</span>'
+      + (n>0 ? '<span class="wb-tile-cnt">'+n+'</span>' : '')
+      + '</button>';
+  }).join("");
+  const chainN = (typeof getLinks === "function") ? (getLinks()||[]).filter(function(l){ return l.enabled; }).length : 0;
+  const html = '<div class="card page-head-card"><header class="page-head sc-page-head">'
+    + '<span class="ph-ic" aria-hidden="true">'+UI_ICONS.grid+'</span>'
+    + '<div class="ph-tx"><h2>'+esc(t("wb.title","工作台"))+'</h2><p class="sub">'+esc(t("wb.sub","选一个场景开始；顶部标签页可追加同名视图"))+'</p></div>'
+    + '</header></div>'
+    + '<div class="wb-grid">'
+    + tiles
+    + '<button type="button" class="wb-tile" data-tile-sc="chainpage" style="--sc:#0d9488">'
+    + '<span class="wb-tile-ic">'+(SIDE_MENU_ICONS.chain||"")+'</span>'
+    + '<span class="wb-tile-nm">'+esc(t("side.menu.chain","场景联动"))+'</span>'
+    + (chainN>0 ? '<span class="wb-tile-cnt">'+chainN+'</span>' : '')
+    + '</button>'
+    + '</div>';
+  $("#main").innerHTML = sanitizeHtml(html);
+  /* lint-xss：sanitizeHtml 会剥内联 onclick ⇒ 渲染后直接绑定（同 _renderRailFiles 的 #railOpenKb 惯例） */
+  $$("#main .wb-tile").forEach(function(b){
+    b.onclick = function(){ formATabOpenScene(b.getAttribute("data-tile-sc")); };
+  });
+  appendFoot();
 }
 
 /* v3.7.78 解耦：自别处下沉（同层序逆层消除） */

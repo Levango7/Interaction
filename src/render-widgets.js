@@ -91,11 +91,6 @@ function _buildSideMenu(){
     cnt:totalOpen>0?totalOpen:"", sc:"tasks",
     active: !_sideActive && _effActive==="tasks"
   };
-  const chainPageNode = {
-    id:"feat-chain", label:t("side.menu.chain", "场景联动"), icon:(SIDE_MENU_ICONS.chain||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#0d9488", // M7 NOTE: 与 --sc-data 场景色一致
-    cnt:"", sc:"chainpage",
-    active: !_sideActive && _effActive==="chainpage"
-  };
   // v3.4.7 批次五：任务时间机器——14 天 × 场景泳道回放（读 wb_agent_task_events 事件流）
   const timelineNode = {
     id:"feat-timeline", label:t("side.menu.timeline", "时间轴"), icon:(SIDE_MENU_ICONS.dash||SIDE_MENU_ICONS.chain||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#b87840",
@@ -103,18 +98,16 @@ function _buildSideMenu(){
     active: !_sideActive && _effActive==="timeline"
   };
 
-  /* ---- 场景组（ORDER 驱动，全部叶子节点；v2.4.0「数据」归位办公之后——数据分析入口） ---- */
-  const sceneNodes = ORDER.map(sc=>{
-    const s = SCENARIOS[sc];
-    if(!s) return null;
-    const open = tasks.filter(t=>t.sc===sc && t.status!=="done").length;
-    return {
-      id:"sc-"+sc, sc:sc, label:s.name, icon:(s.icon||"").replace("<svg","<svg aria-hidden=\"true\""),
-      color:s.color, cnt:open>0?open:"",
-      active: !_sideActive && sc===_effActive,
-      children: null
-    };
-  }).filter(Boolean);
+  /* ---- 刀 2（2026-11-16 接手续做）：work 组 7 场景 + 场景联动收为单一「工作台」入口。
+     场景选择的事实源交还形态 A _formATabs 注册表（工作台 tile 页 + 顶部 tab），侧栏不再背场景态；
+     各场景未完成数搬到 tile 角标（render-entry renderWorkbenchPage 同口径）。
+     组名与入口同名（工作台/工作台）：桌面侧栏抑制单节点组头（见 renderSide groupHtml）、
+     移动底栏点该组直接导航（见 openSideSheet），两处都不出现重名二段。 ---- */
+  const workbenchNode = {
+    id:"feat-workbench", label:t("side.menu.workbench", "工作台"), icon:(UI_ICONS.grid||"").replace("<svg","<svg aria-hidden=\"true\""),
+    color:"var(--accent)", cnt:"", sc:"workbench",
+    active: !_sideActive && _effActive==="workbench"
+  };
 
   /* ---- 应用组：AI（大模型/agent） / 工具箱 / 商店（v2.4.0） ---- */
   const aiNode = {
@@ -156,7 +149,7 @@ function _buildSideMenu(){
        AI=助手；工具箱+商店+回收站+设置+说明=更多。旧 gid（overview/scenario/ai/tools/system）
        不再出现在菜单里，移动端底栏与抽屉随 gid 自动变成 4 组。 */
     {gid:"today", name:t("side.group.today", "今日"), nodes:[overviewNode, tasksNode, timelineNode]},
-    {gid:"work", name:t("side.group.work", "工作台"), nodes:[...sceneNodes, chainPageNode]},
+    {gid:"work", name:t("side.group.work", "工作台"), nodes:[workbenchNode]},
     {gid:"assistant", name:t("side.group.assistant", "助手"), nodes:[aiNode]},
     {gid:"more", name:t("side.group.more", "更多"), nodes:[toolboxNode, storeNode, recycleNode, gearNode, helpNode]}
   ];
@@ -195,7 +188,9 @@ function renderSide(){
   };
 
   const groups = _buildSideMenu();
-  const groupHtml = (g)=> '<div class="nav-group">'+g.name+'</div>' + g.nodes.map(nodeHtml).join("");
+  /* 刀 2：work 组收为单入口后组头与入口同名（工作台/工作台）⇒ 该组不渲染组头。
+     仅影响 work 组（assistant 组虽也单节点，但「助手/AI」两名不同义，保留组头）。 */
+  const groupHtml = (g)=> (g.gid==="work" ? "" : '<div class="nav-group">'+g.name+'</div>') + g.nodes.map(nodeHtml).join("");
   $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + groups.map(groupHtml).join(""));
 
   /* 激活子项的父分支自动展开（一次性同步，不触发额外存储写） */
@@ -629,6 +624,8 @@ function openSideSheet(groupGid){
   const groups = _buildSideMenu();
   const g = groups.find(x=>x.gid===groupGid); // v3.4.5：按 gid 查找（语言无关）；调用方 data-mob-group 现传 gid
   if(!g) return;
+  /* 刀 2：work 组只剩「工作台」一个入口 ⇒ 底栏按钮直接导航，不开抽屉（抽屉里组头与入口同名无意义） */
+  if(groupGid === "work"){ setActive("workbench"); render(); return; }
   _mobSheetGroup = g.gid; // v3.4.5：存 gid 与 _mobCurrentGroup 对齐
   if(title) title.textContent = g.name;
   const rows = [];

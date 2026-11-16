@@ -1923,6 +1923,26 @@ input[data-date-picker]::placeholder{color:var(--muted)} /* v3.7.14：跟随全�
    根因在某个渲染路径的 DOM 拼装（外层外壳被提前闭合），此处只兜底外观：
    **仅匹配 main 的直属子元素**，卡片内的 `.tool-form-box`（_featureCardHtml 那一族）不受影响。 */
 main > .tool-form-box{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);padding:var(--space-4) var(--space-4) var(--space-3);margin-bottom:var(--space-3)}
+/* 刀 2（2026-11-16 接手续做）：工作台 tiles 页 */
+.wb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--space-2);
+  padding-bottom:var(--space-4)}
+.wb-tile{display:grid;grid-template-columns:auto 1fr;align-items:center;column-gap:var(--space-1h);row-gap:var(--space-1h);
+  padding:var(--space-2);border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--panel);
+  cursor:pointer;text-align:left;transition:border-color .15s,box-shadow .15s}
+.wb-tile:hover{border-color:var(--sc);box-shadow:var(--shadow-1)}
+.wb-tile-ic{grid-column:1;grid-row:1;width:32px;height:32px;border-radius:var(--radius-md);
+  display:inline-flex;align-items:center;justify-content:center;
+  background:color-mix(in srgb,var(--sc) 14%,transparent);color:var(--sc)}
+.wb-tile-ic svg{width:var(--icon-md);height:var(--icon-md)}
+.wb-tile-nm{grid-column:1 / -1;grid-row:2;font-size:var(--fs-sm);font-weight:600;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wb-tile-cnt{grid-column:2;grid-row:1;justify-self:end;font-size:var(--fs-2xs);line-height:1.4;
+  padding:0 var(--space-1h);border-radius:var(--radius-full);
+  background:color-mix(in srgb,var(--sc) 14%,transparent);color:var(--sc)}
+@media(max-width:767px){
+  /* 窄屏 2 列：场景名 ≤4 字单行放得下 */
+  .wb-grid{grid-template-columns:repeat(2,1fr)}
+}
 /* v3.0.1 B-5：功能卡通用提示行 / 数据可视化迷你图表 */
 .tool-hint{margin:var(--space-2) 0 0;font-size:var(--fs-xs);color:var(--muted)}
 /* v3.2 A 3/3：缴费近 7 天到期列表（白领下午杂事场景） */

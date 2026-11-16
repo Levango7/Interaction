@@ -3,6 +3,19 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-16 · **刀 2（左栏工作台收口 + tiles 页）——孤儿批接手续做，只落刀 2**
+
+_来源：`F:/wt/wb-ui-c23` 上 2026-11-13 的孤儿批（刀 2 左栏 + 刀 3 右栏三段交织在同一批文件，从未提交）。用户 11-15 裁「ORPHAN」、11-16 先裁「确认他不会再做，你来做」、再裁「**只落刀 2，弃刀 3 右栏，保留已发版 B4 四节**」。为什么弃刀 3：刀 3 的右栏「Qoder 式三段（更新卡/后台进程/产出链接）」与用户 11-14 拍板、已发版上线的 B4「四节堆叠（今日/Agent/文件/会话）」是同一位置的互斥设计，B4 是更新裁定，回退它风险最大。本批**不含任何刀 3 代码**（`_renderRailUpdate`/`_renderRailProc`/`_renderRailOut`/`_renderMenubarSessions`/`_bindMenubarViews`/menubar 会话视图组/`rail-segments`/`rail.upd.*`/`rail.proc.*`/`rail.out.*` 全部零引入，已机械断言）。_
+
+- **`src/render-widgets.js`**：`_buildSideMenu` 删 `chainPageNode` + `sceneNodes`（7 场景 + 场景联动不再占侧栏入口），收为单一 `workbenchNode`（`sc:"workbench"`）；work 组 `nodes:[workbenchNode]`；`renderSide` 的 `groupHtml` 对 work 组不渲染组头（组名与入口同名「工作台」，避免重名二段）；`openSideSheet` 移动底栏点 work 组直接导航工作台（不开抽屉）。刀 3 的 `renderSide` 会话视图调用、右栏三段函数、`applyUIMode` 删 `_railTabGet` 让位逻辑——**一律不取**，B4/B6 原样保留。
+- **`src/render-entry.js`**：`render()` 加 `active==="workbench"` 分支；新增 `renderWorkbenchPage()`（7 场景 + 场景联动 = 8 个 `.wb-tile`，角标＝未完成任务数/启用联动数，点 tile 走 `formATabOpenScene`）与 `formATabOpenScene()`（有同场景 tab 就切、幂等不叠，没有才追加场景视图）。复用 `_formATabs` 注册表为事实源，不做第二份场景状态机。
+- **`src/core-i18n.js`**：`side.menu.workbench` / `wb.title` / `wb.sub` 三键 zh/en（各有 1 处真实 `t()` 引用，不触发死键门禁）。**只加刀 2 三键**，孤儿里刀 3 删 `rail.tab.*`/`taskRail.*`、改 `taskRail.title` 文案、加 `rail.upd.*` 等一律不取。
+- **`agent-workbench.html`**：`.wb-grid` / `.wb-tile*` / 窄屏 2 列媒体查询注入（18 行，与孤儿原版逐字节一致）。
+- **`tests/workbench-tiles.test.js`（新，6 例）**：侧栏单入口与场景退出 / 8 tile 目的地 / 点 tile 开场景 tab / 幂等不叠 / 空名死输入（反向对照）/ 刀 3 零引入反向对照（B4 `.rr-sec` 与 B6 `#helpMenu` 仍在、三段函数不存在）。
+- **`tests/ia-three-zones.test.js` + `tests/ui-consistency.test.js`**：断言从「场景占侧栏入口」改钉「工作台单入口 + 场景全灭」（孤儿纯刀 2 改动，整体移植）。
+- **验证**：刀 2 相关三文件单测 **31/31 passed**（新测 6 例全绿，含 2 条反向对照）；`npm run lint` **rc=0**（CSS 结构 2781 条规则括号配平 / xss 0 违规 / src-split 40 块逐块一致；12 个 eslint warning 为预存 0 errors）；`src:check` 40 块齐全。全量 `npm run test:local` **246 文件 241 passed / 3 failed、2649 tests passed / 4 failed** —— 三红全部与本批零相关且已逐个坐实：① `tests/prod-startup-guard.test.js` A/B/C 三例 + ② `tests/server-sms-providers.test.js` 文件级，根因 `Cannot find module 'express'`（本树缺 server 依赖的预存环境性，与 B4/B6 同签名）；③ `tests/cloud-sync-stage2.test.js` 1 例 `Test timed out in 60000ms`（实耗 170704ms，同文件另 24 例全过、与侧栏/workbench 零引用），**单跑该文件 25/25 全绿** ⇒ CPU 饥饿型 flake，未改任何超时/判据。
+- **高共写面声明**：`CHANGELOG.md` 仅 `[Unreleased]` 追加本节；workflow / `package-lock.json` / node_modules / server / electron 零改动（孤儿里的 package-lock `engines` 位置重排是噪声，未纳入）。孤儿树 `F:/wt/wb-ui-c23` 一字未动，完整现场另存仓外 `wb-ui-c23-orphan-snapshot-2026-11-15/current-2026-11-16/`。
+
 ### 2026-11-14 · **UI 形态 A B6：专注模式 + 帮助菜单（§8 三条待决结案）**
 
 _用户 11-14 两句裁定：「加专注模式按钮（推荐）」+「一组「帮助」菜单（推荐）」。_

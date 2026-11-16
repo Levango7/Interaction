@@ -24,7 +24,7 @@ async function startApp() {
 }
 
 describe("三区导航契约", () => {
-  it("桌面菜单树：4 组、17 个入口、每个入口都有目的地", async () => {
+  it("桌面菜单树：4 组、10 个入口、每个入口都有目的地（刀 2：work 组收成单一「工作台」入口）", async () => {
     const win = await startApp();
     const groups = win._buildSideMenu();
     expect(groups.map((g) => g.gid), "组 id 必须是今日/工作台/助手/更多").toEqual([
@@ -32,31 +32,34 @@ describe("三区导航契约", () => {
     ]);
 
     const nodes = groups.flatMap((g) => g.nodes);
-    expect(nodes.length, "17 个入口一个都不能丢").toBe(17);
+    expect(nodes.length, "10 个入口一个都不能丢（17 - 7 场景 - 联动 + 1 工作台）").toBe(10);
 
     const hasDest = (n) =>
       !!(n.sc || n.menuId || /data-(aipage|gear|help)/.test(n.extraAttrs || ""));
     const missing = nodes.filter((n) => !hasDest(n)).map((n) => n.id);
     expect(missing, "以下节点没有任何目的地（占位死项）：" + missing.join(",")).toEqual([]);
 
+    /* 刀 2（2026-11-13）：7 场景 + 场景联动不再占侧栏入口 —— 场景选择交还形态 A
+       _formATabs 注册表（工作台页 8 个 tile + 顶部标签页，见 render-entry renderWorkbenchPage）；
+       侧栏只剩单一「工作台」入口（sc=workbench）。 */
+    expect(nodes.filter((n) => n.sc === "workbench").length, "工作台入口必须在").toBe(1);
     const scs = nodes.map((n) => n.sc).filter(Boolean);
-    for (const sc of ["office", "data", "design", "study", "code", "life", "health"]) {
-      expect(scs, `场景 ${sc} 必须仍在菜单里`).toContain(sc);
+    for (const sc of ["office", "data", "design", "study", "code", "life", "health", "chainpage"]) {
+      expect(scs.includes(sc), `场景 ${sc} 不应再占侧栏入口（去工作台 tile）`).toBe(false);
     }
-    for (const sc of ["overview", "tasks", "timeline", "chainpage", "toolbox", "store", "recycle"]) {
-      expect(scs, `入口 ${sc} 必须仍在菜单里`).toContain(sc);
+    for (const sc of ["overview", "tasks", "timeline", "toolbox", "store", "recycle"]) {
+      expect(scs.includes(sc), `入口 ${sc} 必须仍在菜单里`).toBe(true);
     }
     expect(nodes.some((n) => n.menuId === "feat-ai"), "AI 入口必须在").toBe(true);
     expect(nodes.some((n) => n.extraAttrs && n.extraAttrs.includes("data-gear")), "设置入口必须在").toBe(true);
     expect(nodes.some((n) => n.extraAttrs && n.extraAttrs.includes("data-help")), "说明入口必须在").toBe(true);
   });
 
-  it("分组归属：场景与联动在工作台，AI 在助手，工具箱/商店/回收站/设置/说明在更多", async () => {
+  it("分组归属：工作台单入口在工作台组，AI 在助手，工具箱/商店/回收站/设置/说明在更多", async () => {
     const win = await startApp();
     const g = Object.fromEntries(win._buildSideMenu().map((x) => [x.gid, x.nodes]));
-    expect(g.work.map((n) => n.sc).filter(Boolean)).toEqual(
-      expect.arrayContaining(["office", "data", "design", "study", "code", "life", "health", "chainpage"]),
-    );
+    expect(g.work.map((n) => n.id)).toEqual(["feat-workbench"]);
+    expect(g.work[0].sc).toBe("workbench");
     expect(g.assistant.some((n) => n.menuId === "feat-ai")).toBe(true);
     const moreSc = g.more.map((n) => n.sc).filter(Boolean);
     for (const sc of ["toolbox", "store", "recycle"]) expect(moreSc).toContain(sc);
