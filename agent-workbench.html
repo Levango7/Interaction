@@ -1082,6 +1082,27 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   padding:var(--space-3) var(--space-2);overflow:auto;flex-shrink:0;transition:width .2s ease}
 /* v3.7.37（控件矩阵 P1）：min-height 30 → 32px —— 实测渲染 31px，
    低于可点击区建议下限 32px（触控/鼠标精度）。侧栏是全站最高频的点击区。 */
+/* 2026-11-17（主流 Agent 化）：左栏顶部「最近会话」区。主流 Agent 左栏首屏是会话历史，
+   不是功能菜单。本区块独立 class（不套 .nav-item），因此不改变「10 个导航入口」的既有断言。 */
+.side-sess{padding:0 0 var(--space-2);margin:0 0 var(--space-2);
+  border-bottom:1px solid color-mix(in srgb,var(--line) 45%,transparent)}
+.side-sess-head{display:flex;align-items:center;justify-content:space-between;padding:2px var(--space-2) var(--space-1)}
+.side-sess-t{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.06em}
+.side-sess-new{width:22px;height:22px;padding:0;border:0;background:transparent;color:var(--muted);
+  cursor:pointer;border-radius:var(--radius-sm);font-size:var(--fs-sm);line-height:1;
+  display:inline-flex;align-items:center;justify-content:center}
+.side-sess-new:hover{background:var(--accent-soft);color:var(--accent-text,var(--accent))}
+.side-sess-item{display:block;width:100%;text-align:left;padding:4px var(--space-2);border:0;
+  background:transparent;color:var(--text-dim);font-size:var(--fs-xs);border-radius:var(--radius-sm);
+  cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-sess-item:hover{background:var(--surface-hover);color:var(--text)}
+.side-sess-item.is-active{background:color-mix(in srgb,var(--accent) 12%,transparent);
+  color:var(--accent-text,var(--accent))}
+.side-sess-empty{padding:2px var(--space-2);font-size:var(--fs-2xs);color:var(--text-faint)}
+.side-sess-all{display:block;width:100%;text-align:left;padding:4px var(--space-2);border:0;
+  background:transparent;color:var(--muted);font-size:var(--fs-2xs);cursor:pointer;
+  border-radius:var(--radius-sm);margin-top:2px}
+.side-sess-all:hover{color:var(--accent-text,var(--accent));background:var(--accent-soft)}
 .nav-item{display:flex;align-items:center;gap:var(--space-2);width:100%;padding:6px var(--space-2);
   border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text);margin-bottom:2px;
   text-align:left;transition:background var(--transition-fast),color var(--transition-fast);position:relative;
@@ -2217,6 +2238,14 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
   padding:3px 10px;font-size:var(--fs-xs);color:var(--text-dim);cursor:pointer;line-height:1.6;
   transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast)}
 .chat-suggest .chip:hover{background:var(--accent-soft);color:var(--accent-text,var(--accent));border-color:var(--accent)}
+/* 2026-11-17：未配置态的能力清单（填补消息下方空白）。消息流内内容，不挤压输入区、
+   不占常驻高度——与 2026-09-23 用户去掉的「去配置」常驻条不是一回事。 */
+.chat-empty-guide{margin-top:var(--space-3);padding:var(--space-3);border:1px dashed color-mix(in srgb,var(--line) 80%,transparent);
+  border-radius:var(--radius-md);background:color-mix(in srgb,var(--panel2) 50%,transparent)}
+.chat-empty-guide-t{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.04em;margin-bottom:var(--space-2)}
+.chat-empty-guide ul{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:var(--space-1)}
+.chat-empty-guide li{font-size:var(--fs-xs);color:var(--text-dim);line-height:1.5}
+.chat-empty-guide li::marker{color:var(--accent)}
 .chat-form input{flex:1;min-width:0}
 .chat-form .addbtn{flex-shrink:0}
 .msg.tool{background:var(--banner-bg);border:1px dashed var(--banner-border-2);font-size:var(--fs-xs);color:var(--banner-ink)}
@@ -10050,6 +10079,13 @@ const MESSAGES = {
     "option.native": "原生",
     "p3.html.aiGreetingPrefix": "<div class=\"msg assistant\">你好，我是",
     "p3.html.aiGreetingSuffix": "助手。尚未启用 AI：点击右上角「设置」填入 API Key，即可对话并调用工具修改数据。</div>",
+    "chat.emptyGuide.title": "启用后可以直接让我做",
+    "chat.emptyGuide.item1": "建任务、改状态、跨场景整理",
+    "chat.emptyGuide.item2": "查总览、按条件检索已有数据",
+    "chat.emptyGuide.item3": "把一段需求画成架构图 / 流程图",
+    "chat.emptyGuide.item4": "检索知识库文件并带出处引用",
+    "side.sess.title": "最近会话",
+    "side.sess.all": "全部会话",
     "p3.html.batchChk": "<input type=\"checkbox\" class=\"batch-chk\" aria-label=\"选择此任务\">",
     "p3.html.chartEmpty": "<div class=\"mini-chart-empty\">暂无可视化数据 · 在「数据点」中填入 JSON 数组，如 [{\"label\":\"Q1\",\"value\":30}]</div>",
     "p3.html.countPrefix": "<span class=\"sub\" class=\"u-m-0\">共 ",
@@ -14257,6 +14293,13 @@ const MESSAGES = {
     "option.native": "Native",
     "p3.html.aiGreetingPrefix": "<div class=\"msg assistant\">Hi, I am your ",
     "p3.html.aiGreetingSuffix": " assistant. AI is not enabled yet: click \"Settings\" in the top-right corner, enter your API Key, and you can chat and call tools to modify data.</div>",
+    "chat.emptyGuide.title": "Once enabled, you can ask me to",
+    "chat.emptyGuide.item1": "Create tasks, change status, tidy up across scenes",
+    "chat.emptyGuide.item2": "Read overviews and search existing data by condition",
+    "chat.emptyGuide.item3": "Turn a requirement into an architecture / flow diagram",
+    "chat.emptyGuide.item4": "Retrieve knowledge-base files with source citations",
+    "side.sess.title": "Recent sessions",
+    "side.sess.all": "All sessions",
     "p3.html.batchChk": "<input type=\"checkbox\" class=\"batch-chk\" aria-label=\"Select this task\">",
     "p3.html.chartEmpty": "<div class=\"mini-chart-empty\">No chart data · enter a JSON array in the Data points field, e.g. [{\"label\":\"Q1\",\"value\":30}]</div>",
     "p3.html.countPrefix": "<span class=\"sub\" class=\"u-m-0\">Total ",
@@ -25788,6 +25831,28 @@ function _buildSideMenu(){
 function renderSide(){
   const expanded = _loadSideExpanded();
 
+  /* 2026-11-17（主流 Agent 化，用户：'左栏仍是导航菜单样式'）：左栏顶部加「最近会话」快捷区。
+     只加会话区，功能导航组原样保留在下方——10 个入口一个不丢（ia-three-zones 钉 nodes.length===10，
+     `#side .nav-item` 数量由 nav-pages-smoke 的 waitSideNav(page,10) 守）。本区块**不用 .nav-item 类**，
+     故两条断言均不受影响。 */
+  const sideSessionsHtml = function(){
+    let list = [], act = "";
+    try{ list = getSessions() || []; }catch(_e){ list = []; }
+    try{ act = getActiveSession() || ""; }catch(_e){ act = ""; }
+    const items = list.slice(0, 4).map(function(s2){
+      const title = s2.title || t("sess.new", "新会话");
+      return '<button type="button" class="side-sess-item' + (s2.id === act ? " is-active" : "")
+        + '" data-sess-id="' + esc(s2.id) + '" title="' + esc(title) + '">' + esc(title) + "</button>";
+    }).join("");
+    return '<div class="side-sess">'
+      + '<div class="side-sess-head"><span class="side-sess-t">' + esc(t("side.sess.title", "最近会话")) + "</span>"
+      + '<button type="button" class="side-sess-new" data-sess-new="1" title="' + esc(t("dock.newSession", "新建会话"))
+      + '" aria-label="' + esc(t("dock.newSession", "新建会话")) + '">＋</button></div>'
+      + (items || '<div class="side-sess-empty">' + esc(t("dock.noSessions", "暂无会话")) + "</div>")
+      + '<button type="button" class="side-sess-all" data-sess-all="1">' + esc(t("side.sess.all", "全部会话")) + "</button>"
+      + "</div>";
+  };
+
   /* 子项渲染：圆点标记 + 标签（v3.0.2：stub:「新」角标机制已随 stub:true 清理移除） */
   const subBtn = (nodeId, it)=>{
     const act = (_sideActive===it.id) ? " active" : "";
@@ -25815,7 +25880,7 @@ function renderSide(){
   /* 刀 2：work 组收为单入口后组头与入口同名（工作台/工作台）⇒ 该组不渲染组头。
      仅影响 work 组（assistant 组虽也单节点，但「助手/AI」两名不同义，保留组头）。 */
   const groupHtml = (g)=> (g.gid==="work" ? "" : '<div class="nav-group">'+g.name+'</div>') + g.nodes.map(nodeHtml).join("");
-  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + groups.map(groupHtml).join(""));
+  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + sideSessionsHtml() + groups.map(groupHtml).join(""));
 
   /* 激活子项的父分支自动展开（一次性同步，不触发额外存储写） */
   if(_sideActive){
@@ -26173,6 +26238,30 @@ function setupSideMenu(){
   if(!side || side._menuBound) return;
   side._menuBound = true;
   side.addEventListener("click", (e)=>{
+    /* 2026-11-17：左栏「最近会话」区（独立 class，先于 .nav-item 分支处理） */
+    const sessItem = e.target && e.target.closest ? e.target.closest(".side-sess-item") : null;
+    if(sessItem){
+      const sid = sessItem.getAttribute("data-sess-id");
+      if(sid && typeof switchSession === "function"){
+        const ok = switchSession(sid);
+        if(ok !== false){ if(typeof renderChat === "function"){ const _c=(typeof getCfg==="function")?getCfg():null; if(_c && !_c.enabled && typeof renderChatDisabled==="function") renderChatDisabled(); else renderChat(); } if(typeof render === "function") render(); }
+      }
+      return;
+    }
+    const sessNew = e.target && e.target.closest ? e.target.closest("[data-sess-new]") : null;
+    if(sessNew){
+      try{
+        let sc = "office";
+        try{ const cur = getActiveSessionObj(); sc = (cur && cur.sc) || (typeof getActive === "function" ? getActive() : "office"); }catch(_e){ /* 回 office */ }
+        const ns = createSession(sc, t("sess.new", "新会话"));
+        if(ns && ns.id){ switchSession(ns.id); if(typeof render === "function") render(); }
+      }catch(_e3){ /* 新建失败不阻塞侧栏（非诊断兜底，故不沿用 _e2 命名——那个名字被
+                       empty-catch-slice4 约定为"pushDiag 二次保护"的配对标记） */ }
+      return;
+    }
+    const sessAll = e.target && e.target.closest ? e.target.closest("[data-sess-all]") : null;
+    if(sessAll){ if(typeof openSessionModal === "function") openSessionModal(); return; }
+
     const btn = e.target && e.target.closest ? e.target.closest(".nav-item") : null;
     if(!btn) return;
     const _m = $("#main"); if(_m) _m.scrollTop = 0; const _mw = document.querySelector(".main-wrap"); if(_mw) _mw.scrollTop = 0;
@@ -26271,6 +26360,24 @@ function openSideSheet(groupGid){
   if(!g) return;
   /* 刀 2：work 组只剩「工作台」一个入口 ⇒ 底栏按钮直接导航，不开抽屉（抽屉里组头与入口同名无意义） */
   if(groupGid === "work"){ setActive("workbench"); render(); return; }
+  /* 2026-11-17（主流 Agent 化）：底栏「助手」＝对话 tab，**已配置**时直接唤起 AI 聊天抽屉，
+     不再先弹一层导航菜单（主流 Agent 的底部「对话」tab 点下去就是对话）。
+     ⚠️ 未配置时必须仍走抽屉：`aiNode`（AI 配置页）只挂在 assistant 组，
+     若一律直达聊天，移动端就**再也到不了 AI 配置页**——mobile.spec 的
+     「助手组 → 抽屉 → AI 页」正守这条（CI 环境无 Key ⇒ 走抽屉 ⇒ 该用例保持绿）。
+     故按 cfg.enabled 分流：已配置→聊天；未配置→抽屉（用户能进去填 Key）。
+     __aiPanelExpand 由 ai-retry.js bindChatPanel 暴露，窄屏内部走 setChatDrawer(true)，
+     与 rail 展开键同一条真实通路。 */
+  if(groupGid === "assistant"){
+    /* 判定用 aiReadyProfile()，不是裸 cfg.enabled —— 后者只说明"开关打开"，
+       真正能对话还要求有效 profile（base + key）；只开了开关没填 Key 时直达聊天=开口即废。
+       未 ready ⇒ 落到下面开抽屉（AI 配置页可达，mobile.spec 那条用例正是这个前提）。 */
+    let _aiReady = null;
+    try{ _aiReady = (typeof aiReadyProfile === "function") ? aiReadyProfile() : null; }catch(_e){ _aiReady = null; }
+    if(_aiReady){
+      try{ if(typeof window.__aiPanelExpand === "function"){ window.__aiPanelExpand(); return; } }catch(_e){ /* 展开失败则回退开抽屉，不让点击变成无反应 */ }
+    }
+  }
   _mobSheetGroup = g.gid; // v3.4.5：存 gid 与 _mobCurrentGroup 对齐
   if(title) title.textContent = g.name;
   const rows = [];
@@ -29586,7 +29693,16 @@ function applyUIMode(){
   }
   /* 2026-11-07：空对话的快捷指令随模式变（见 chatSuggestHtml）——模式切换后要重画聊天区，
      否则用户切到 code/design 仍看到 work 的四条提示。 */
-  try{ if(typeof renderChat === "function") renderChat(); }catch(_e){ /* 聊天区重绘失败不阻断模式切换 */ }
+  /* 2026-11-07：空对话的快捷指令随模式变（见 chatSuggestHtml）——模式切换后要重画聊天区，
+     否则用户切到 code/design 仍看到 work 的四条提示。
+     2026-11-17 修：此处原先无条件 renderChat()，**绕过了「AI 是否已配置」的判定**
+     （该判定只存在于 render-entry 的 render()：cfg.enabled ? renderChat : renderChatDisabled），
+     导致切一次模式就把未配置态的引导覆盖成已配置态的欢迎语。现在按同一判据分流。 */
+  try{
+    const _cfg = (typeof getCfg === "function") ? getCfg() : null;
+    if(_cfg && !_cfg.enabled && typeof renderChatDisabled === "function") renderChatDisabled();
+    else if(typeof renderChat === "function") renderChat();
+  }catch(_e){ /* 聊天区重绘失败不阻断模式切换 */ }
 }
 function toggleUIMode(){
   const cur = _uiMode();
@@ -38621,16 +38737,28 @@ function chatSuggestHtml(){
 function renderChatDisabled(){
   const el=$("#chat"); if(!el) return;
   const s = SCENARIOS[active] || {name:""};
+  /* 2026-11-17：未配置态补「能做什么」引导，填掉消息下方的整片空白（用户：'对话区大面积空白'）。
+     ⚠️ 不加「去配置」按钮/常驻条 —— 那是 2026-09-23 用户明确要求去掉的（87px 条挤压输入区 +
+     提示本身已写明配置路径，属重复引导）。这里只加**消息流内的内容**：不挤压输入区、随消息滚动。 */
+  const items = [
+    t("chat.emptyGuide.item1", "建任务、改状态、跨场景整理"),
+    t("chat.emptyGuide.item2", "查总览、按条件检索已有数据"),
+    t("chat.emptyGuide.item3", "把一段需求画成架构图 / 流程图"),
+    t("chat.emptyGuide.item4", "检索知识库文件并带出处引用")
+  ];
   el.innerHTML = sanitizeHtml(
     t("p3.html.aiGreetingPrefix","<div class=\"msg assistant\">你好，我是") + esc(s.name) +
-    t("p3.html.aiGreetingSuffix","助手。尚未启用 AI：点击右上角「设置」填入 API Key，即可对话并调用工具修改数据。</div>")
+    t("p3.html.aiGreetingSuffix","助手。尚未启用 AI：点击右上角「设置」填入 API Key，即可对话并调用工具修改数据。</div>") +
+    '<div class="chat-empty-guide"><div class="chat-empty-guide-t">' +
+    esc(t("chat.emptyGuide.title", "启用后可以直接让我做")) + "</div><ul>" +
+    items.map(function(x){ return "<li>" + esc(x) + "</li>"; }).join("") + "</ul></div>"
   );
   /* v3.7.20：**移除「去配置」行动条**（用户 2026-09-23 截图标注"去掉"）。
      历史：v3.7.18 把按钮从消息流末位移到输入框上方做成常驻状态条，
      但那条 87px 高的条会挤压输入区 —— CI e2e 在 1280×800 下报
      "waiting for element to be visible, enabled and stable" 超时（发送按钮位置不稳）。
      且提示消息本身已写明"点击右上角「设置」填入 API Key"，按钮属重复引导。
-     → 整条删除，只保留提示气泡。 */
+     → 整条删除，只保留提示气泡。2026-11-17 补的能力清单是**消息流内容**，不是状态条，不违背本条。 */
 }
 
 /* ---------- 右侧 AI 聊天面板（三栏布局第三栏）·事件绑定 ----------
