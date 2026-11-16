@@ -1111,6 +1111,10 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .nav-item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nav-item .cnt{font-size:var(--fs-xs);background:var(--surface-muted);border-radius:var(--radius-md);
   padding:1px 8px;color:var(--text-dim-2);min-width:20px;text-align:center}
+/* 2026-11-17（IA 收敛）：AI 未就绪时「AI」入口的「待配置」标记——从计数样式改成语义胶囊，
+   与数字徽标区分开（背景/前景取 accent-soft + accent，不新增色值）。 */
+.nav-item[data-need-cfg] .cnt{padding:1px 6px;font-size:var(--fs-2xs);min-width:0;
+  background:var(--accent-soft);color:var(--accent-text,var(--accent));white-space:nowrap}
 .nav-item:hover{background:var(--surface-hover)}
 /* v1.9.5：侧栏为专属浅灰背景时，hover 提亮为白，保证在灰底上可辨（暗色主题 panel 亦深于 side-bg） */
 .side .nav-item:hover{background:var(--surface-hover)}
@@ -10086,6 +10090,7 @@ const MESSAGES = {
     "chat.emptyGuide.item4": "检索知识库文件并带出处引用",
     "side.sess.title": "最近会话",
     "side.sess.all": "全部会话",
+    "side.ai.needCfg": "待配置",
     "p3.html.batchChk": "<input type=\"checkbox\" class=\"batch-chk\" aria-label=\"选择此任务\">",
     "p3.html.chartEmpty": "<div class=\"mini-chart-empty\">暂无可视化数据 · 在「数据点」中填入 JSON 数组，如 [{\"label\":\"Q1\",\"value\":30}]</div>",
     "p3.html.countPrefix": "<span class=\"sub\" class=\"u-m-0\">共 ",
@@ -14300,6 +14305,7 @@ const MESSAGES = {
     "chat.emptyGuide.item4": "Retrieve knowledge-base files with source citations",
     "side.sess.title": "Recent sessions",
     "side.sess.all": "All sessions",
+    "side.ai.needCfg": "Setup needed",
     "p3.html.batchChk": "<input type=\"checkbox\" class=\"batch-chk\" aria-label=\"Select this task\">",
     "p3.html.chartEmpty": "<div class=\"mini-chart-empty\">No chart data · enter a JSON array in the Data points field, e.g. [{\"label\":\"Q1\",\"value\":30}]</div>",
     "p3.html.countPrefix": "<span class=\"sub\" class=\"u-m-0\">Total ",
@@ -25777,10 +25783,15 @@ function _buildSideMenu(){
   };
 
   /* ---- 应用组：AI（大模型/agent） / 工具箱 / 商店（v2.4.0） ---- */
+  /* 2026-11-17（IA 收敛）：AI 未就绪时在「AI」入口挂「待配置」小标记——
+     未配置时左栏 10 个入口里只有这一件事是真该做的，标记把它显性化；
+     不删任何入口、不改结构（避免动 nav-pages-smoke 直接 click 子项的路径）。 */
+  let _aiNeedCfg = false;
+  try{ _aiNeedCfg = (typeof aiReadyProfile === "function") ? !aiReadyProfile() : false; }catch(_e){ _aiNeedCfg = false; }
   const aiNode = {
     id:"feat-ai", label:t("page.ai.title", "AI"), icon:(SIDE_MENU_ICONS.ai||"").replace("<svg","<svg aria-hidden=\"true\""), color:"var(--accent)",
-    cnt:"", menuId:"feat-ai",
-    extraAttrs:' id="sideBtnAi" data-aipage="1"',
+    cnt: _aiNeedCfg ? t("side.ai.needCfg", "待配置") : "", menuId:"feat-ai",
+    extraAttrs:' id="sideBtnAi" data-aipage="1"' + (_aiNeedCfg ? ' data-need-cfg="1"' : ""),
     active: !_sideActive && uiView==="ai"
   };
   const toolboxNode = {
