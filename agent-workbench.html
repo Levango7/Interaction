@@ -1082,6 +1082,27 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   padding:var(--space-3) var(--space-2);overflow:auto;flex-shrink:0;transition:width .2s ease}
 /* v3.7.37（控件矩阵 P1）：min-height 30 → 32px —— 实测渲染 31px，
    低于可点击区建议下限 32px（触控/鼠标精度）。侧栏是全站最高频的点击区。 */
+/* 2026-11-17（主流 Agent 化）：左栏顶部「最近会话」区。主流 Agent 左栏首屏是会话历史，
+   不是功能菜单。本区块独立 class（不套 .nav-item），因此不改变「10 个导航入口」的既有断言。 */
+.side-sess{padding:0 0 var(--space-2);margin:0 0 var(--space-2);
+  border-bottom:1px solid color-mix(in srgb,var(--line) 45%,transparent)}
+.side-sess-head{display:flex;align-items:center;justify-content:space-between;padding:2px var(--space-2) var(--space-1)}
+.side-sess-t{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.06em}
+.side-sess-new{width:22px;height:22px;padding:0;border:0;background:transparent;color:var(--muted);
+  cursor:pointer;border-radius:var(--radius-sm);font-size:var(--fs-sm);line-height:1;
+  display:inline-flex;align-items:center;justify-content:center}
+.side-sess-new:hover{background:var(--accent-soft);color:var(--accent-text,var(--accent))}
+.side-sess-item{display:block;width:100%;text-align:left;padding:4px var(--space-2);border:0;
+  background:transparent;color:var(--text-dim);font-size:var(--fs-xs);border-radius:var(--radius-sm);
+  cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-sess-item:hover{background:var(--surface-hover);color:var(--text)}
+.side-sess-item.is-active{background:color-mix(in srgb,var(--accent) 12%,transparent);
+  color:var(--accent-text,var(--accent))}
+.side-sess-empty{padding:2px var(--space-2);font-size:var(--fs-2xs);color:var(--text-faint)}
+.side-sess-all{display:block;width:100%;text-align:left;padding:4px var(--space-2);border:0;
+  background:transparent;color:var(--muted);font-size:var(--fs-2xs);cursor:pointer;
+  border-radius:var(--radius-sm);margin-top:2px}
+.side-sess-all:hover{color:var(--accent-text,var(--accent));background:var(--accent-soft)}
 .nav-item{display:flex;align-items:center;gap:var(--space-2);width:100%;padding:6px var(--space-2);
   border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text);margin-bottom:2px;
   text-align:left;transition:background var(--transition-fast),color var(--transition-fast);position:relative;
@@ -2217,6 +2238,14 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
   padding:3px 10px;font-size:var(--fs-xs);color:var(--text-dim);cursor:pointer;line-height:1.6;
   transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast)}
 .chat-suggest .chip:hover{background:var(--accent-soft);color:var(--accent-text,var(--accent));border-color:var(--accent)}
+/* 2026-11-17：未配置态的能力清单（填补消息下方空白）。消息流内内容，不挤压输入区、
+   不占常驻高度——与 2026-09-23 用户去掉的「去配置」常驻条不是一回事。 */
+.chat-empty-guide{margin-top:var(--space-3);padding:var(--space-3);border:1px dashed color-mix(in srgb,var(--line) 80%,transparent);
+  border-radius:var(--radius-md);background:color-mix(in srgb,var(--panel2) 50%,transparent)}
+.chat-empty-guide-t{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.04em;margin-bottom:var(--space-2)}
+.chat-empty-guide ul{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:var(--space-1)}
+.chat-empty-guide li{font-size:var(--fs-xs);color:var(--text-dim);line-height:1.5}
+.chat-empty-guide li::marker{color:var(--accent)}
 .chat-form input{flex:1;min-width:0}
 .chat-form .addbtn{flex-shrink:0}
 .msg.tool{background:var(--banner-bg);border:1px dashed var(--banner-border-2);font-size:var(--fs-xs);color:var(--banner-ink)}

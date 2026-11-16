@@ -164,6 +164,28 @@ function _buildSideMenu(){
 function renderSide(){
   const expanded = _loadSideExpanded();
 
+  /* 2026-11-17（主流 Agent 化，用户：'左栏仍是导航菜单样式'）：左栏顶部加「最近会话」快捷区。
+     只加会话区，功能导航组原样保留在下方——10 个入口一个不丢（ia-three-zones 钉 nodes.length===10，
+     `#side .nav-item` 数量由 nav-pages-smoke 的 waitSideNav(page,10) 守）。本区块**不用 .nav-item 类**，
+     故两条断言均不受影响。 */
+  const sideSessionsHtml = function(){
+    let list = [], act = "";
+    try{ list = getSessions() || []; }catch(_e){ list = []; }
+    try{ act = getActiveSession() || ""; }catch(_e){ act = ""; }
+    const items = list.slice(0, 4).map(function(s2){
+      const title = s2.title || t("sess.new", "新会话");
+      return '<button type="button" class="side-sess-item' + (s2.id === act ? " is-active" : "")
+        + '" data-sess-id="' + esc(s2.id) + '" title="' + esc(title) + '">' + esc(title) + "</button>";
+    }).join("");
+    return '<div class="side-sess">'
+      + '<div class="side-sess-head"><span class="side-sess-t">' + esc(t("side.sess.title", "最近会话")) + "</span>"
+      + '<button type="button" class="side-sess-new" data-sess-new="1" title="' + esc(t("dock.newSession", "新建会话"))
+      + '" aria-label="' + esc(t("dock.newSession", "新建会话")) + '">＋</button></div>'
+      + (items || '<div class="side-sess-empty">' + esc(t("dock.noSessions", "暂无会话")) + "</div>")
+      + '<button type="button" class="side-sess-all" data-sess-all="1">' + esc(t("side.sess.all", "全部会话")) + "</button>"
+      + "</div>";
+  };
+
   /* 子项渲染：圆点标记 + 标签（v3.0.2：stub:「新」角标机制已随 stub:true 清理移除） */
   const subBtn = (nodeId, it)=>{
     const act = (_sideActive===it.id) ? " active" : "";
@@ -191,7 +213,7 @@ function renderSide(){
   /* 刀 2：work 组收为单入口后组头与入口同名（工作台/工作台）⇒ 该组不渲染组头。
      仅影响 work 组（assistant 组虽也单节点，但「助手/AI」两名不同义，保留组头）。 */
   const groupHtml = (g)=> (g.gid==="work" ? "" : '<div class="nav-group">'+g.name+'</div>') + g.nodes.map(nodeHtml).join("");
-  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + groups.map(groupHtml).join(""));
+  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + sideSessionsHtml() + groups.map(groupHtml).join(""));
 
   /* 激活子项的父分支自动展开（一次性同步，不触发额外存储写） */
   if(_sideActive){
@@ -549,6 +571,30 @@ function setupSideMenu(){
   if(!side || side._menuBound) return;
   side._menuBound = true;
   side.addEventListener("click", (e)=>{
+    /* 2026-11-17：左栏「最近会话」区（独立 class，先于 .nav-item 分支处理） */
+    const sessItem = e.target && e.target.closest ? e.target.closest(".side-sess-item") : null;
+    if(sessItem){
+      const sid = sessItem.getAttribute("data-sess-id");
+      if(sid && typeof switchSession === "function"){
+        const ok = switchSession(sid);
+        if(ok !== false){ if(typeof renderChat === "function"){ const _c=(typeof getCfg==="function")?getCfg():null; if(_c && !_c.enabled && typeof renderChatDisabled==="function") renderChatDisabled(); else renderChat(); } if(typeof render === "function") render(); }
+      }
+      return;
+    }
+    const sessNew = e.target && e.target.closest ? e.target.closest("[data-sess-new]") : null;
+    if(sessNew){
+      try{
+        let sc = "office";
+        try{ const cur = getActiveSessionObj(); sc = (cur && cur.sc) || (typeof getActive === "function" ? getActive() : "office"); }catch(_e){ /* 回 office */ }
+        const ns = createSession(sc, t("sess.new", "新会话"));
+        if(ns && ns.id){ switchSession(ns.id); if(typeof render === "function") render(); }
+      }catch(_e3){ /* 新建失败不阻塞侧栏（非诊断兜底，故不沿用 _e2 命名——那个名字被
+                       empty-catch-slice4 约定为"pushDiag 二次保护"的配对标记） */ }
+      return;
+    }
+    const sessAll = e.target && e.target.closest ? e.target.closest("[data-sess-all]") : null;
+    if(sessAll){ if(typeof openSessionModal === "function") openSessionModal(); return; }
+
     const btn = e.target && e.target.closest ? e.target.closest(".nav-item") : null;
     if(!btn) return;
     const _m = $("#main"); if(_m) _m.scrollTop = 0; const _mw = document.querySelector(".main-wrap"); if(_mw) _mw.scrollTop = 0;
@@ -647,6 +693,15 @@ function openSideSheet(groupGid){
   if(!g) return;
   /* 刀 2：work 组只剩「工作台」一个入口 ⇒ 底栏按钮直接导航，不开抽屉（抽屉里组头与入口同名无意义） */
   if(groupGid === "work"){ setActive("workbench"); render(); return; }
+  /* 2026-11-17（主流 Agent 化）：底栏「助手」组不再开导航抽屉，直接唤起 AI 聊天抽屉。
+     理由＝主流 Agent 的底部「对话」tab 就是打开对话，不是再弹一层导航；
+     且 assistant 组只有 aiNode 一个入口（打开 AI 配置页），放抽屉里等于"点助手先看到菜单再点一次"。
+     AI 配置页入口仍在：底栏「更多」组 → AI，及侧栏「助手/AI」。
+     __aiPanelExpand 由 ai-retry.js bindChatPanel 暴露，窄屏内部分支走 setChatDrawer(true)，
+     与 rail 展开键同一条真实通路（不新造抽屉逻辑）。 */
+  if(groupGid === "assistant"){
+    try{ if(typeof window.__aiPanelExpand === "function"){ window.__aiPanelExpand(); return; } }catch(_e){ /* 展开失败则回退到开抽屉，不让点击变成无反应 */ }
+  }
   _mobSheetGroup = g.gid; // v3.4.5：存 gid 与 _mobCurrentGroup 对齐
   if(title) title.textContent = g.name;
   const rows = [];
@@ -3962,7 +4017,16 @@ function applyUIMode(){
   }
   /* 2026-11-07：空对话的快捷指令随模式变（见 chatSuggestHtml）——模式切换后要重画聊天区，
      否则用户切到 code/design 仍看到 work 的四条提示。 */
-  try{ if(typeof renderChat === "function") renderChat(); }catch(_e){ /* 聊天区重绘失败不阻断模式切换 */ }
+  /* 2026-11-07：空对话的快捷指令随模式变（见 chatSuggestHtml）——模式切换后要重画聊天区，
+     否则用户切到 code/design 仍看到 work 的四条提示。
+     2026-11-17 修：此处原先无条件 renderChat()，**绕过了「AI 是否已配置」的判定**
+     （该判定只存在于 render-entry 的 render()：cfg.enabled ? renderChat : renderChatDisabled），
+     导致切一次模式就把未配置态的引导覆盖成已配置态的欢迎语。现在按同一判据分流。 */
+  try{
+    const _cfg = (typeof getCfg === "function") ? getCfg() : null;
+    if(_cfg && !_cfg.enabled && typeof renderChatDisabled === "function") renderChatDisabled();
+    else if(typeof renderChat === "function") renderChat();
+  }catch(_e){ /* 聊天区重绘失败不阻断模式切换 */ }
 }
 function toggleUIMode(){
   const cur = _uiMode();

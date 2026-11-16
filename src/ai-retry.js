@@ -1247,16 +1247,28 @@ function chatSuggestHtml(){
 function renderChatDisabled(){
   const el=$("#chat"); if(!el) return;
   const s = SCENARIOS[active] || {name:""};
+  /* 2026-11-17：未配置态补「能做什么」引导，填掉消息下方的整片空白（用户：'对话区大面积空白'）。
+     ⚠️ 不加「去配置」按钮/常驻条 —— 那是 2026-09-23 用户明确要求去掉的（87px 条挤压输入区 +
+     提示本身已写明配置路径，属重复引导）。这里只加**消息流内的内容**：不挤压输入区、随消息滚动。 */
+  const items = [
+    t("chat.emptyGuide.item1", "建任务、改状态、跨场景整理"),
+    t("chat.emptyGuide.item2", "查总览、按条件检索已有数据"),
+    t("chat.emptyGuide.item3", "把一段需求画成架构图 / 流程图"),
+    t("chat.emptyGuide.item4", "检索知识库文件并带出处引用")
+  ];
   el.innerHTML = sanitizeHtml(
     t("p3.html.aiGreetingPrefix","<div class=\"msg assistant\">你好，我是") + esc(s.name) +
-    t("p3.html.aiGreetingSuffix","助手。尚未启用 AI：点击右上角「设置」填入 API Key，即可对话并调用工具修改数据。</div>")
+    t("p3.html.aiGreetingSuffix","助手。尚未启用 AI：点击右上角「设置」填入 API Key，即可对话并调用工具修改数据。</div>") +
+    '<div class="chat-empty-guide"><div class="chat-empty-guide-t">' +
+    esc(t("chat.emptyGuide.title", "启用后可以直接让我做")) + "</div><ul>" +
+    items.map(function(x){ return "<li>" + esc(x) + "</li>"; }).join("") + "</ul></div>"
   );
   /* v3.7.20：**移除「去配置」行动条**（用户 2026-09-23 截图标注"去掉"）。
      历史：v3.7.18 把按钮从消息流末位移到输入框上方做成常驻状态条，
      但那条 87px 高的条会挤压输入区 —— CI e2e 在 1280×800 下报
      "waiting for element to be visible, enabled and stable" 超时（发送按钮位置不稳）。
      且提示消息本身已写明"点击右上角「设置」填入 API Key"，按钮属重复引导。
-     → 整条删除，只保留提示气泡。 */
+     → 整条删除，只保留提示气泡。2026-11-17 补的能力清单是**消息流内容**，不是状态条，不违背本条。 */
 }
 
 /* ---------- 右侧 AI 聊天面板（三栏布局第三栏）·事件绑定 ----------

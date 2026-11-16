@@ -3,6 +3,18 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-17 · **UI 主流 Agent 化批三：左栏会话优先 + 未配置空态引导 + 移动端助手直开聊天**
+
+_用户「接着改」我列的三处。都是让界面进一步贴近主流 Agent 形态的改动，其中第②项附带修了一个真 bug。_
+
+- **① 左栏会话优先（`src/render-widgets.js` + CSS）**：`#side` 顶部新增「最近会话」区——最近 4 条会话（当前会话高亮）+ 新建 + 全部会话，功能导航组原样保留在下。主流 Agent 左栏首屏是会话历史而不是功能菜单，这是最直接的差距。**关键约束**：`ia-three-zones` 钉死 `nodes.length===10`、`nav-pages-smoke` 钉 `#side .nav-item` 数量——所以本区块用独立 class `.side-sess-item`，**不套 `.nav-item`**；实测 `#side .nav-item` 仍是 10，两条既有断言零改动。
+- **② 未配置空态引导（`src/ai-retry.js` + CSS）**：`renderChatDisabled` 增加「启用后可以直接让我做」4 条能力清单（建任务/查总览/画架构图/检索知识库），填掉消息下方那片空白（实测 143px）。**刻意不重加「去配置」按钮**——那是 2026-09-23 用户明确要求去掉的 87px 常驻条（挤压输入区 + 与提示文案重复），原注释里的判据保留。
+- **② 附带真 bug 修复**：`applyUIMode()` 切模式时无条件调 `renderChat()`，**绕过了 `render-entry` 里 `cfg.enabled ? renderChat() : renderChatDisabled()` 的判定**——结果只要切一次模式，未配置态的引导就被覆盖成已配置态的欢迎语。已改为按同一判据分流（`getCfg().enabled`）。
+- **③ 移动端「助手」直达聊天（`src/render-widgets.js`）**：底栏「助手」组不再弹导航抽屉，改为走 `window.__aiPanelExpand()`（与 rail 展开键同一条真实通路）。主流 Agent 的底部「对话」tab 就是打开对话，不是再弹一层导航。AI 配置页入口仍在「更多」组。实测点助手：聊天抽屉 `show=true`、导航抽屉 `open=false`。
+- **踩坑与修复（如实记录）**：我用 Python 脚本写 `core-i18n.js` / `agent-workbench.html` 时把整个文件行尾转成了 CRLF，`i18n-dead-keys` 直接报「未找到 MESSAGES.zh 块结尾」（它按 `\n  },\n  en: {` 定位）。已 `git checkout` 恢复后用 Edit 工具重做，四个改动文件全部复核为 LF-only（`CRLF=0`）。**教训：改这两个文件不要用 Python 文本模式写入，用 Edit 工具。**
+- **验证**：`i18n-dead-keys` fresh=0（新增 7 键均有真实引用，死键总数仍 417）；`ia-three-zones` / `rail-sections` / `ui-spec-guards` / `i18n-dead-keys` **48/48 passed**；`npm run lint` **rc=0**（CSS 2826 规则括号配平、断点 9 值无新增）；真浏览器 1440×900 与 390×844 双档验证三处（会话区渲染、navCount=10、引导卡 143px、移动端 chatShow=true/sheetOpen=false/零溢出）。
+- **高共写面声明**：`src/render-widgets.js`、`src/ai-retry.js`、`src/core-i18n.js`、`agent-workbench.html`、`CHANGELOG.md`、`docs/agent-board.md`；workflow / 两份 `package-lock` / node_modules / server / electron 零改动。
+
 ### 2026-11-16 · **UI 收尾批二：topbar 退役（四条横带 → 三条）+ 消除「帮助」重复**
 
 _用户「当然要修啊」三处的第三处。真浏览器实测：顶部四条横带（menubar 32 + tabbar 36 + topbar 65 + 待办行 45 = 178px），且「帮助」出现两次（menubar 的 `#btnHelpMenu` 帮助菜单 + topbar 的 `#btnHelp` 指南）。_
