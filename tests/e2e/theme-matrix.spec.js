@@ -206,10 +206,11 @@ test.describe("10 套主题渲染层不变量", () => {
         expect(box.height, "主题 " + th + "：侧栏项高度塌陷 " + box.height + "px").toBeGreaterThanOrEqual(28);
       }
 
-      /* ④ 顶栏高度未漂移 */
-      const topbar = await page.locator(".topbar").boundingBox();
-      expect(topbar.height, "主题 " + th + "：顶栏高度异常 " + topbar.height + "px").toBeGreaterThan(28);
-      expect(topbar.height, "主题 " + th + "：顶栏高度异常 " + topbar.height + "px").toBeLessThan(96);
+      /* ④ 顶栏高度未漂移（2026-11-16 topbar 退役：整行 .topbar 已内联进 .menubar，
+         高度判据改钉顶栏载体 .menubar——宽屏 32px、矮于原独立行 65px，但仍是「有高度、不塌陷」） */
+      const menubar = await page.locator(".menubar").boundingBox();
+      expect(menubar.height, "主题 " + th + "：顶栏 menubar 高度异常 " + menubar.height + "px").toBeGreaterThan(28);
+      expect(menubar.height, "主题 " + th + "：顶栏 menubar 高度异常 " + menubar.height + "px").toBeLessThan(96);
     }
   });
 });

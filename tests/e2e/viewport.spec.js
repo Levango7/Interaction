@@ -55,11 +55,22 @@ test.describe("跨视口布局不变量", () => {
       await expect(page.locator("#mobBar"), "宽屏应隐藏底部导航").toBeHidden();
     }
 
-    /* ③ 顶栏高度合理（历史上修过窄屏溢出，这里防漂移） */
+    /* ③ 顶栏高度合理（历史上修过窄屏溢出，这里防漂移）
+       2026-11-16 topbar 退役：原独立整行 .topbar 已整体迁入 .menubar 成为其子容器（内联紧凑档，~26px）。
+       判据随之改钉**顶栏载体 .menubar**（宽屏 32px / 窄屏 44px 触控档），仍守「有高度、不异常膨胀」；
+       .topbar 仍存在且必须留在 menubar 内（防止有人把它又拆回独立整行，那会退化成四条横带）。 */
+    const menubar = await page.locator(".menubar").boundingBox();
+    expect(menubar, "顶栏 menubar 应存在").toBeTruthy();
+    expect(menubar.height, `顶栏 menubar 高度异常：${menubar.height}px`).toBeGreaterThan(28);
+    expect(menubar.height, `顶栏 menubar 高度异常：${menubar.height}px`).toBeLessThan(96);
     const topbar = await page.locator(".topbar").boundingBox();
-    expect(topbar, "顶栏应存在").toBeTruthy();
-    expect(topbar.height, `顶栏高度异常：${topbar.height}px`).toBeGreaterThan(28);
-    expect(topbar.height, `顶栏高度异常：${topbar.height}px`).toBeLessThan(96);
+    expect(topbar, "topbar 容器应仍存在（按钮载体，不可删）").toBeTruthy();
+    const topbarInsideMenubar = await page.evaluate(() => {
+      const tb = document.querySelector(".topbar");
+      const mb = document.querySelector(".menubar");
+      return !!(tb && mb && mb.contains(tb));
+    });
+    expect(topbarInsideMenubar, "topbar 应内联在 menubar 内（退役后不得回到独立整行）").toBe(true);
 
     /* ④ 主内容区未被压扁 */
     /* 阈值按本机 CDP 实测取：375 → 375px、768 → 288px（侧栏 180 + 折叠聊天面板占位）、1280 → 770px。

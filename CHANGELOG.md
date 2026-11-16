@@ -3,6 +3,17 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-16 · **UI 收尾批二：topbar 退役（四条横带 → 三条）+ 消除「帮助」重复**
+
+_用户「当然要修啊」三处的第三处。真浏览器实测：顶部四条横带（menubar 32 + tabbar 36 + topbar 65 + 待办行 45 = 178px），且「帮助」出现两次（menubar 的 `#btnHelpMenu` 帮助菜单 + topbar 的 `#btnHelp` 指南）。_
+
+- **做法（低风险方案）**：不删 `.topbar` 容器、不改任何 button 的 id/class/data-fold，而是把整块 `.topbar` **整体迁入 `.menubar`** 成为其子容器，新增「menubar 内联 + 紧凑档」覆盖规则（`.menubar .topbar{...}`、`.menubar .topbar .tbtn{...}`）。这样 `.topbar .tbtn` 的既有 CSS（窄屏溢出、主题着色、44px 命中区）**全部原样生效**，11 处 `.topbar` 断言里的选择器仍命中，只改了两处依赖「独立整行高度」的断言。
+- **消除「帮助」重复**：`.menubar .topbar #btnHelp{display:none}`——`#btnHelp` 是无 handler 的隐藏占位（真实入口在侧栏底部 `#sideBtnHelp`），内联后与 menubar 的帮助菜单并排才显重复。保留 DOM 节点（不删 id，a11y/绑定兼容）。
+- **窄屏专项（关键）**：menubar 原来 32px 放不下 44px 触控按钮 ⇒ 窄屏 menubar 抬到 44px（顶部仍三条横带：44+36+45=125px，比原 178px 省 53px）；补 `.menubar .logo > span:not(.mark){display:none}`（原 topbar 独立行时靠隐藏自身品牌文字腾宽度，内联后 logo 是 menubar 的、该规则不再命中，390 档实测溢出 53px）；补 479px 段 `.menubar .topbar .tbtn[data-fold]{display:none}` + `.topbar-more-btn{display:inline-flex}`——低频按钮收进 `#btnMore` 溢出菜单，与原 topbar 独立行时的窄屏口径一致。
+- **判据随布局退役（非放宽）**：`viewport.spec.js` 与 `theme-matrix.spec.js` 原钉「`.topbar` 高度 >28 且 <96」——topbar 内联后只有 26px，该断言失去对象。改钉**顶栏载体 `.menubar`**（宽屏 32 / 窄屏 44，仍守「有高度、不膨胀」），并**新增一条**：`.topbar` 必须存在且 `menubar.contains(topbar)` 为真（防止有人把它拆回独立整行、退化成四条横带）。
+- **验证**：真浏览器七档（1440/1024/768/480/390/360/320）**全部零溢出**；`topbar-overflow` e2e **16/16**（含 44×44 命中区、320/360/375/412 四档）；`viewport` 3/3、`theme-matrix` 5/5、`corrupt-data-boot` 4/4；单测 `topbar-overflow.test` + `ui-scale-floor` + `css-structure` **26/26**；`npm run lint` **rc=0**（CSS 2810 规则配平 / 断点 9 值无新增）。顶部横带 178px → 113px（宽屏）/ 125px（窄屏）。
+- **高共写面声明**：`agent-workbench.html`、`tests/e2e/viewport.spec.js`、`tests/e2e/theme-matrix.spec.js`、`CHANGELOG.md`、`docs/agent-board.md`；`src/` / workflow / 两份 `package-lock` / node_modules / server / electron 零改动。
+
 ### 2026-11-16 · **UI 收尾批一：移动端 AI 入口解遮挡 + 右栏四节空态收敛**
 
 _用户「当然要修啊」（三处：topbar 退役 / 右栏空态 / 移动端 AI 入口）。真浏览器实测坐实前两处问题：390×844 下 `#chatPanelRail`（y772/h72）与 `#mob-bar`（fixed, y787/h57）重叠 57px，窄屏唯一 AI 聊天入口被底栏挡住；1440×900 下右栏 agent 216px + files 315px＝531px 全是「0 + 空提示」，rail 总高 811 > 767 需滚动。第三处 topbar 退役牵动 6 个测试文件 11 处断言 + 窄屏溢出菜单可达性设计，风险更高，单独成批。_
