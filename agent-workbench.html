@@ -652,6 +652,25 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .menubar{height:var(--mb-h);display:flex;align-items:center;gap:var(--space-1);position:relative;
   padding:0 var(--space-2);background:var(--panel);border-bottom:1px solid var(--line);flex:none}
 .menubar .mb-sp{flex:1}
+/* 2026-11-16 topbar 退役：原独立一行 .topbar 现为 menubar 子容器，内联化 + 紧凑档。
+   容器与所有 .topbar .tbtn 既有 CSS（窄屏溢出、主题着色、44px 命中区）保持不动——只覆盖
+   在本容器内的「外观与尺寸」：去掉它作为独立行时的 padding/背景/模糊/下边框（menubar 已有），
+   高度收进 32px 行内，按钮由 48px 纵排改为 26px 图标档（图标+小字横排，或纯图标）。
+   这是纯视觉压缩，不删任何 class / id / data-fold，JS 绑定与 11 处 .topbar 断言不受影响。 */
+.menubar .topbar{flex:0 0 auto;flex-direction:row;align-items:center;gap:2px;
+  padding:0;margin-left:var(--space-2);background:transparent;backdrop-filter:none;
+  -webkit-backdrop-filter:none;border-bottom:none;position:relative}
+.menubar .topbar .spacer{display:none}
+.menubar .topbar .tbtn{flex-direction:row;gap:4px;min-height:24px;min-width:0;
+  padding:2px var(--space-2);font-size:var(--fs-2xs);line-height:1}
+.menubar .topbar .tbtn .lbl{display:inline;max-width:72px;font-size:var(--fs-2xs)}
+.menubar .topbar .tbtn svg{width:var(--icon-sm);height:var(--icon-sm)}
+.menubar .topbar .tbtn .badge{top:0;right:2px}
+/* 2026-11-16：消除「帮助」重复——menubar 已有 #btnHelpMenu（帮助菜单），
+   topbar 里这个 #btnHelp 是**无 handler 的隐藏占位**（实际入口在侧栏底部 #sideBtnHelp，
+   注释见 DOM 处）。退役前它靠 topbar 独立行撑着不明显，内联到 menubar 后两处「帮助」并排，
+   正是用户说的「帮助重复」。这里隐掉占位按钮，保留 DOM 节点（a11y/绑定兼容，不删 id）。 */
+.menubar .topbar #btnHelp{display:none}
 .menubar .mi{padding:2px var(--space-2);border-radius:var(--radius-md);color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;min-height:22px}
 .menubar .mi:hover{background:var(--accent-soft)}
 .menubar .mi svg{width:14px;height:14px}
@@ -698,6 +717,27 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
    窄变异登记：临时删本条 ⇒ 320 档 menubar 溢出，本机无浏览器栈自证，押 CI 窄屏探针）。 */
 @media (max-width:767px){
   .menubar .mi{display:none}
+  /* 2026-11-16 topbar 退役后补：原 .topbar 独立行时窄屏靠「隐藏自身品牌文字」腾宽度
+     （见 .topbar .logo 的 479 规则）。现在 topbar 内联进 menubar，logo 是 menubar 的，
+     该规则不再命中 ⇒ 390 档实测 logo 125 + topbar 318 = 443 > 390 溢出 53px。
+     这里对 menubar 的 logo 做同样处理：收品牌文字、留标记图形。 */
+  .menubar .logo > span:not(.mark){display:none}
+  .menubar .topbar{margin-left:auto}
+  /* 2026-11-16：menubar 内联的 topbar 在窄屏必须保 44×44 触控命中区（topbar-overflow e2e 钉死），
+     而 44px 按钮装不进 32px 行 ⇒ 窄屏把 menubar 整行抬到 44px。顶部仍是三条横带
+     （menubar 44 + tabbar 36 + 待办行 45 = 125px，原四条 178px，仍省 53px）。
+     文字标签隐藏（图标表达），低频按钮按 data-fold 收进 #btnMore（见下面 479 段）。 */
+  .menubar{height:44px}
+  .menubar .topbar{gap:0}
+  .menubar .topbar .tbtn{min-width:44px;min-height:44px;padding:0;gap:0}
+  .menubar .topbar .tbtn .lbl{display:none}
+  .menubar .topbar .tbtn svg{width:var(--icon-set);height:var(--icon-set)}
+}
+@media (max-width:479px){
+  /* 低频按钮（命令/主题/下载/安装）收进溢出菜单，常驻 搜索/今日/消息/用户/更多——
+     与原 .topbar 独立行时的窄屏口径一致（见 .topbar .tbtn[data-fold] 那条）。 */
+  .menubar .topbar .tbtn[data-fold]{display:none}
+  .menubar .topbar .tbtn.topbar-more-btn{display:inline-flex}
 }
 .topbar{display:flex;flex-direction:row;align-items:center;gap:var(--space-3);
   padding:var(--space-2) var(--space-6);
@@ -5655,6 +5695,50 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <button type="button" class="mi imbtn" id="btnFocus" data-action="faFocusToggle" aria-pressed="false" data-i18n-title="menu.focus" data-i18n-aria="menu.focus" title="专注模式" aria-label="专注模式">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
     </button>
+    <!-- 2026-11-16 topbar 退役（用户「双层工具行拥挤且帮助重复」）：原独立一行 .topbar 整体迁入 menubar，
+         成为本行右段的子容器（.menubar .topbar 内联化）——四条横带降到三条，省 ~65px。
+         .topbar / .topbar .tbtn 的既有 CSS、窄屏溢出、主题着色**全部原样生效**（容器与 class 都没删），
+         只需新增「menubar 内联 + 紧凑档」的覆盖规则；11 处 .topbar 断言仍在（选择器命中不变）。 -->
+    <div class="topbar">
+      <!-- v1.9.9：顶栏按钮顺序——搜索·命令·消息·主题·下载·更多（指南已迁移至侧栏底部） -->
+      <div class="spacer"></div>
+      <!-- 指南按钮 id="btnHelp" 保留为隐藏占位（a11y/事件绑定兼容），实际入口在侧栏底部 #sideBtnHelp -->
+      <button type="button" class="tbtn" id="btnHelp" data-i18n-title="a11y.guide" title="使用指南" data-i18n-aria="a11y.guide" aria-label="使用指南">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="lbl" data-i18n="top.help">指南</span></button>
+      <!-- v1.9.9：搜索按钮上移顶栏（从功能组侧栏迁出），Ctrl+Shift+F 唤起全局搜索弹窗 -->
+      <button type="button" class="tbtn" id="btnSearchTop" data-i18n-aria="a11y.fullSearch" aria-label="全文搜索">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="lbl" data-i18n="top.search">搜索</span></button>
+      <!-- v1.9.9：命令面板按钮（Ctrl+K）——用户确认保留 -->
+      <button type="button" class="tbtn" id="btnCmd" data-fold="1" data-i18n-aria="a11y.commandPalette" aria-label="命令面板">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl" data-i18n="top.command">命令</span></button>
+      <!-- v1.15：消息入口（原双入口收敛为顶栏按钮；正文待办栏替代了原消息栏） -->
+      <button type="button" class="tbtn task-rail-toggle" id="btnTaskRail" data-i18n-title="taskRail.open" title="今日任务" data-i18n-aria="taskRail.open" aria-label="今日任务">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
+        <span class="badge u-hidden" id="taskRailBadge"></span><span class="lbl" data-i18n="taskRail.title">今日</span></button>
+      <button class="tbtn" id="btnMessages" type="button" data-i18n-aria="a11y.messages" aria-label="消息">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="badge u-hidden" id="msgBadge"></span><span class="lbl" data-i18n="top.messages">消息</span></button>
+      <button type="button" class="tbtn" id="btnTheme" data-fold="1" data-i18n-aria="a11y.toggleTheme" aria-label="切换明暗主题">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span class="lbl" data-i18n="top.theme">主题</span></button>
+      <button type="button" class="tbtn" id="btnDownload" data-fold="1" data-i18n-aria="a11y.exportData" aria-label="导出数据">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span class="lbl" data-i18n="top.download">下载</span></button>
+      <!-- v1.15：更多按钮已移除（甘特/导图/仪表盘在图表页、笔记在知识页、协作/分享为死功能） -->
+      <button type="button" class="tbtn install-btn" id="btnInstall" data-fold="1" data-i18n-title="a11y.installDesktop" title="安装到桌面" data-i18n-aria="a11y.installAppDesktop" aria-label="安装应用到桌面">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span class="lbl" data-i18n="top.install">安装</span></button>
+      <!-- 任务235：同步状态指示器（登录后显示，同步中/已同步/离线/错误） -->
+      <span class="sync-status u-hidden" id="syncStatus" role="status" aria-live="polite">
+        <span class="sync-dot" aria-hidden="true"></span><span class="sync-text" data-i18n="api.syncIdle">已同步</span>
+      </span>
+      <!-- B5（2026-10-26）：窄屏溢出菜单入口。≥480px 隐藏，≤479px 顶栏只留 搜索/今日/消息/用户 + 本按钮，
+           把每个可见按钮的命中宽度从 26px 抬回 44px（P1-4 余项，CSS:881 那条注释里自认的"正解"）。 -->
+      <button type="button" class="tbtn topbar-more-btn" id="btnMore" data-i18n-aria="top.moreAria" aria-label="更多操作" aria-expanded="false" aria-controls="topbarMorePanel">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+        <span class="lbl" data-i18n="top.more">更多</span></button>
+      <!-- 任务235：用户按钮（未登录显示「登录」，已登录显示头像首字母） -->
+      <button type="button" class="tbtn user-btn" id="btnUser" data-i18n-aria="api.login" aria-label="登录">
+        <span class="user-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span class="lbl" data-i18n="api.login">登录</span></button>
+      <input type="file" id="fileInput" accept="application/json" class="u-hidden">
+    </div>
     <div class="help-menu" id="helpMenu" role="menu" aria-labelledby="btnHelpMenu" hidden>
       <button type="button" class="help-item" role="menuitem" data-help-item="hotkeys" data-i18n="menu.hotkeys">快捷键说明</button>
       <button type="button" class="help-item" role="menuitem" data-help-item="diag" data-i18n="menu.diag">诊断报告</button>
@@ -5683,46 +5767,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
     <button type="button" class="tabadd" data-action="faTabAdd" data-i18n-title="formA.addTab" data-i18n-aria="formA.addTab" title="新建标签页" aria-label="新建标签页"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
     <button type="button" class="railbtn" data-action="faRailToggle" data-i18n-title="taskRail.open" data-i18n-aria="taskRail.open" title="今日任务" aria-label="今日任务"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></button>
   </div>
-  <div class="topbar">
-    <!-- v1.9.9：顶栏按钮顺序——搜索·命令·消息·主题·下载·更多（指南已迁移至侧栏底部） -->
-    <div class="spacer"></div>
-    <!-- 指南按钮 id="btnHelp" 保留为隐藏占位（a11y/事件绑定兼容），实际入口在侧栏底部 #sideBtnHelp -->
-    <button type="button" class="tbtn" id="btnHelp" data-i18n-title="a11y.guide" title="使用指南" data-i18n-aria="a11y.guide" aria-label="使用指南">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="lbl" data-i18n="top.help">指南</span></button>
-    <!-- v1.9.9：搜索按钮上移顶栏（从功能组侧栏迁出），Ctrl+Shift+F 唤起全局搜索弹窗 -->
-    <button type="button" class="tbtn" id="btnSearchTop" data-i18n-aria="a11y.fullSearch" aria-label="全文搜索">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="lbl" data-i18n="top.search">搜索</span></button>
-    <!-- v1.9.9：命令面板按钮（Ctrl+K）——用户确认保留 -->
-    <button type="button" class="tbtn" id="btnCmd" data-fold="1" data-i18n-aria="a11y.commandPalette" aria-label="命令面板">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="m7 9 3 3-3 3M13 15h4"/></svg><span class="lbl" data-i18n="top.command">命令</span></button>
-    <!-- v1.15：消息入口（原双入口收敛为顶栏按钮；正文待办栏替代了原消息栏） -->
-    <button type="button" class="tbtn task-rail-toggle" id="btnTaskRail" data-i18n-title="taskRail.open" title="今日任务" data-i18n-aria="taskRail.open" aria-label="今日任务">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
-      <span class="badge u-hidden" id="taskRailBadge"></span><span class="lbl" data-i18n="taskRail.title">今日</span></button>
-    <button class="tbtn" id="btnMessages" type="button" data-i18n-aria="a11y.messages" aria-label="消息">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      <span class="badge u-hidden" id="msgBadge"></span><span class="lbl" data-i18n="top.messages">消息</span></button>
-    <button type="button" class="tbtn" id="btnTheme" data-fold="1" data-i18n-aria="a11y.toggleTheme" aria-label="切换明暗主题">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg><span class="lbl" data-i18n="top.theme">主题</span></button>
-    <button type="button" class="tbtn" id="btnDownload" data-fold="1" data-i18n-aria="a11y.exportData" aria-label="导出数据">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><span class="lbl" data-i18n="top.download">下载</span></button>
-    <!-- v1.15：更多按钮已移除（甘特/导图/仪表盘在图表页、笔记在知识页、协作/分享为死功能） -->
-    <button type="button" class="tbtn install-btn" id="btnInstall" data-fold="1" data-i18n-title="a11y.installDesktop" title="安装到桌面" data-i18n-aria="a11y.installAppDesktop" aria-label="安装应用到桌面">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v10m0 0 4-4m-4 4-4-4M5 19h14"/></svg><span class="lbl" data-i18n="top.install">安装</span></button>
-    <!-- 任务235：同步状态指示器（登录后显示，同步中/已同步/离线/错误） -->
-    <span class="sync-status u-hidden" id="syncStatus" role="status" aria-live="polite">
-      <span class="sync-dot" aria-hidden="true"></span><span class="sync-text" data-i18n="api.syncIdle">已同步</span>
-    </span>
-    <!-- B5（2026-10-26）：窄屏溢出菜单入口。≥480px 隐藏，≤479px 顶栏只留 搜索/今日/消息/用户 + 本按钮，
-         把每个可见按钮的命中宽度从 26px 抬回 44px（P1-4 余项，CSS:881 那条注释里自认的"正解"）。 -->
-    <button type="button" class="tbtn topbar-more-btn" id="btnMore" data-i18n-aria="top.moreAria" aria-label="更多操作" aria-expanded="false" aria-controls="topbarMorePanel">
-      <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
-      <span class="lbl" data-i18n="top.more">更多</span></button>
-    <!-- 任务235：用户按钮（未登录显示「登录」，已登录显示头像首字母） -->
-    <button type="button" class="tbtn user-btn" id="btnUser" data-i18n-aria="api.login" aria-label="登录">
-      <span class="user-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><span class="lbl" data-i18n="api.login">登录</span></button>
-    <input type="file" id="fileInput" accept="application/json" class="u-hidden">
-  </div>
+
   <!-- B5：窄屏顶栏溢出面板（内联展开，与 #msgPanel 同型 —— 静态定位、不进 flex 排布、不算坐标）。
        行项只是"入口镜像"：点击转给原按钮，行为与快捷键完全同路，不在这里重写一遍逻辑。
        目标按钮当前不可见（如 Electron 才有的安装、能力缺失即隐藏的入口）时，行项一起隐掉，
