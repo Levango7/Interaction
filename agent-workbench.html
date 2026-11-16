@@ -863,6 +863,15 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 @media(max-width:767px){
   /* 桌面侧栏隐藏，改用底部导航 */
   .side{display:none}
+  /* 2026-11-16 修复：窄屏折叠态 rail 与底栏重叠。`.body` 是 column，rail 是最后一个流内子项，
+     底缘落在 body 底（844）；而 `.mob-bar` 是 position:fixed 盖在其上（787-844）——实测 rail
+     矩形 y772/h72 与 mobBar y787/h57 重叠 57px，AI 聊天入口被底栏挡住点不到。
+     rail 是窄屏唯一的聊天唤起入口（窄屏聊天是右抽屉，rail 的展开键走 setChatDrawer），不能隐藏。
+     修法：窄屏把 rail 改为 fixed 贴右缘、mobBar 之上（不占流内空间，也不再压看板内容）——
+     与「聊天抽屉从右侧滑出」的方向感一致，按钮完整可见可点。桌面 ≥768 不受影响。 */
+  .chat-panel-rail{position:fixed;right:0;bottom:calc(57px + var(--safe));
+    width:44px;height:auto;max-height:none;z-index:calc(var(--z-sidebar) + 1);
+    border-left:1px solid var(--line);border-radius:var(--radius-md) 0 0 var(--radius-md)}
   .mob-bar{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:var(--z-sidebar);
     background:var(--panel);border-top:1px solid var(--line);
     padding:var(--space-1) var(--space-2);padding-bottom:calc(var(--space-1) + var(--safe));
@@ -5388,6 +5397,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 .rr-body{padding:0 var(--space-1) var(--space-1);display:flex;flex-direction:column;gap:6px;min-height:0}
 .rail-sec-title{display:flex;align-items:center;gap:var(--space-1);padding:var(--space-1h) var(--space-2);
   font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.04em}
+/* 2026-11-16 空态收敛：空节压成一行摘要时，节名后面跟一个更淡的「· 未配置 / · 文件知识」说明，
+   与计数 chip 同排不换行（min-width:0 + ellipsis 防长文案撑破 280px 右栏）。 */
+.rail-empty-inline{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.75}
 .rail-list{list-style:none;margin:0;padding:0 var(--space-1);display:flex;flex-direction:column;gap:1px;overflow-y:auto}
 .rail-item{display:flex;align-items:center;gap:var(--space-1h);padding:var(--space-1h) var(--space-1);
   border-radius:var(--radius-md);font-size:var(--fs-xs)}

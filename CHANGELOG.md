@@ -3,6 +3,16 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-16 · **UI 收尾批一：移动端 AI 入口解遮挡 + 右栏四节空态收敛**
+
+_用户「当然要修啊」（三处：topbar 退役 / 右栏空态 / 移动端 AI 入口）。真浏览器实测坐实前两处问题：390×844 下 `#chatPanelRail`（y772/h72）与 `#mob-bar`（fixed, y787/h57）重叠 57px，窄屏唯一 AI 聊天入口被底栏挡住；1440×900 下右栏 agent 216px + files 315px＝531px 全是「0 + 空提示」，rail 总高 811 > 767 需滚动。第三处 topbar 退役牵动 6 个测试文件 11 处断言 + 窄屏溢出菜单可达性设计，风险更高，单独成批。_
+
+- **移动端 AI 入口解遮挡（`agent-workbench.html` 窄屏媒体块）**：`.body` 是 column、rail 是最后流内子项落到底部，而 `.mob-bar` 是 `position:fixed` 盖其上——窄屏把 `.chat-panel-rail` 改 `position:fixed;right:0;bottom:calc(57px + var(--safe));z-index:calc(var(--z-sidebar)+1)`，贴右缘、底栏之上、不占流内空间（也不再压看板内容）。与「聊天抽屉从右侧滑出」方向感一致，按钮完整可见可点。桌面 ≥768 不受影响（该块只 ≤767 生效）。
+- **右栏四节空态收敛（`src/render-widgets.js`）**：`_renderRailAgent` 全空（无技能、无运行、无进度）时压成一行「技能 0 · 未配置」；`_renderRailFiles` 两段全空时压成一行「AI 产出 0 · 文件知识 0」+ 保留「打开知识库」按钮。**有技能/在运行/有产出/有文件时仍走完整版，不丢任何真实信息**，只去掉「0 + 空提示」的纯占位。新增 `.rail-empty-inline` 样式（`min-width:0` + ellipsis 防长文案撑破 280px 右栏）。
+- **验证**：真浏览器 390×844 实测 rail 底缘 787 = mobBar 顶 787（重叠 **0**），点 `#chatRailExpand` 后 `#chatPanel.show` 真开；1440×900 实测四节 today 172 / agent **216→64** / files **315→107** / sessions 108，总高 **811→451 无需滚动**，截图核观感；受影响单测 `task-rail` / `rail-sections` / `chat-usage-visibility` / `form-a-composer` **33/33 passed**（注入态）；跑后 `src:extract` + `check:source-state` ✓ 690KB 源码态。
+- **未做（第三处 topbar 退役）**：如实留待单独批次——它要动 `.topbar` 的 11 处断言（corrupt-data-boot / theme-matrix / topbar-overflow / viewport / topbar-overflow.test / ui-scale-floor）并重做窄屏 `#btnMore` 溢出菜单在无 topbar 后的可达性，混入本笔会让回归面过大、CI 定位困难。
+- **高共写面声明**：`agent-workbench.html`、`src/render-widgets.js`、`CHANGELOG.md`、`docs/agent-board.md` 四文件；workflow / 两份 `package-lock` / node_modules / server / electron 零改动。
+
 ### 2026-11-16 · **聊天区信息架构改造（核心两刀）：运行态/会话管理迁出 Composer + Code 中栏分屏**
 
 _用户 11-16 连续追问「聊天区为什么还有那么多东西、能不能移到别的地方、消息气泡应该放在哪」。真浏览器量测坐实：CODE 与 WORK 的聊天区完全相同（1440×900 下 `#chatPanel` 均贴底 168px 坞、`#chat` 在收起态 `display:none`、气泡根本没有位置）。用户裁「核心两刀」，并在知悉 11-02「主客颠倒」旧判据后**二次裁刀2＝中栏分屏**（非全高对话），明确不推翻「工作面居中」。这是纯 UI/UX 改造，`src/` 一行未改。_

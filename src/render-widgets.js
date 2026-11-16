@@ -312,6 +312,16 @@ function _renderRailAgent(){
   if(!el) return;
   const skills = (typeof listEnabledSkills === "function") ? listEnabledSkills() : [];
   const prog = (typeof getChatProgress === "function") ? getChatProgress() : null;
+  const ready = (typeof aiReadyProfile === "function") ? !!aiReadyProfile() : false;
+  /* 2026-11-16 空态收敛（用户：「右栏四节空态拥挤」）：全空时压成一行「技能 0 · 未配置」，
+     不再渲染三段（技能标题 + 空提示 + AI 状态标题 + 未配置行）。实测空态原 216px，压后约 56px。
+     有技能、或正在运行、或已配置时仍走下面的完整版——不丢任何真实信息，只去掉"0 + 空提示"的占位。 */
+  if(!skills.length && !prog){
+    el.innerHTML = sanitizeHtml('<div class="rail-sec-title">' + esc(t("rail.agent.skills", "技能"))
+      + ' <span class="task-rail-count">0</span>'
+      + '<span class="rail-empty-inline">· ' + esc(ready ? t("rail.agent.configured", "已配置") : t("rail.agent.unconfigured", "未配置")) + "</span></div>");
+    return;
+  }
   let html = '<div class="rail-sec-title">' + esc(t("rail.agent.skills", "技能"))
     + ' <span class="task-rail-count">' + skills.length + "</span></div>";
   html += skills.length
@@ -326,7 +336,6 @@ function _renderRailAgent(){
       + '<div class="rail-item"><span class="rail-item-name">' + esc(prog.label || "") + "</span>"
       + '<span class="rail-item-meta">' + esc(prog.total ? (prog.current + "/" + prog.total) : (prog.received + t("chat.progress.chars", " 字"))) + "</span></div>";
   }
-  const ready = (typeof aiReadyProfile === "function") ? !!aiReadyProfile() : false;
   html += '<div class="rail-sec-title">' + esc(t("rail.agent.ready", "AI 状态")) + "</div>"
     + '<div class="rail-item"><span class="rail-item-name">'
     + esc(ready ? t("rail.agent.configured", "已配置") : t("rail.agent.unconfigured", "未配置")) + "</span></div>";
@@ -338,6 +347,19 @@ function _renderRailFiles(){
   /* 2026-10-24：这一页分两段 —— 上=AI 新建出来的东西（任务/记录/笔记），下=导入的知识库文件。
      只列引用，不复制内容；撤销回执时对应条目已被摘掉（见 aiArtifactDrop）。 */
   const arts = (typeof aiArtifacts === "function") ? aiArtifacts() : [];
+  const files = (typeof getRagFiles === "function") ? getRagFiles() : [];
+  /* 2026-11-16 空态收敛（用户：「右栏四节空态拥挤」）：两段全空时压成一行计数 + 知识库按钮，
+     不再渲染两段标题 + 两段空提示 + 按钮（实测空态原 315px，压后约 90px）。
+     任一段有内容就仍走完整版——只去掉"0 + 空提示"的纯占位。 */
+  if(!arts.length && !files.length){
+    el.innerHTML = sanitizeHtml('<div class="rail-sec-title">'
+      + esc(t("rail.ai.title", "AI 产出")) + ' <span class="task-rail-count">0</span>'
+      + '<span class="rail-empty-inline">· ' + esc(t("rail.files.title", "文件知识")) + '</span> <span class="task-rail-count">0</span></div>'
+      + '<button type="button" class="task-rail-more" id="railOpenKb">' + esc(t("rail.files.open", "打开知识库")) + "</button>");
+    const b = $("#railOpenKb");
+    if(b) b.onclick = function(){ try{ AppBridge.openKnowledgeBaseModal(); }catch(_e){ /* 打开失败不阻塞右栏 */ } };
+    return;
+  }
   const kindLabel = { task: t("rail.ai.kind.task", "任务"), record: t("rail.ai.kind.record", "记录"), note: t("rail.ai.kind.note", "笔记"),
     run: t("rail.ai.kind.run", "运行"), mcp: t("rail.ai.kind.mcp", "远端") };
   let html = '<div class="rail-sec-title">' + esc(t("rail.ai.title", "AI 产出"))
@@ -351,7 +373,6 @@ function _renderRailFiles(){
           + '<span class="rail-item-meta">' + esc(kindLabel[a.kind] || a.kind || "") + " · " + esc(hh) + "</span></li>";
       }).join("") + "</ul>"
     : '<p class="task-rail-empty">' + esc(t("rail.ai.empty", "AI 还没有新建过任务 / 记录 / 笔记。")) + "</p>";
-  const files = (typeof getRagFiles === "function") ? getRagFiles() : [];
   html += '<div class="rail-sec-title">' + esc(t("rail.files.title", "文件知识"))
     + ' <span class="task-rail-count">' + files.length + "</span></div>";
   html += files.length
