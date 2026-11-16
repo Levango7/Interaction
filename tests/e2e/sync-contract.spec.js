@@ -45,10 +45,12 @@ async function openApp(page, { apiBase, appBase, fakeLogin = false } = {}) {
   await page.goto((appBase || mock.url) + "/agent-workbench.html");
   await page.waitForSelector("#side", { timeout: 15_000 });
   /* v3.7.123：原为 waitForTimeout(600)。等的是「侧栏 nav-item 异步注入完成」这个真实条件
-     （renderSide 实测 0 → ~30ms → 17），不是等一段时长 —— 固定 sleep 慢机不够、快机白等。 */
+     （renderSide 实测 0 → ~30ms → N），不是等一段时长 —— 固定 sleep 慢机不够、快机白等。
+     刀 2（2026-11-16 接手续做）把 work 组 7 场景 + 联动收成单一「工作台」入口，
+     侧栏入口 17→10（见 tests/ia-three-zones.test.js 的 10 入口断言）；等待阈值同步到 10。 */
   await page.waitForFunction(
     () => {
-      try { return document.querySelectorAll("#side .nav-item").length >= 17; } catch (e) { return false; }
+      try { return document.querySelectorAll("#side .nav-item").length >= 10; } catch (e) { return false; }
     },
     null,
     { timeout: 15_000 }

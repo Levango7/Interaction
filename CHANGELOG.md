@@ -3,6 +3,17 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-16 · **刀 2 首推 CI 红修复：e2e 启动等待 17→10（判据对齐真实 DOM，覆盖面不缩水）**
+
+_`9b44f8b` 首推 CI `43829969212` attempt 1 / Deploy `43829970682` e2e 腿红：11 failed / 78 passed / 3 flaky / 1 skipped / 164 did not run。10 条确定性红全部来自「侧栏还是旧 17 项」的假设——刀 2 把 7 场景 + 场景联动收进工作台 tiles，侧栏真实入口 17→10（`tests/ia-three-zones.test.js` 10 入口断言 + 系统 Chrome 真浏览器探针 `NAVCOUNT={"navItems":10,"workbench":1,"sceneNodes":0}`）；唯一额外一项 `rag-hybrid` 是 30s `waitRagReady` 的已知饥饿型 flaky，三次尝试后重试转绿，判 3 flaky、不在本批修复面。_
+
+- **`tests/e2e/sync-contract.spec.js` / `notify-hook.spec.js` / `sync-real-backend.spec.js`**：启动闸门 `#side .nav-item >= 17` → `>= 10`，补注释指向 10 入口断言；超时 15s 与全部行为断言零改动，**不是放宽判据**，是把等待条件对齐刀 2 后的真实 DOM。这三条对应首跑 8 条红（sync-contract 7 + notify-hook 1）。
+- **`tests/e2e/helpers/wait-settled.cjs`**：`waitSideNav()` 默认 17→10（注释同步）；`toolbox.spec.js` / `thin-pages.spec.js` 都吃这个默认值，是首跑 164 did not run 里尚未展开的潜在红，提前对齐，不把问题留给复跑。
+- **`tests/e2e/nav-pages-smoke.spec.js`（3 条红全部在此）**：覆盖面**扩**而不是缩——从「侧栏 17 页」改为「侧栏 10 入口 + 工作台 8 tile = 18 个目的地」，tile 清单运行时从 `#main .wb-tile[data-tile-sc]` 取（不写死 8）；逐项继续走原有六条不变量（唯一命中 / 有文本 / 有控件 / 无 pageerror / 无模板残渣 / 375px 零溢出）。`有 sc` 的页面集合由 7 侧栏 sc + 8 tile sc 去重 = 15，原 `>=14` 守门员保持不降；连切守门员 17→18。等待统一走 `waitSideNav(page, 10)`。
+- **验证**：本地 `nav-pages-smoke` **3/3 passed**；`sync-contract` / `notify-hook` / `toolbox` / `thin-pages` 四 spec 合并 **23/23 passed**（`PLAYWRIGHT_EXIT=0`，全在 `desktop-1280x800`）；`sync-real-backend` 早先复跑 21 passed / 2 failed，两条均为 `server exited early code=1 / Cannot find module 'express'`（本树缺 server 依赖的预存环境性，CI e2e job 另有 `working-directory: server` 的 `npm ci`），未为本地环境改 spec 或抬超时。跑后 `npm run src:extract` 往返，`check-source-state` ✓ 源码态 686KB。
+- **CI 读数纪律**：attempt 2 是同 SHA `9b44f8b` 的旧代码重跑，**不作为修复后判据**；本修复的权威终态以新提交触发的 CI / Deploy run 为准（R9）。`9b44f8b` 的 Deploy e2e 红、deploy skipped 如实留账，不回填成绿。
+- **高共写面声明**：`CHANGELOG.md` 仅 `[Unreleased]` 追加本节；workflow / `package-lock.json` / node_modules / server / electron / 产品源码零改动。
+
 ### 2026-11-16 · **刀 2（左栏工作台收口 + tiles 页）——孤儿批接手续做，只落刀 2**
 
 _来源：`F:/wt/wb-ui-c23` 上 2026-11-13 的孤儿批（刀 2 左栏 + 刀 3 右栏三段交织在同一批文件，从未提交）。用户 11-15 裁「ORPHAN」、11-16 先裁「确认他不会再做，你来做」、再裁「**只落刀 2，弃刀 3 右栏，保留已发版 B4 四节**」。为什么弃刀 3：刀 3 的右栏「Qoder 式三段（更新卡/后台进程/产出链接）」与用户 11-14 拍板、已发版上线的 B4「四节堆叠（今日/Agent/文件/会话）」是同一位置的互斥设计，B4 是更新裁定，回退它风险最大。本批**不含任何刀 3 代码**（`_renderRailUpdate`/`_renderRailProc`/`_renderRailOut`/`_renderMenubarSessions`/`_bindMenubarViews`/menubar 会话视图组/`rail-segments`/`rail.upd.*`/`rail.proc.*`/`rail.out.*` 全部零引入，已机械断言）。_

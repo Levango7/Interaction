@@ -151,7 +151,8 @@ test.describe("通知通道 · http 源形态（本地服务 / 线上站点）",
     expect(await page.evaluate(() => notifyHookGet("feishu").configured)).toBe(true);
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => {
-      try { return document.querySelectorAll("#side .nav-item").length >= 17; } catch (e) { return false; }
+      /* 刀 2（2026-11-16）：work 组收成单一工作台入口，侧栏 17→10（见 ia-three-zones 断言） */
+      try { return document.querySelectorAll("#side .nav-item").length >= 10; } catch (e) { return false; }
     }, null, { timeout: 15_000 });
     await page.evaluate(() => { setActive("office"); render(); });
     await page.waitForFunction(() => {

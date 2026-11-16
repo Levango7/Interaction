@@ -131,7 +131,8 @@ async function openApp(page, port) {
   await page.goto("http://127.0.0.1:" + port + "/agent-workbench.html");
   await page.waitForSelector("#side", { timeout: 15_000 });
   await page.waitForFunction(
-    () => { try { return document.querySelectorAll("#side .nav-item").length >= 17; } catch (e) { return false; } },
+    /* 刀 2（2026-11-16）：work 组收成单一工作台入口，侧栏 17→10（见 ia-three-zones 断言） */
+    () => { try { return document.querySelectorAll("#side .nav-item").length >= 10; } catch (e) { return false; } },
     null,
     { timeout: 15_000 }
   );
