@@ -3,6 +3,14 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-17 · **UI 主流 Agent 化批四：IA 收敛——AI 未就绪时把注意力收到唯一该做的事上**
+
+_用户「做吧」（针对我上一轮提的「AI 未配置时左栏/右栏功能入口偏多」）。评估后只做**零结构风险**的那部分：左栏 10 个入口全部保留、不收起任何组——因为 `nav-pages-smoke` 是直接 `click` 未展开子项的，改成默认收起会破核心 e2e，收益不值。_
+
+- **左栏「AI」入口加「待配置」标记（`src/render-widgets.js` + CSS + i18n）**：`aiReadyProfile()` 为空时，`aiNode.cnt` 写 `t("side.ai.needCfg")` 并在 `extraAttrs` 挂 `data-need-cfg="1"`，CSS 让它从「数字徽标」变成语义胶囊（`--accent-soft` 底 + accent 字，不新增色值）。理由：未配置时 10 个入口里只有「把 AI 配上」是真该做的事，标记把它显性化，比删入口安全。
+- **不做的（如实记录）**：① 「更多」组默认收起——`nav-pages-smoke` 对 8 个子项直接 `page.click(sel)`，收起后 click 超时，要连带改测试且用户反而要多点一次才能到设置；② 右栏 `agentDock` 整节隐藏——`ui-mode-layout` 钉了「agentDock 应显示」，且它 4 段本就有折叠持久化；③ 左栏 IA 重构（导航 → 会话/文件树）——骨架级改动，会推翻 `ia-three-zones` 的 10 入口契约，应单独立项、明确方向后再动。
+- **验证**：真浏览器 1440 实测 `#sideBtnAi[data-need-cfg="1"]`、徽标文本「待配置」、`#side .nav-item` 仍 **10** 个；`ia-three-zones` / `i18n-dead-keys` / `ui-spec-guards` / `ui-mode` **60/60 passed**（i18n 死键仍 fresh=0）；`npm run lint` rc=0。
+
 ### 2026-11-17 · **UI 主流 Agent 化批三：左栏会话优先 + 未配置空态引导 + 移动端助手直开聊天**
 
 _用户「接着改」我列的三处。都是让界面进一步贴近主流 Agent 形态的改动，其中第②项附带修了一个真 bug。_

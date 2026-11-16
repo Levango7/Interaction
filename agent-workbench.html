@@ -1111,6 +1111,10 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .nav-item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nav-item .cnt{font-size:var(--fs-xs);background:var(--surface-muted);border-radius:var(--radius-md);
   padding:1px 8px;color:var(--text-dim-2);min-width:20px;text-align:center}
+/* 2026-11-17（IA 收敛）：AI 未就绪时「AI」入口的「待配置」标记——从计数样式改成语义胶囊，
+   与数字徽标区分开（背景/前景取 accent-soft + accent，不新增色值）。 */
+.nav-item[data-need-cfg] .cnt{padding:1px 6px;font-size:var(--fs-2xs);min-width:0;
+  background:var(--accent-soft);color:var(--accent-text,var(--accent));white-space:nowrap}
 .nav-item:hover{background:var(--surface-hover)}
 /* v1.9.5：侧栏为专属浅灰背景时，hover 提亮为白，保证在灰底上可辨（暗色主题 panel 亦深于 side-bg） */
 .side .nav-item:hover{background:var(--surface-hover)}

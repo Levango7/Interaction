@@ -110,10 +110,15 @@ function _buildSideMenu(){
   };
 
   /* ---- 应用组：AI（大模型/agent） / 工具箱 / 商店（v2.4.0） ---- */
+  /* 2026-11-17（IA 收敛）：AI 未就绪时在「AI」入口挂「待配置」小标记——
+     未配置时左栏 10 个入口里只有这一件事是真该做的，标记把它显性化；
+     不删任何入口、不改结构（避免动 nav-pages-smoke 直接 click 子项的路径）。 */
+  let _aiNeedCfg = false;
+  try{ _aiNeedCfg = (typeof aiReadyProfile === "function") ? !aiReadyProfile() : false; }catch(_e){ _aiNeedCfg = false; }
   const aiNode = {
     id:"feat-ai", label:t("page.ai.title", "AI"), icon:(SIDE_MENU_ICONS.ai||"").replace("<svg","<svg aria-hidden=\"true\""), color:"var(--accent)",
-    cnt:"", menuId:"feat-ai",
-    extraAttrs:' id="sideBtnAi" data-aipage="1"',
+    cnt: _aiNeedCfg ? t("side.ai.needCfg", "待配置") : "", menuId:"feat-ai",
+    extraAttrs:' id="sideBtnAi" data-aipage="1"' + (_aiNeedCfg ? ' data-need-cfg="1"' : ""),
     active: !_sideActive && uiView==="ai"
   };
   const toolboxNode = {
