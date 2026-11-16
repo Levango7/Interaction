@@ -1923,6 +1923,26 @@ input[data-date-picker]::placeholder{color:var(--muted)} /* v3.7.14：跟随全�
    根因在某个渲染路径的 DOM 拼装（外层外壳被提前闭合），此处只兜底外观：
    **仅匹配 main 的直属子元素**，卡片内的 `.tool-form-box`（_featureCardHtml 那一族）不受影响。 */
 main > .tool-form-box{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);padding:var(--space-4) var(--space-4) var(--space-3);margin-bottom:var(--space-3)}
+/* 刀 2（2026-11-16 接手续做）：工作台 tiles 页 */
+.wb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--space-2);
+  padding-bottom:var(--space-4)}
+.wb-tile{display:grid;grid-template-columns:auto 1fr;align-items:center;column-gap:var(--space-1h);row-gap:var(--space-1h);
+  padding:var(--space-2);border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--panel);
+  cursor:pointer;text-align:left;transition:border-color .15s,box-shadow .15s}
+.wb-tile:hover{border-color:var(--sc);box-shadow:var(--shadow-1)}
+.wb-tile-ic{grid-column:1;grid-row:1;width:32px;height:32px;border-radius:var(--radius-md);
+  display:inline-flex;align-items:center;justify-content:center;
+  background:color-mix(in srgb,var(--sc) 14%,transparent);color:var(--sc)}
+.wb-tile-ic svg{width:var(--icon-md);height:var(--icon-md)}
+.wb-tile-nm{grid-column:1 / -1;grid-row:2;font-size:var(--fs-sm);font-weight:600;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wb-tile-cnt{grid-column:2;grid-row:1;justify-self:end;font-size:var(--fs-2xs);line-height:1.4;
+  padding:0 var(--space-1h);border-radius:var(--radius-full);
+  background:color-mix(in srgb,var(--sc) 14%,transparent);color:var(--sc)}
+@media(max-width:767px){
+  /* 窄屏 2 列：场景名 ≤4 字单行放得下 */
+  .wb-grid{grid-template-columns:repeat(2,1fr)}
+}
 /* v3.0.1 B-5：功能卡通用提示行 / 数据可视化迷你图表 */
 .tool-hint{margin:var(--space-2) 0 0;font-size:var(--fs-xs);color:var(--muted)}
 /* v3.2 A 3/3：缴费近 7 天到期列表（白领下午杂事场景） */
@@ -8844,6 +8864,9 @@ const MESSAGES = {
     "formA.addTab": "新建标签页",
     "rail.tab.agent": "Agent",
     "rail.tab.files": "文件",
+    "side.menu.workbench": "工作台",
+    "wb.title": "工作台",
+    "wb.sub": "选一个场景开始；顶部标签页可追加同名视图",
     "rail.ai.title": "AI 产出",
     "rail.ai.empty": "AI 还没有新建过任务 / 记录 / 笔记。",
     "rail.ai.untitled": "（未命名）",
@@ -13049,6 +13072,9 @@ const MESSAGES = {
     "formA.addTab": "New Tab",
     "rail.tab.agent": "Agent",
     "rail.tab.files": "Files",
+    "side.menu.workbench": "Workbench",
+    "wb.title": "Workbench",
+    "wb.sub": "Pick a scene to start; add more views from the top tabs",
     "rail.ai.title": "Created by AI",
     "rail.ai.empty": "The AI has not created any task / record / note yet.",
     "rail.ai.untitled": "(untitled)",
@@ -25596,11 +25622,6 @@ function _buildSideMenu(){
     cnt:totalOpen>0?totalOpen:"", sc:"tasks",
     active: !_sideActive && _effActive==="tasks"
   };
-  const chainPageNode = {
-    id:"feat-chain", label:t("side.menu.chain", "场景联动"), icon:(SIDE_MENU_ICONS.chain||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#0d9488", // M7 NOTE: 与 --sc-data 场景色一致
-    cnt:"", sc:"chainpage",
-    active: !_sideActive && _effActive==="chainpage"
-  };
   // v3.4.7 批次五：任务时间机器——14 天 × 场景泳道回放（读 wb_agent_task_events 事件流）
   const timelineNode = {
     id:"feat-timeline", label:t("side.menu.timeline", "时间轴"), icon:(SIDE_MENU_ICONS.dash||SIDE_MENU_ICONS.chain||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#b87840",
@@ -25608,18 +25629,16 @@ function _buildSideMenu(){
     active: !_sideActive && _effActive==="timeline"
   };
 
-  /* ---- 场景组（ORDER 驱动，全部叶子节点；v2.4.0「数据」归位办公之后——数据分析入口） ---- */
-  const sceneNodes = ORDER.map(sc=>{
-    const s = SCENARIOS[sc];
-    if(!s) return null;
-    const open = tasks.filter(t=>t.sc===sc && t.status!=="done").length;
-    return {
-      id:"sc-"+sc, sc:sc, label:s.name, icon:(s.icon||"").replace("<svg","<svg aria-hidden=\"true\""),
-      color:s.color, cnt:open>0?open:"",
-      active: !_sideActive && sc===_effActive,
-      children: null
-    };
-  }).filter(Boolean);
+  /* ---- 刀 2（2026-11-16 接手续做）：work 组 7 场景 + 场景联动收为单一「工作台」入口。
+     场景选择的事实源交还形态 A _formATabs 注册表（工作台 tile 页 + 顶部 tab），侧栏不再背场景态；
+     各场景未完成数搬到 tile 角标（render-entry renderWorkbenchPage 同口径）。
+     组名与入口同名（工作台/工作台）：桌面侧栏抑制单节点组头（见 renderSide groupHtml）、
+     移动底栏点该组直接导航（见 openSideSheet），两处都不出现重名二段。 ---- */
+  const workbenchNode = {
+    id:"feat-workbench", label:t("side.menu.workbench", "工作台"), icon:(UI_ICONS.grid||"").replace("<svg","<svg aria-hidden=\"true\""),
+    color:"var(--accent)", cnt:"", sc:"workbench",
+    active: !_sideActive && _effActive==="workbench"
+  };
 
   /* ---- 应用组：AI（大模型/agent） / 工具箱 / 商店（v2.4.0） ---- */
   const aiNode = {
@@ -25661,7 +25680,7 @@ function _buildSideMenu(){
        AI=助手；工具箱+商店+回收站+设置+说明=更多。旧 gid（overview/scenario/ai/tools/system）
        不再出现在菜单里，移动端底栏与抽屉随 gid 自动变成 4 组。 */
     {gid:"today", name:t("side.group.today", "今日"), nodes:[overviewNode, tasksNode, timelineNode]},
-    {gid:"work", name:t("side.group.work", "工作台"), nodes:[...sceneNodes, chainPageNode]},
+    {gid:"work", name:t("side.group.work", "工作台"), nodes:[workbenchNode]},
     {gid:"assistant", name:t("side.group.assistant", "助手"), nodes:[aiNode]},
     {gid:"more", name:t("side.group.more", "更多"), nodes:[toolboxNode, storeNode, recycleNode, gearNode, helpNode]}
   ];
@@ -25700,7 +25719,9 @@ function renderSide(){
   };
 
   const groups = _buildSideMenu();
-  const groupHtml = (g)=> '<div class="nav-group">'+g.name+'</div>' + g.nodes.map(nodeHtml).join("");
+  /* 刀 2：work 组收为单入口后组头与入口同名（工作台/工作台）⇒ 该组不渲染组头。
+     仅影响 work 组（assistant 组虽也单节点，但「助手/AI」两名不同义，保留组头）。 */
+  const groupHtml = (g)=> (g.gid==="work" ? "" : '<div class="nav-group">'+g.name+'</div>') + g.nodes.map(nodeHtml).join("");
   $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + groups.map(groupHtml).join(""));
 
   /* 激活子项的父分支自动展开（一次性同步，不触发额外存储写） */
@@ -26134,6 +26155,8 @@ function openSideSheet(groupGid){
   const groups = _buildSideMenu();
   const g = groups.find(x=>x.gid===groupGid); // v3.4.5：按 gid 查找（语言无关）；调用方 data-mob-group 现传 gid
   if(!g) return;
+  /* 刀 2：work 组只剩「工作台」一个入口 ⇒ 底栏按钮直接导航，不开抽屉（抽屉里组头与入口同名无意义） */
+  if(groupGid === "work"){ setActive("workbench"); render(); return; }
   _mobSheetGroup = g.gid; // v3.4.5：存 gid 与 _mobCurrentGroup 对齐
   if(title) title.textContent = g.name;
   const rows = [];
@@ -40769,6 +40792,9 @@ function render(){
        而"忘密码"这件事在界面上根本无处可去（服务端也没有端点，见 auth.js 的注释）。 */
     if(active==="authreset"){ renderAuthReset(); appendFoot(); return; }
     if(active==="timeline"){ renderTimelinePage(); appendFoot(); return; } // v3.4.7 批次五：任务时间轴页
+    /* 刀 2（2026-11-16 接手续做）：work 组 7 场景 + 场景联动收为单一「工作台」入口后的落地页。
+       场景选择的事实源仍是 active + _formATabs（B2 注册表），本页只是入口面。 */
+    if(active==="workbench"){ renderWorkbenchPage(); appendFoot(); return; }
     const cfg=getCfg();
     // v1.9.7：标题块（renderSceneHead）独立成卡置于最前——消息栏正下方即场景标题，与后续内容块分离
     // v3.0：功能菜单（renderSceneFeatNav）独立于标题栏，置于标题卡与主内容之间
@@ -40925,6 +40951,57 @@ function formATabClose(id){
   _saveFormATabs();
   if(closedActive){ setActive(tabs[0].scene); }
   render();
+}
+
+/* 刀 2（2026-11-16 接手续做）：工作台 tile 的入口。有同场景 tab 就切过去（幂等，重复点不叠 tab），
+   没有就追加一个场景视图。tab 标题取场景名（与 _formATabsDefault 的「今日」字面不同——
+   这里是场景视图，不是默认视图的复制品）。 */
+function formATabOpenScene(scene){
+  if(typeof scene !== "string" || !scene) return;
+  const tabs = getFormATabs();
+  const hit = tabs.filter(function(x){ return x.scene === scene; })[0];
+  if(hit){ formATabSwitch(hit.id); return; }
+  const s = SCENARIOS[scene];
+  tabs.push({ id:"view-"+Date.now()+"-"+tabs.length, scene:scene, title:s ? s.name : scene });
+  _saveFormATabs();
+  if(active !== scene){ setActive(scene); }
+  render();
+}
+
+/* ---------- 刀 2（2026-11-16 接手续做）：工作台页（左栏 work 组收口后的单一入口） ----------
+ * 7 场景 + 场景联动 = 8 个 tile；点 tile = 开/切该场景的形态 A tab（formATabOpenScene）。
+ * 场景级数据（未完成任务数 / 启用联动数）与旧侧栏 cnt 同口径：getActiveTasks / getLinks。
+ * 不做第二份场景状态机——tile 只是指向 active 的入口，与 chainpage 页内 tab 同惯例。 */
+function renderWorkbenchPage(){
+  const open = getActiveTasks();
+  const tiles = ORDER.map(function(sc){
+    const s = SCENARIOS[sc]; if(!s) return "";
+    const n = open.filter(function(x){ return x.sc===sc && x.status!=="done"; }).length;
+    return '<button type="button" class="wb-tile" data-tile-sc="'+esc(sc)+'" style="--sc:'+scCss(s.color)+'">'
+      + '<span class="wb-tile-ic">'+(s.icon||"")+'</span>'
+      + '<span class="wb-tile-nm">'+esc(s.name)+'</span>'
+      + (n>0 ? '<span class="wb-tile-cnt">'+n+'</span>' : '')
+      + '</button>';
+  }).join("");
+  const chainN = (typeof getLinks === "function") ? (getLinks()||[]).filter(function(l){ return l.enabled; }).length : 0;
+  const html = '<div class="card page-head-card"><header class="page-head sc-page-head">'
+    + '<span class="ph-ic" aria-hidden="true">'+UI_ICONS.grid+'</span>'
+    + '<div class="ph-tx"><h2>'+esc(t("wb.title","工作台"))+'</h2><p class="sub">'+esc(t("wb.sub","选一个场景开始；顶部标签页可追加同名视图"))+'</p></div>'
+    + '</header></div>'
+    + '<div class="wb-grid">'
+    + tiles
+    + '<button type="button" class="wb-tile" data-tile-sc="chainpage" style="--sc:#0d9488">'
+    + '<span class="wb-tile-ic">'+(SIDE_MENU_ICONS.chain||"")+'</span>'
+    + '<span class="wb-tile-nm">'+esc(t("side.menu.chain","场景联动"))+'</span>'
+    + (chainN>0 ? '<span class="wb-tile-cnt">'+chainN+'</span>' : '')
+    + '</button>'
+    + '</div>';
+  $("#main").innerHTML = sanitizeHtml(html);
+  /* lint-xss：sanitizeHtml 会剥内联 onclick ⇒ 渲染后直接绑定（同 _renderRailFiles 的 #railOpenKb 惯例） */
+  $$("#main .wb-tile").forEach(function(b){
+    b.onclick = function(){ formATabOpenScene(b.getAttribute("data-tile-sc")); };
+  });
+  appendFoot();
 }
 
 /* v3.7.78 解耦：自别处下沉（同层序逆层消除） */
