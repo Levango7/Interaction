@@ -25,17 +25,31 @@ const { test, expect } = require("@playwright/test");
 const APP_URL = "./agent-workbench.html";
 
 /* v3.7.104（台账 R-9 续二/续三）：切场景用「判别性等待 + 重试块」——
-   renderSide() 在 render() 里整体替换 #side 的 innerHTML（render-widgets.js 的 `$("#side").innerHTML = …`），
-   点击若落在正被替换的节点上会**静默丢失**（mousedown 与 mouseup 落在不同节点 → click 不派发）。
-   而原来切场景后等的是 `#taskForm` —— 它由 render-scene-main.js 生成、**每个场景都有**，
-   等待不具区分力：场景没切过去，等待照样通过，fill/submit 都发生在旧场景，
-   失败错位到两步之后（`.kcard` 文本断言超时，CI 实证：workflow.spec.js:91）。
-   现在断言场景 nav 拿到 `active` 令牌（_buildSideMenu 的 `active: !_sideActive && sc===_effActive`）；
-   瞬时丢失由重试块补点击自愈，真故障仍会如实超时。
-   ⚠️ 正则不能写 \bactive\b —— 会匹配上 has-active（连字符是非单词字符，词边界成立）。
-   对照实验（A 旧等待不具区分力 3/3 / B 如实报错 / E 出厂写法逐字复刻自愈 3/3 / F 永久注入仍如实失败）：
-   `_probe/repro-nav-click-race.cjs`（V1 原件级注入 3/3 复现）。 */
+   renderSide() 在 render() 里整体替换 #side 的 innerHTML，点击若落在正被替换的节点上会
+   **静默丢失**（mousedown 与 mouseup 落在不同节点 → click 不派发）。等 `#taskForm` 不具
+   区分力（每个场景都有），会错位到两步之后；因此按切换后的真实状态断言，瞬时丢失由重试自愈。
+
+   刀 2（2026-11-16）：7 场景 + 场景联动退出侧栏，收进工作台 tiles；侧栏原生项只剩
+   今日 3 + 工作台 1 + 助手 1 + 更多 5。于是分两条真实路径：
+     · 场景/联动 → 点工作台入口 → 点 `#main .wb-tile[data-tile-sc]` → 断言全局 `active === sc`
+       （`formATabOpenScene` 真调 `setActive(sc); render()`，仍走用户路径，不直接改状态）；
+     · 侧栏常驻页（overview/tasks/timeline/toolbox/store/recycle）→ 原 nav 点击 + active 类断言。
+   ⚠️ active 类正则不能写 \bactive\b —— 会匹配 has-active（连字符也是非单词字符）。 */
+const WORKBENCH_SCENES = ["office", "data", "design", "study", "code", "life", "health", "chainpage"];
+
 async function switchScene(page, sc) {
+  if (WORKBENCH_SCENES.indexOf(sc) >= 0) {
+    await expect(async () => {
+      await page.click('#side .nav-item[data-sc="workbench"]');
+      const tile = `#main .wb-tile[data-tile-sc="${sc}"]`;
+      await page.waitForSelector(tile, { timeout: 3_000 });
+      await page.click(tile);
+      await expect
+        .poll(() => page.evaluate(() => (typeof active !== "undefined" ? active : "")), { timeout: 2_000 })
+        .toBe(sc);
+    }).toPass({ timeout: 10_000 });
+    return;
+  }
   const nav = `#side .nav-item[data-sc="${sc}"]`;
   await expect(async () => {
     await page.click(nav);
@@ -86,7 +100,7 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
 
     // ---------- 3. 创建任务 ----------
     await test.step("在办公场景创建任务", async () => {
-      // 确保在办公场景（点侧边栏 office）—— 判别性等待 + 重试块（见 switchScene 注释）
+      // 确保在办公场景（刀 2 后走工作台 office tile）—— 判别性等待 + 重试块（见 switchScene 注释）
       await switchScene(page, "office");
       await page.waitForSelector("#taskForm", { timeout: 10_000 });
       // 填标题并提交
@@ -296,7 +310,7 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
     });
   });
 
-  test("smoke：应用可启动且渲染侧边栏四个场景", async ({ page }) => {
+  test("smoke：应用可启动且渲染工作台入口与四个场景 tile", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#side .nav-item", { timeout: 15_000 });
     // 处理 onboarding（若存在）以便主区渲染 —— v3.7.68 起「跳过」一次即结束
@@ -306,14 +320,14 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       await page.click("#onboardSkip");
       await expect(page.locator(".onboard-modal"), "跳过后不应再弹下一步").toHaveCount(0);
     }
-    /* v3.7.91 更正注释：v3.6.6 起侧栏**不再**有独立的 stats 项（统计页入口已并入主页卡片，
-       见第 6 步），故此处不再把 stats 列为侧栏应有项——旧注释与实现不符会误导后来人。
-       仍断言：侧栏 nav-item 数量达标 + 四个场景项可见。 */
+    /* 刀 2（2026-11-16）：场景退出侧栏，改由工作台 tile 承载；侧栏契约改钉 10 入口，
+       四个场景的可见性改到工作台页断言（走真实点击，不直接读 _buildSideMenu）。 */
     const navCount = await page.locator("#side .nav-item").count();
-    expect(navCount).toBeGreaterThanOrEqual(6);
-    // 验证四个场景按钮存在
+    expect(navCount, "刀 2 后侧栏稳态 10 入口").toBeGreaterThanOrEqual(10);
+    await page.click('#side .nav-item[data-sc="workbench"]');
+    await page.waitForSelector("#main .wb-tile", { timeout: 10_000 });
     for (const sc of ["office", "code", "study", "life"]) {
-      await expect(page.locator(`#side .nav-item[data-sc="${sc}"]`)).toBeVisible();
+      await expect(page.locator(`#main .wb-tile[data-tile-sc="${sc}"]`)).toBeVisible();
     }
   });
 });

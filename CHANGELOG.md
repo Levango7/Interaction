@@ -3,6 +3,15 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-16 · **刀 2 e2e 红第二批：工作流 / 移动端改走工作台 tile（首修余下的 5 条）**
+
+_`bf926be` 推后 CI `43836202029` 的 e2e 腿 5 failed / 245 passed / 2 flaky / 5 skipped。读 job 原始日志：4 条确定性红在 `workflow.spec.js`（desktop + tablet 各「完整用户流程」「smoke」），1 条在 `mobile.spec.js`；根因同属刀 2「场景退出侧栏」——第一批只对齐了启动等待与 nav-pages-smoke，漏了这两处**用户路径本身**。另 2 条 flaky 为 `i18n` 15s 判别等待与 `rag-hybrid` 30s `waitRagReady`（重试均转绿），既有已知饥饿型抖动，本批不改。_
+
+- **`tests/e2e/workflow.spec.js`**：`switchScene()` 分两条真实路径——8 个场景/联动（office/data/design/study/code/life/health/chainpage）点工作台入口 → 点 `#main .wb-tile[data-tile-sc]` → 断言全局 `active === sc`（`formATabOpenScene` 真调 `setActive+render`，不直接改状态）；侧栏常驻页（overview/tasks/timeline/toolbox/store/recycle）保留原 nav 点击 + active 类重试自愈。smoke 从「侧栏四场景」改为「侧栏 10 入口 + 工作台页四个场景 tile 可见」。
+- **`tests/e2e/mobile.spec.js`**：work 组已由 `openSideSheet("work")` 改为直导航工作台（抽屉里组头与入口同名无意义）；用例同步改为「底栏 work → 工作台 tile → 办公」，并额外断言 `#sideSheet` **不**带 `open`（把产品新行为钉成判据，不是放宽成抽屉/tile 二选一）。
+- **验证**：本地 desktop workflow 2/2；tablet workflow 2/2 + mobile 9/9（`PLAYWRIGHT_EXIT=0`）；与第一批已绿的 nav 3/3、四 spec 23/23 合起来，五条确定性红全部有本地绿对照。超时与行为断言零放宽，产品源码零改动；跑后 `src:extract` 往返 + `check-source-state` ✓ 686KB。
+- **高共写面声明**：`CHANGELOG.md` 仅 `[Unreleased]` 追加本节；workflow 文件 / `package-lock` / node_modules / server / electron / `src/` / `agent-workbench.html` 零改动。
+
 ### 2026-11-16 · **刀 2 首推 CI 红修复：e2e 启动等待 17→10（判据对齐真实 DOM，覆盖面不缩水）**
 
 _`9b44f8b` 首推 CI `43829969212` attempt 1 / Deploy `43829970682` e2e 腿红：11 failed / 78 passed / 3 flaky / 1 skipped / 164 did not run。10 条确定性红全部来自「侧栏还是旧 17 项」的假设——刀 2 把 7 场景 + 场景联动收进工作台 tiles，侧栏真实入口 17→10（`tests/ia-three-zones.test.js` 10 入口断言 + 系统 Chrome 真浏览器探针 `NAVCOUNT={"navItems":10,"workbench":1,"sceneNodes":0}`）；唯一额外一项 `rag-hybrid` 是 30s `waitRagReady` 的已知饥饿型 flaky，三次尝试后重试转绿，判 3 flaky、不在本批修复面。_

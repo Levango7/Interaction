@@ -5,7 +5,7 @@
  * 移动端 IA 是「底部 5 组导航 #mobBar + 底部抽屉 #sideSheet（复用侧栏菜单树）」。
  *
  * 覆盖：① 启动无横向溢出 + 底栏 5 组可见 + 侧栏隐藏
- *       ② 场景组 → 抽屉 → 切到「办公」（active 变 office）
+ *       ② 工作台组 → 工作台页 → 点「办公」tile（active 变 office；刀 2 后不再开抽屉）
  *       ③ AI 组 → 抽屉 → AI 配置页（#cfgEnabled 可见）
  *       ④ 引导 modal 的移动端布局不变量（v3.7.68，见文件末尾的 describe）
  *
@@ -47,14 +47,18 @@ test.describe("移动端（竖屏 375×667）", () => {
     await expect(page.locator("#side"), "移动端侧栏应隐藏").toBeHidden();
   });
 
-  test("底部导航切换场景：工作台组 → 抽屉 → 办公", async ({ page }) => {
+  test("底部导航切换场景：工作台组 → 工作台页 → 办公 tile", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#mobBar", { timeout: 15_000 });
 
+    /* 刀 2（2026-11-16）：work 组只剩「工作台」单入口，openSideSheet("work") 按真实产品行为
+       改为直接 setActive("workbench"); render()，不再开抽屉（抽屉里组头与入口同名无意义）。
+       所以这里断言工作台 tile 真出现，再点办公 tile，仍走用户路径切场景。 */
     await page.click('#mobBar [data-mob-group="work"]');
-    await page.waitForSelector("#sideSheet.open", { timeout: 10_000 });
+    await page.waitForSelector("#main .wb-tile", { timeout: 10_000 });
+    await expect(page.locator("#sideSheet"), "work 组应直导航工作台，不开抽屉").not.toHaveClass(/open/);
 
-    const office = page.locator('#sideSheetBody [data-sc="office"]').first();
+    const office = page.locator('#main .wb-tile[data-tile-sc="office"]').first();
     await expect(office).toBeVisible();
     await office.click();
 
