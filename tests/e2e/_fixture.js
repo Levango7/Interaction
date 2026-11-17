@@ -12,10 +12,11 @@
  * 例外：`workflow.spec.js` 负责跑引导三步本身，故意继续用 `@playwright/test` 的原生 test。
  *
  * 2026-11-17（默认落地页翻成 agent-first）：产品默认已改为 code 模式，但绝大多数 e2e
- * 写于"默认 work"时代、断言的是各自功能而非默认形态。这里显式注入 `wb_agent_uimode=work`
- * 把前提钉在夹具里——测试声明自己的前提，而不是隐式依赖产品默认值；模式本身的默认契约
- * 由 `tests/ui-mode.test.js` 独占守护。不这么做的后果是几十个 spec 同时换基线，
+ * 写于"默认 work"时代、断言的是各自功能而非默认形态。这里在**缺省时**注入
+ * `wb_agent_uimode=work`，把前提钉在夹具里——测试声明自己的前提，而不是隐式依赖产品默认值；
+ * 模式本身的默认契约由 `tests/ui-mode.test.js` 独占守护。不这么做的后果是几十个 spec 同时换基线，
  * 红因会被"默认变了"淹没，真正的功能回归反而看不见。
+ * ⚠️ 必须"仅缺省时"注入：有 spec 会自己预置 design 再 reload，无条件 setItem 会把它覆盖成 work。
  */
 const base = require("@playwright/test");
 
@@ -24,7 +25,13 @@ const test = base.test.extend({
     await page.addInitScript(() => {
       try {
         localStorage.setItem("wb_agent_onboarded", "true");
-        localStorage.setItem("wb_agent_uimode", JSON.stringify("work"));
+        /* 仅缺省时注入：draw-edge-routing / draw-embed-bridge / draw-export 那几条用例
+           会自己预置 `wb_agent_uimode=design` 再 reload，期望"持久化的设计模式真回到 Design"。
+           无条件 setItem 会在每次导航时覆盖它们（CI 全量 e2e 当场抓出，本地只跑了 5 个 spec 没覆盖到）。
+           缺省注入仍然让写于"默认 work"时代的 spec 拿到 work 前提，而预置 design 的不被改写。 */
+        if (localStorage.getItem("wb_agent_uimode") === null) {
+          localStorage.setItem("wb_agent_uimode", JSON.stringify("work"));
+        }
       } catch (e) { /* 存储不可用时保持原行为 */ }
     });
     await use(page);
