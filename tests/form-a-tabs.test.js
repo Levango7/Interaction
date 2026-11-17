@@ -25,7 +25,14 @@ const TABS_KEY = PREFIX + "form_a_tabs";
 const DFLT = [{ id: "today", scene: "office", title: "今日" }];
 
 function boot(extra) {
-  return loadApp({ storage: Object.assign({ [PREFIX + "onboarded"]: "true" }, extra || {}) });
+  /* 2026-11-17 批六刀2：本文件守的是「形态 A 工作区 tab 注册表」契约（默认今日 tab is-on 等），
+     写于默认 work 时代。产品默认翻 agent-first（code + 对话优先）后，jsdom 的 window.innerWidth
+     也 ≥1024 ⇒ 默认落 code 模式，顶部多出「对话」标签且它高亮，抢走今日 tab 的 is-on ⇒ 6 条红。
+     这里显式声明 work 前提（与其它 spec 的 fixture 同手法），零改任何断言——测的是 tab 注册表
+     本身，不是产品默认模式（默认模式由 ui-mode.test.js 独占守护）。只在缺省时注入，不覆盖用例预置。 */
+  const storage = Object.assign({ [PREFIX + "onboarded"]: "true" }, extra || {});
+  if (storage[PREFIX + "uimode"] === undefined) storage[PREFIX + "uimode"] = JSON.stringify("work");
+  return loadApp({ storage });
 }
 async function ready(win) {
   await vi.waitFor(() => expect(win.document.getElementById("chatPanel")._bound).toBe(true));

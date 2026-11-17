@@ -99,7 +99,9 @@ describe("窄变异自证（§2：删 handler / 去发射 必须翻红）", () =
 
   it("基线：真实三处源双向包含（绿）", () => {
     expect(checkBindings({ used: baseline, handlers }).ok).toBe(true);
-    expect(handlers).toHaveLength(8); // B2 首落 4 键 + B3 faCmpToggle + B4 faRrSec + B6 faMenuOpen/faFocusToggle（§8 已结案）
+    /* 2026-11-17 批六刀2：新增 faChatFocus（「对话」标签回纯聊天），8→9。
+       B2 首落 4 + B3 faCmpToggle + B4 faRrSec + B6 faMenuOpen/faFocusToggle + faChatFocus。 */
+    expect(handlers).toHaveLength(9);
   });
 
   it("变异①：删一个 handler 引用 ⇒ 门红（死控件面）", () => {

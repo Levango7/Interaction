@@ -4108,6 +4108,9 @@ function applyUIMode(){
     if(_cfg && !_cfg.enabled && typeof renderChatDisabled === "function") renderChatDisabled();
     else if(typeof renderChat === "function") renderChat();
   }catch(_e){ /* 聊天区重绘失败不阻断模式切换 */ }
+  /* 2026-11-17 批六刀2：模式切换后 tab 条要即时同步——code 模式才有「对话」标签、切走要撤掉。
+     typeof 守卫调用，避免 render-widgets → render-entry 形成静态依赖环（lint-layers）。幂等重绘。 */
+  try{ if(typeof renderFormATabs === "function") renderFormATabs(); }catch(_e){ /* tab 条重绘失败不阻断模式切换 */ }
 }
 function toggleUIMode(){
   const cur = _uiMode();

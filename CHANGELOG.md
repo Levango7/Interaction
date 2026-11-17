@@ -3,6 +3,18 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-17 · **批六 CI 复绿：chat tab 限定 code 模式 + 测试前提显式化（非放宽判据）**
+
+_`8629f3f` 推后 CI run `44074109446` / Deploy `44074109262` 全红（e2e + test ubuntu/24 两腿）。这是我自己推的提交，先停新布局、定位红因并修绿，再继续用户最新标注图的改造。_
+
+- **`tests/form-a-tabs.test.js` 6 failed（根因：chat tab 全局化）**：首版 `#tabChat` 在所有模式都渲染且默认高亮，jsdom 无偏好时 `window.innerWidth ≥1024` ⇒ 落 code 模式，抢走「今日」tab 的 `is-on`，6 条 tab 注册表断言红。修法两层：① `src/render-entry.js` 新增 `_isCodeMode()`，`renderFormATabs()` **仅 code 模式**渲染 chat tab，`formATabSwitch()` / `formAChatFocus()` 均加守卫——work/design 模式渲染路径一字不变；② 该文件 `boot()` 显式注入 `wb_agent_uimode="work"`，声明「守工作区 tab 注册表」的测试前提（只在缺省时注入，不覆盖用例预置）。零改断言。
+- **`tests/lint-bindings.test.js` 1 failed**：新增 `faChatFocus` handler 后 `FORM_A_ACTIONS` 从 8 键变 9 键，硬断言仍写 8。改为 9 并注明新增键；变异测试两腿（删 handler / 去发射）保持原射程。
+- **`tests/e2e/workflow.spec.js` 6 次 retry timeout**：该 spec 是工作模式长流程（依赖 `#main .wb-tile` / `#taskForm` / `.kcard`），默认 code + 对话优先后 `#main` display:none ⇒ tile 永远等不到。`beforeEach` 显式注入 work 前提（同「仅缺省时」手法），零改断言。
+- **`tests/e2e/rag-hybrid.spec.js:269` 不修**：首次 `waitRagReady 30s` 超时，同 SHA retry #1 762ms 绿；现场 `profiles:none / keyKind:null / cfgEnabled:undefined`，判为既有环境/CPU 饥饿型 flake，与批六无因果关系。**不放宽判据、不抬超时**。
+- **`src/render-widgets.js` `applyUIMode()` 补 tab 条同步**：模式切换后即时 `renderFormATabs()`（`typeof` 守卫避免静态依赖环、幂等重绘），否则切到 work 时旧的 chat tab 残留。
+- **验证（本地）**：`form-a-tabs` + `lint-bindings` **31/31**、`workflow` e2e **4/4**、`ui-mode-layout` + `topbar-overflow` **30/30**；源码态抽回复核 705KB / 40 标记。
+- **高共写面声明**：`src/render-entry.js`、`src/render-widgets.js`、`tests/form-a-tabs.test.js`、`tests/lint-bindings.test.js`、`tests/e2e/workflow.spec.js`、`CHANGELOG.md`、`docs/agent-board.md`；HTML 仅抽取位移、零内容改动；workflow 之外的 spec / 两份 lock / node_modules / server / electron 零触碰。
+
 ### 2026-11-17 · **主流 Agent 化批六（刀1+刀2）：顶栏收敛三枚 + 中栏纯聊天 + 工作区收进顶部标签页**
 
 _用户发截图「还要改」并给出目标结构：「顶栏左侧图标与产品名，右侧只放搜索/消息/下载；登录放左下角，帮助是设置里的能力，快捷命令放进设置或右栏；下面左中右三栏……中间页面是聊天区……右侧边栏是 todo/skills/mcps/tools/plugins」。两问裁定：中栏工作区「收进顶部标签页」、右栏「合并进相关区」。本批先落刀1（顶栏+左栏底部）与刀2 的中栏部分；右栏五分区拆下一批（撞 rail-sections/ui-agent-parity/ui-mode-layout 三处 sessions 节硬断言，拆开控风险）。_

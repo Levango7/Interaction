@@ -66,6 +66,13 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
 
   // 自动处理 alert()（saveCfg 成功会 alert("已保存...")）
   test.beforeEach(async ({ page }) => {
+    /* 2026-11-17 批六刀2：本 spec 是「工作模式」长流程（依赖工作台 tiles / #taskForm / .kcard）。
+       产品默认翻成 code + 对话优先后，无偏好启动会落 code 且 #main 隐藏 ⇒ switchScene 的
+       `#main .wb-tile` 永远等不到（CI 6 次 timeout）。这里显式声明 work 前提——与其它 spec 的
+       公共 fixture 同手法，只在缺省时注入、不覆盖用例自己预置的值。零改任何断言，是前提显式化。 */
+    await page.addInitScript(() => {
+      try { if (localStorage.getItem("wb_agent_uimode") === null) localStorage.setItem("wb_agent_uimode", JSON.stringify("work")); } catch (e) { /* ignore */ }
+    });
     page.on("dialog", async (d) => {
       try { await d.accept(); } catch (e) { /* ignore */ }
     });
