@@ -684,6 +684,22 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   display:inline-flex;align-items:center;justify-content:center;min-height:22px;background:transparent;border:0}
 .menubar .mi-session:hover{background:var(--accent-soft);color:var(--text)}
 .menubar .mi-session svg{width:14px;height:14px}
+/* ===== 主流 Agent 化批六·刀1（2026-11-17，用户截图「还要改」+ 目标结构）=====
+   顶栏右侧（.topbar 容器）在宽屏（≥1024，三栏 agent 形态的门槛）严格只留三枚图标：
+   搜索 / 消息 / 下载。用户原话「顶栏 左侧不变，右侧只放几个图标：搜索、消息、下载；
+   登录放在左下角，帮助是设置里面的能力；快捷命令…放进设置或右侧边栏」。
+   —— 左侧 .menubar > .logo / .mi 一律不动（「左侧不变」）；这里只作用于右侧 .topbar。
+   —— 隐藏的按钮 DOM / id / data-action 全保留：JS 绑定、Ctrl+K 命令面板、主题切换
+      （设置页外观卡）、右栏 todo（宽屏常驻）均不受影响；登录由左栏底部 .side-foot 转发。
+   —— 用 @media(min-width:1024) 限定：≤1023 窄屏顶栏完全维持原样，topbar-overflow
+      ①②③⑤ 的窄屏判据（44px 命中 / 溢出入口 / 更多菜单）零影响，只改 ④ 的宽屏断言。 */
+@media (min-width:1024px){
+  .menubar .topbar #btnCmd,
+  .menubar .topbar #btnTaskRail,
+  .menubar .topbar #btnTheme,
+  .menubar .topbar #btnInstall,
+  .menubar .topbar #btnUser{display:none}
+}
 /* B6：帮助菜单浮层——脱离流、右锚 menubar 下缘；[hidden] 优先，不靠类切换 */
 .help-menu{position:absolute;top:calc(var(--mb-h) - 2px);right:var(--space-2);z-index:var(--z-popover);
   display:flex;flex-direction:column;min-width:180px;padding:var(--space-1);
@@ -1167,6 +1183,22 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   color:var(--text-faint);font-size:var(--fs-2xs);font-weight:500;gap:2px}
 .side .side-toggle:hover{background:var(--surface-hover);color:var(--text)}
 .side .side-toggle svg{width:11px;height:11px}
+/* 主流 Agent 化批六·刀1：左栏最底部「用户 + 设置」同行（用户「登录放在左下角/用户、设置同一行」）。
+   两根等高按钮各占一半，透明底、hover 才显形——与折叠键同一克制口径。数据侧走 data-foot 委托。 */
+.side .side-foot{order:5;flex-shrink:0;display:flex;gap:2px;
+  padding:var(--space-1) var(--space-2) var(--space-2);
+  border-top:1px solid color-mix(in srgb,var(--line) 45%,transparent);margin-top:2px}
+.side-foot-btn{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:5px;
+  min-height:30px;padding:2px 4px;border:0;border-radius:var(--radius-md);background:transparent;
+  color:var(--text-dim);font-size:var(--fs-2xs);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
+.side-foot-btn:hover{background:var(--accent-soft);color:var(--accent-text,var(--accent))}
+.side-foot-ic{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.side-foot-ic svg{width:var(--icon-sm);height:var(--icon-sm)}
+.side-foot-lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 折叠态：只留两个图标，各占半格；label 退场 */
+.side.collapsed .side-foot{padding:var(--space-1) 2px}
+.side.collapsed .side-foot-lbl{display:none}
+.side.collapsed .side-foot-btn{min-height:34px}
 } /* @media(min-width:768px) 三段式左栏（见上：不限定会盖掉 ≤767 的侧栏隐藏） */
 .nav-item{display:flex;align-items:center;gap:var(--space-2);width:100%;padding:6px var(--space-2);
   border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text);margin-bottom:2px;
@@ -5610,11 +5642,17 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
      纯 CSS 覆盖，只在 .body.code-mode 作用域生效：work 贴底坞 / design 画布零影响。
      折叠键在分屏态隐藏（无折叠概念，布局固定）；#chat 与运行态条无视 .collapsed 强制常驻——
      这是「气泡常驻可见」的产品裁决，不是放宽折叠判据（折叠行为在 work 模式原样保留）。 */
+  /* ===== 2026-11-17 批六刀2（用户「中间页面是聊天区」+ 裁定「工作区收进顶部标签页」）=====
+     code 模式默认 = 对话优先：#chatPanel 占满中栏主体、#main 让位（功能没删——点顶部任一
+     工作区标签即加 .workspace-open 恢复工作区）。这是产品裁决反转：覆盖 11-02「主客颠倒」
+     与 11-16「分屏」（用户新结构以对话为中栏主体）；ui-mode-layout 判据同步改写，非放宽。
+     工作区视图（.workspace-open）仍沿用下面 11-16 的分屏几何，保证任务/设置/知识库可达。 */
   .body.code-mode .main-wrap{overflow:hidden}
-  .body.code-mode .main-wrap>.main{flex:1 1 auto;min-height:0;overflow-y:auto}
+  /* 默认对话优先：main 隐藏，chat 占满中栏（flex:1，非贴底坞） */
+  .body.code-mode .main-wrap>.main{display:none;flex:1 1 auto;min-height:0;overflow-y:auto}
   .body.code-mode .main-wrap>.chat-panel{
-    position:static;flex:0 0 50%;max-height:none;min-height:0;
-    overflow:hidden;border-top:1px solid var(--line)}
+    position:static;flex:1 1 auto;max-height:none;min-height:0;
+    overflow:hidden;border-top:none}
   .body.code-mode .main-wrap>.chat-panel .chat,
   .body.code-mode .main-wrap>.chat-panel.collapsed .chat{
     display:flex;flex:1 1 auto;max-height:none;min-height:0;overflow-y:auto}
@@ -5622,6 +5660,11 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   .body.code-mode .main-wrap>.chat-panel.collapsed .chat-toolbar{display:flex}
   .body.code-mode .main-wrap>.chat-panel #chatPanelCollapse{display:none}
   .body.code-mode .main-wrap>.chat-panel .chat-input-area{max-height:none}
+  /* 工作区视图（点顶部工作区标签）：恢复 11-16 分屏——main 上半 / chat 下半，各约半屏 */
+  .body.code-mode.workspace-open .main-wrap>.main{display:block;flex:1 1 auto;min-height:0;overflow-y:auto}
+  .body.code-mode.workspace-open .main-wrap>.chat-panel{
+    position:static;flex:0 0 50%;max-height:none;min-height:0;
+    overflow:hidden;border-top:1px solid var(--line)}
   .body.code-mode .task-rail{grid-column:3;grid-row:1;width:auto;min-height:0}
   /* P2-5（2026-11-02）：code 模式的能力面在右下 agentDock（同源数据 + 2.5s 活轮询），
      右栏 Agent 节是同一批数据的静态副本——藏掉，避免两个入口两份渲染互相漂移。
@@ -9052,6 +9095,7 @@ const MESSAGES = {
     "taskRail.title": "今日",
     "rail.tab.today": "今日",
     "formA.tabToday": "今日",
+    "formA.tabChat": "对话",
     "formA.addTab": "新建标签页",
     "rail.tab.agent": "Agent",
     "rail.tab.files": "文件",
@@ -13270,6 +13314,7 @@ const MESSAGES = {
     "taskRail.title": "Today",
     "rail.tab.today": "Today",
     "formA.tabToday": "Today",
+    "formA.tabChat": "Chat",
     "formA.addTab": "New Tab",
     "rail.tab.agent": "Agent",
     "rail.tab.files": "Files",
@@ -25990,7 +26035,22 @@ function renderSide(){
     + '<div class="side-nav-t">' + esc(t("side.nav.title", "导航")) + "</div>"
     + '<div class="side-nav-grid">' + groups.map((g)=>g.nodes.map(nodeHtml).join("")).join("") + "</div>"
     + "</div>";
-  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + sideSessionsHtml() + navHtml);
+  /* 主流 Agent 化批六·刀1（2026-11-17，用户「登录放在左下角 / 用户、设置在同一行」）：
+     左栏最底部加一行「用户 + 设置」。不重复 id（#btnUser / #btnGear 各只有一份），
+     用独立 data-foot 属性走 setupSideMenu 委托：用户转发 #btnUser.click()（保留其登录态
+     渲染与 onclick），设置走 AppBridge.openDrawer()（与侧栏 data-gear 同路）。顶栏宽屏
+     隐藏 #btnUser 后，这里是登录入口的唯一替代；窄屏顶栏 #btnUser 仍在，两处并存不冲突。 */
+  const footHtml = '<div class="side-foot">'
+    + '<button type="button" class="side-foot-btn" data-foot="user" title="' + esc(t("api.login", "登录"))
+    + '" aria-label="' + esc(t("api.login", "登录")) + '">'
+    + '<span class="side-foot-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>'
+    + '<span class="side-foot-lbl">' + esc(t("api.login", "登录")) + "</span></button>"
+    + '<button type="button" class="side-foot-btn" data-foot="settings" title="' + esc(t("side.menu.settings", "设置"))
+    + '" aria-label="' + esc(t("side.menu.settings", "设置")) + '">'
+    + '<span class="side-foot-ic" aria-hidden="true">' + UI_ICONS.gear.replace("<svg", '<svg aria-hidden="true"') + "</span>"
+    + '<span class="side-foot-lbl">' + esc(t("side.menu.settings", "设置")) + "</span></button>"
+    + "</div>";
+  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + sideSessionsHtml() + navHtml + footHtml);
 
   /* 激活子项的父分支自动展开（一次性同步，不触发额外存储写） */
   if(_sideActive){
@@ -26371,6 +26431,17 @@ function setupSideMenu(){
     }
     const sessAll = e.target && e.target.closest ? e.target.closest("[data-sess-all]") : null;
     if(sessAll){ if(typeof openSessionModal === "function") openSessionModal(); return; }
+    /* 主流 Agent 化批六·刀1：左栏底部「用户 / 设置」同行（不重复 id，转发既有入口） */
+    const foot = e.target && e.target.closest ? e.target.closest("[data-foot]") : null;
+    if(foot){
+      const which = foot.getAttribute("data-foot");
+      if(which === "user"){
+        const ub = document.getElementById("btnUser"); if(ub && typeof ub.click === "function") ub.click();
+      }else if(which === "settings"){
+        if(typeof AppBridge !== "undefined" && typeof AppBridge.openDrawer === "function") AppBridge.openDrawer();
+      }
+      return;
+    }
 
     const btn = e.target && e.target.closest ? e.target.closest(".nav-item") : null;
     if(!btn) return;
@@ -29824,6 +29895,9 @@ function applyUIMode(){
     if(_cfg && !_cfg.enabled && typeof renderChatDisabled === "function") renderChatDisabled();
     else if(typeof renderChat === "function") renderChat();
   }catch(_e){ /* 聊天区重绘失败不阻断模式切换 */ }
+  /* 2026-11-17 批六刀2：模式切换后 tab 条要即时同步——code 模式才有「对话」标签、切走要撤掉。
+     typeof 守卫调用，避免 render-widgets → render-entry 形成静态依赖环（lint-layers）。幂等重绘。 */
+  try{ if(typeof renderFormATabs === "function") renderFormATabs(); }catch(_e){ /* tab 条重绘失败不阻断模式切换 */ }
 }
 function toggleUIMode(){
   const cur = _uiMode();
@@ -41277,14 +41351,41 @@ function getFormATabs(){
 function _saveFormATabs(){ try{ return save(FORM_A_TABS_KEY, _formATabs); }catch(e){
   try{ if(typeof pushDiag === "function") pushDiag("warn", "form_a_tabs persist failed: "+((e&&e.message)||e), {where:"_saveFormATabs"}); }catch(_e2){}
 } }
-/* tab 条渲染：与 active 场景匹配的首个 tab 高亮（active 是唯一事实源；重复场景视图只亮首个） */
+/* ===== 主流 Agent 化批六·刀2（2026-11-17，用户「中间页面是聊天区」+ 两问裁定「工作区收进顶部标签页」）=====
+   中栏在 code 模式默认 = 纯聊天（chat 占满中栏、#main 让位）；工作区不删除，收进顶部 formATabs
+   标签页——点任一工作区标签才打开 #main（body 加 .workspace-open）。#tabChat 是回到纯聊天的显式入口。
+   与 11-02「主客颠倒」/11-16「分屏」是产品裁决反转（用户新结构覆盖旧裁决），不是放宽判据。
+   workspace-open 不持久化：每次刷新回到对话优先——与「无偏好默认 agent-first」同口径。 */
+/* 是否 code 模式（对话优先只在此模式生效）。⚠️ 关键：work/design 模式不该有「对话」标签——
+   CI 首红的根因是首版把 chat tab 做成全局，任何模式下都渲染且默认高亮，抢走「今日」tab 的 is-on。
+   这里按 body.code-mode 守卫；另注：jsdom 的 window.innerWidth 也 ≥1024，无偏好时同样落 code，
+   故 form-a-tabs 等守「工作区 tab 注册表」的 spec 还需在 boot() 显式声明 work 前提。 */
+function _isCodeMode(){ const b=document.querySelector(".body"); return !!(b && b.classList.contains("code-mode")); }
+function _workspaceOpen(){ const b=document.querySelector(".body"); return !!(b && b.classList.contains("workspace-open")); }
+function _setWorkspaceOpen(on){
+  const b=document.querySelector(".body"); if(!b) return;
+  b.classList.toggle("workspace-open", !!on);
+  const chatTab = document.getElementById("tabChat");
+  if(chatTab){ chatTab.classList.toggle("is-on", !on); chatTab.setAttribute("aria-selected", on?"false":"true"); }
+  renderFormATabs();
+}
+/* tab 条渲染：与 active 场景匹配的首个 tab 高亮（active 是唯一事实源；重复场景视图只亮首个）。
+   仅 code 模式在最前加「对话」标签 #tabChat：对话优先时高亮它，工作区标签高亮让位于它；
+   非 code 模式（work/design/jsdom 测试）完全维持原渲染，一个字都不变。 */
 function renderFormATabs(){
   const host = $("#formATabs"); if(!host) return;
   const tabs = getFormATabs();
   const multi = tabs.length > 1;
+  const codeMode = _isCodeMode();
+  const chatOn = codeMode && !_workspaceOpen();
+  const chatTabHtml = codeMode
+    ? '<button type="button" class="tab tab-chat'+(chatOn?' is-on':'')+'" id="tabChat" role="tab"'
+      + ' aria-selected="'+(chatOn?"true":"false")+'" data-action="faChatFocus"'
+      + ' title="'+esc(t("formA.tabChat","对话"))+'">'+esc(t("formA.tabChat","对话"))+'</button>'
+    : "";
   let marked = false;
-  host.innerHTML = sanitizeHtml(tabs.map(function(tb){
-    const on = !marked && tb.scene === active;
+  host.innerHTML = sanitizeHtml(chatTabHtml + tabs.map(function(tb){
+    const on = !chatOn && !marked && tb.scene === active;
     if(on) marked = true;
     return '<button type="button" class="tab'+(on?' is-on':'')+'" role="tab" aria-selected="'+(on?"true":"false")+'" data-action="faTabSwitch" data-tab-id="'+esc(tb.id)+'">'+esc(tb.title)+'</button>'
       + (multi ? '<button type="button" class="tab-x" data-action="faTabClose" data-tab-id="'+esc(tb.id)+'" aria-label="'+esc(t("a11y.closeTab","关闭标签页"))+'">'+UI_ICONS.close+'</button>' : '');
@@ -41292,9 +41393,16 @@ function renderFormATabs(){
 }
 function formATabSwitch(id){
   const tab = getFormATabs().filter(function(x){ return x.id === id; })[0];
-  if(!tab || active === tab.scene) return;
+  if(!tab) return;
+  /* 点工作区标签 = 打开工作区视图（仅 code 模式；work 模式点 tab 维持原切场景行为） */
+  if(_isCodeMode() && !_workspaceOpen()) _setWorkspaceOpen(true);
+  if(active === tab.scene){ render(); return; }
   setActive(tab.scene);
   render();
+}
+/** 回到「对话优先」：关闭工作区视图，#main 让位给 chat（不换 scene，工作区状态保留在 tab 里） */
+function formAChatFocus(){
+  if(_isCodeMode() && _workspaceOpen()) _setWorkspaceOpen(false);
 }
 function formATabAdd(){
   const tabs = getFormATabs();
@@ -46548,6 +46656,8 @@ function _helpRun(item){
    faRailToggle 不重写行为，只把点击转给原按钮 #btnTaskRail（同仓「行项不重写行为」惯例）。
    覆盖门禁：scripts/lint-bindings.mjs 扫 HTML＋src 发射并集 ⇄ 本表键集双向包含。 */
 const FORM_A_ACTIONS = {
+  /* 主流 Agent 化批六·刀2：点「对话」标签 → 关闭工作区视图，中栏回纯聊天 */
+  faChatFocus: function(){ if(typeof formAChatFocus === "function") formAChatFocus(); },
   faTabSwitch: function(el){ formATabSwitch(el.getAttribute("data-tab-id")); },
   faTabAdd: function(){ formATabAdd(); },
   faTabClose: function(el){ formATabClose(el.getAttribute("data-tab-id")); },
