@@ -106,13 +106,14 @@ describe("CSS 契约（防静默回退）", () => {
     expect(rule[1]).toContain("color-mix(in srgb, var(--accent) 12%");
   });
 
-  it("#toasts 锚在实测的 --chrome-h 上 + B1 四壳前缀（mb+tb），不再用 --topbar-h 推导", () => {
+  it("#toasts 锚在实测的 --chrome-h 上 + 批八前缀（mb），不再用 --topbar-h 推导", () => {
     /* --topbar-h 记 54px、实测 65px（v1.15 之后没人回改）；用它推导会压住常驻工具行。
-       B1 起顶区四壳（menubar+tabbar+topbar+toolbar-row），toasts 随顶区下移 mb+tb，
-       与 chrome-h 的相对偏移（实测 110 + space-3）保持同构。 */
+       批八 tabbar 整条删除（用户「取消 tabbar 那一栏」），顶区只剩 menubar + toolbar-row，
+       toasts 的 top 锚同步去掉 --tb-h；与 chrome-h 的相对偏移（110 + space-3）保持同构。 */
     const rule = /#toasts\{[^}]*\}/.exec(SRC);
     expect(rule, "应存在 #toasts 规则").toBeTruthy();
-    expect(rule[0]).toMatch(/top:calc\(var\(--mb-h\) \+ var\(--tb-h\) \+ var\(--chrome-h\) \+ var\(--space-3\)\)/);
+    expect(rule[0]).toMatch(/top:calc\(var\(--mb-h\) \+ var\(--chrome-h\) \+ var\(--space-3\)\)/);
+    expect(rule[0]).not.toMatch(/var\(--tb-h\)/);
     expect(rule[0]).not.toMatch(/top:calc\(var\(--topbar-h\)/);
     expect(SRC).toMatch(/--chrome-h:110px/);
   });

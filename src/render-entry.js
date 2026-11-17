@@ -71,7 +71,7 @@ function render(){
     const _help = $("#helpPage"); if(_help) _help.remove();
     uiView = "main"; // v1.9.3g：回到主视图，侧栏高亮据此渲染（场景/总览/统计/回收站）
     AppBridge.renderSide();
-    renderFormATabs(); // 形态 A B2：tab 条随视图注册表重绘（active 是唯一事实源）
+    /* 批八：tab 条已删，视图注册表只在工作台 tile / 数据层 API 中使用，render 不再重绘 UI tab。 */
     /* 首次渲染后武装通用撤销：此前（seed/迁移）的快照清掉，也不弹「可撤销」提示 */
     if(typeof armUndo === "function") armUndo();
     if(active==="overview"){ renderOverview(); appendFoot(); return; }
@@ -218,58 +218,17 @@ function getFormATabs(){
 function _saveFormATabs(){ try{ return save(FORM_A_TABS_KEY, _formATabs); }catch(e){
   try{ if(typeof pushDiag === "function") pushDiag("warn", "form_a_tabs persist failed: "+((e&&e.message)||e), {where:"_saveFormATabs"}); }catch(_e2){}
 } }
-/* ===== 主流 Agent 化批六·刀2（2026-11-17，用户「中间页面是聊天区」+ 两问裁定「工作区收进顶部标签页」）=====
-   中栏在 code 模式默认 = 纯聊天（chat 占满中栏、#main 让位）；工作区不删除，收进顶部 formATabs
-   标签页——点任一工作区标签才打开 #main（body 加 .workspace-open）。#tabChat 是回到纯聊天的显式入口。
-   与 11-02「主客颠倒」/11-16「分屏」是产品裁决反转（用户新结构覆盖旧裁决），不是放宽判据。
-   workspace-open 不持久化：每次刷新回到对话优先——与「无偏好默认 agent-first」同口径。 */
-/* 是否 code 模式（对话优先只在此模式生效）。⚠️ 关键：work/design 模式不该有「对话」标签——
-   CI 首红的根因是首版把 chat tab 做成全局，任何模式下都渲染且默认高亮，抢走「今日」tab 的 is-on。
-   这里按 body.code-mode 守卫；另注：jsdom 的 window.innerWidth 也 ≥1024，无偏好时同样落 code，
-   故 form-a-tabs 等守「工作区 tab 注册表」的 spec 还需在 boot() 显式声明 work 前提。 */
-function _isCodeMode(){ const b=document.querySelector(".body"); return !!(b && b.classList.contains("code-mode")); }
-function _workspaceOpen(){ const b=document.querySelector(".body"); return !!(b && b.classList.contains("workspace-open")); }
-function _setWorkspaceOpen(on){
-  const b=document.querySelector(".body"); if(!b) return;
-  b.classList.toggle("workspace-open", !!on);
-  const chatTab = document.getElementById("tabChat");
-  if(chatTab){ chatTab.classList.toggle("is-on", !on); chatTab.setAttribute("aria-selected", on?"false":"true"); }
-  renderFormATabs();
-}
-/* tab 条渲染：与 active 场景匹配的首个 tab 高亮（active 是唯一事实源；重复场景视图只亮首个）。
-   仅 code 模式在最前加「对话」标签 #tabChat：对话优先时高亮它，工作区标签高亮让位于它；
-   非 code 模式（work/design/jsdom 测试）完全维持原渲染，一个字都不变。 */
-function renderFormATabs(){
-  const host = $("#formATabs"); if(!host) return;
-  const tabs = getFormATabs();
-  const multi = tabs.length > 1;
-  const codeMode = _isCodeMode();
-  const chatOn = codeMode && !_workspaceOpen();
-  const chatTabHtml = codeMode
-    ? '<button type="button" class="tab tab-chat'+(chatOn?' is-on':'')+'" id="tabChat" role="tab"'
-      + ' aria-selected="'+(chatOn?"true":"false")+'" data-action="faChatFocus"'
-      + ' title="'+esc(t("formA.tabChat","对话"))+'">'+esc(t("formA.tabChat","对话"))+'</button>'
-    : "";
-  let marked = false;
-  host.innerHTML = sanitizeHtml(chatTabHtml + tabs.map(function(tb){
-    const on = !chatOn && !marked && tb.scene === active;
-    if(on) marked = true;
-    return '<button type="button" class="tab'+(on?' is-on':'')+'" role="tab" aria-selected="'+(on?"true":"false")+'" data-action="faTabSwitch" data-tab-id="'+esc(tb.id)+'">'+esc(tb.title)+'</button>'
-      + (multi ? '<button type="button" class="tab-x" data-action="faTabClose" data-tab-id="'+esc(tb.id)+'" aria-label="'+esc(t("a11y.closeTab","关闭标签页"))+'">'+UI_ICONS.close+'</button>' : '');
-  }).join(""));
-}
+/* ===== 主流 Agent 化批八（2026-11-17，用户「取消 tabbar / 不需要工作区入口，直接常驻聊天」）=====
+   tab 条 UI 整条退役：#tabChat / #formATabs / 旧工作区状态类全部删除，中栏在 code 模式常驻纯聊天。
+   视图注册表（getFormATabs / formATabAdd / formATabClose / formATabOpenScene）**保留为数据层**：
+   工作台 tile 仍按场景开/切视图，只是不再有顶部标签页可视化。这覆盖 11-16「分屏」与
+   11-17 批六「工作区收进顶部标签页」两次旧裁决，不是放宽判据。 */
 function formATabSwitch(id){
   const tab = getFormATabs().filter(function(x){ return x.id === id; })[0];
   if(!tab) return;
-  /* 点工作区标签 = 打开工作区视图（仅 code 模式；work 模式点 tab 维持原切场景行为） */
-  if(_isCodeMode() && !_workspaceOpen()) _setWorkspaceOpen(true);
   if(active === tab.scene){ render(); return; }
   setActive(tab.scene);
   render();
-}
-/** 回到「对话优先」：关闭工作区视图，#main 让位给 chat（不换 scene，工作区状态保留在 tab 里） */
-function formAChatFocus(){
-  if(_isCodeMode() && _workspaceOpen()) _setWorkspaceOpen(false);
 }
 function formATabAdd(){
   const tabs = getFormATabs();

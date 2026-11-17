@@ -150,9 +150,11 @@ describe("B6 反向对照（防假绿）", () => {
     const win = await ready(boot());
     helpBtn(win).click();
     expect(helpBtn(win).getAttribute("aria-expanded")).toBe("true");
-    // 任意已登记 action（faTabAdd 会新增视图，此处只看菜单是否收起）
-    const add = win.document.querySelector("[data-action='faTabAdd']");
-    if (add) add.click();
+    /* 批八：faTabAdd 随 tabbar 一起退役。改用仍存活的已登记 action #btnFocus
+       （faFocusToggle，点它会切专注态；这里只看菜单是否被统一收起）。 */
+    const toggle = win.document.querySelector("[data-action='faFocusToggle']");
+    expect(toggle, "存活的 faFocusToggle 发射点应在位").toBeTruthy();
+    toggle.click();
     expect(menu(win).hidden).toBe(true);
   });
 });

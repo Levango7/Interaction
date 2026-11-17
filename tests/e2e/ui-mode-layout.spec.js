@@ -50,10 +50,12 @@ const probeCodeMode = () => {
     collapseDisplay: collapseBtn ? getComputedStyle(collapseBtn).display : null,
     sessionBtnInMenubar: !!q(".menubar #chatSessionBtn"),
     chipInStatusbar: !!q(".statusbar #ctxBudgetChip"),
-    /* 2026-11-17 批六刀2：对话优先 / 工作区 tab 可达 */
-    workspaceOpen: q(".body").classList.contains("workspace-open"),
+    /* 2026-11-17 批八：tabbar 整条退役，中栏常驻纯聊天 */
+    tabbarExists: !!q(".tabbar"),
+    formATabsExists: !!q("#formATabs"),
     chatTabExists: !!q("#tabChat"),
-    chatTabOn: q("#tabChat") ? q("#tabChat").classList.contains("is-on") : null,
+    pillInSide: !!q("#side #uiModePill"),
+    footInSide: !!q("#side .side-foot"),
     dockDisplay: dock ? getComputedStyle(dock).display : null,
     dock: dock ? box(dock) : null,
     sdDisplay: sd ? getComputedStyle(sd).display : null,
@@ -69,12 +71,11 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
   });
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  /* 2026-11-17 批六刀2 判据随产品裁决**反转**改写（用户新结构「中间页面是聊天区」明确覆盖
-     11-02「主客颠倒」与 11-16「分屏」裁决）。这是产品裁决反转，**不是放宽判据**：
-     旧判据钉「工作区居中在上 + chat 下半屏」；新判据钉「chat 占满中栏主体、#main 默认隐藏、
-     工作区经顶部 #tabChat / 工作区标签往返可达」——两侧都钉，缺一不可。
-     工作区功能不删除：点任一工作区标签加 .workspace-open 恢复 #main（分屏几何，任务/设置/知识库可达）。 */
-  test("对话优先：chat 占满中栏主体、工作区收进顶部标签页可达（产品裁决反转）", async ({ page }) => {
+  /* 2026-11-17 批八判据随用户新裁定再次**反转**（「取消 tabbar 那一栏 / 不需要工作区入口，
+     直接常驻聊天」明确覆盖 11-02「主客颠倒」、11-16「分屏」与批六「顶部标签页往返」）。
+     新判据钉死：chat 占满中栏主体、#main 无入口可达、tabbar/tab 节点彻底不存在。
+     产品裁决反转而非放宽——旧判据里的往返路径本身被用户删除，不能留作「功能没删」的挡箭牌。 */
+  test("常驻纯聊天：chat 占满中栏、tabbar 与工作区入口整条退役（产品裁决反转）", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#main", { timeout: 15_000 });
     await waitMainRendered(page);
@@ -84,10 +85,9 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
     await waitMainRendered(page);
     const g = await page.evaluate(probeCodeMode);
 
-    /* ---- 对话优先：body 带 code-mode 但不带 workspace-open（默认落对话） ---- */
+    /* ---- 常驻纯聊天：body 带 code-mode，#main 永久让位（无工作区入口） ---- */
     expect(g.bodyClass, "body 应带 code-mode").toContain("code-mode");
-    expect(g.workspaceOpen, "默认应对话优先，不带 workspace-open").toBe(false);
-    expect(g.mainDisplay, `默认对话优先时 #main 应 display:none（实测 ${g.mainDisplay}）`).toBe("none");
+    expect(g.mainDisplay, `常驻聊天时 #main 应 display:none（实测 ${g.mainDisplay}）`).toBe("none");
 
     /* ---- 三栏位：中栏在 240 左栏与 300 右栏之间（不变） ---- */
     expect(g.wrap.x, `中栏左缘 ${g.wrap.x}，应在 240px 左栏之后`).toBeGreaterThanOrEqual(238);
@@ -106,39 +106,31 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
     expect(g.msgs.h, `#chat 高 ${g.msgs.h}px，应有实质高度承载气泡`).toBeGreaterThan(80);
     expect(g.msgs.y, "消息区应落在对话区内").toBeGreaterThanOrEqual(g.chat.y - 1);
 
-    /* ---- 工作区 tab 入口在位 + 控件落位 ---- */
-    expect(g.chatTabExists, "顶部应有「对话」标签 #tabChat").toBe(true);
-    expect(g.chatTabOn, "对话优先时 #tabChat 应高亮").toBe(true);
+    /* ---- 批八骨架：tabbar / 标签 / 工作区入口零残留；模式胶囊与用户设置在左栏 ---- */
+    expect(g.tabbarExists, "整条 tabbar 应删除").toBe(false);
+    expect(g.formATabsExists, "#formATabs 应删除").toBe(false);
+    expect(g.chatTabExists, "#tabChat 应删除").toBe(false);
+    expect(g.pillInSide, "模式胶囊应迁入左侧栏").toBe(true);
+    expect(g.footInSide, "用户/设置应固定在左栏最下方").toBe(true);
     expect(g.collapseDisplay, "主形态无折叠概念，#chatPanelCollapse 应隐藏").toBe("none");
-    expect(g.sessionBtnInMenubar, "会话管理按钮应迁至顶栏 menubar").toBe(true);
+    expect(g.sessionBtnInMenubar, "会话管理按钮应留在顶栏 menubar").toBe(true);
     expect(g.chipInStatusbar, "上下文预算芯片应迁至状态栏").toBe(true);
-
-    /* ---- 往返：点工作区标签 → #main 出现且分屏；点「对话」→ 回纯聊天 ---- */
-    await page.click("#formATabs .tab:not(.tab-chat)");
-    const g2 = await page.evaluate(probeCodeMode);
-    expect(g2.workspaceOpen, "点工作区标签应加 workspace-open").toBe(true);
-    expect(g2.mainDisplay, "工作区视图下 #main 应显示").not.toBe("none");
-    expect(g2.main.h, "工作区视图下 #main 应有可滚高度").toBeGreaterThan(120);
-    expect(g2.chatTabOn, "工作区视图下「对话」标签应取消高亮").toBe(false);
-    await page.click("#tabChat");
-    const g3 = await page.evaluate(probeCodeMode);
-    expect(g3.workspaceOpen, "点「对话」应回 workspace-open=false").toBe(false);
-    expect(g3.mainDisplay, "回到对话优先 #main 应再隐藏").toBe("none");
 
     /* ---- P2-5：右栏 Agent 节让位 agentDock（B4 起按节藏，不再按 tab） ---- */
     expect(g.agentSecDisplay, "code 模式右栏 Agent 节应隐藏").toBe("none");
     expect(g.todaySecDisplay, "「今日」节不应被误伤").not.toBe("none");
 
-    /* ---- 两个 dock 在位（左下会话 / 右下能力面） ---- */
-    expect(g.sdDisplay, "sessionDock 应显示").not.toBe("none");
+    /* ---- 批八：左下会话 dock 删除（会话只在右栏），右下能力 dock 保留 ---- */
+    expect(g.sdDisplay, "code 模式左栏会话 dock 应隐藏").toBe("none");
     expect(g.dockDisplay, "agentDock 应显示").not.toBe("none");
     expect(g.dock.x, `agentDock 左缘 ${g.dock.x}，应在 300px 右栏内`).toBeGreaterThanOrEqual(g.vw - 302);
     expect(g.dock.y + g.dock.h, "agentDock 不得溢出视口底").toBeLessThanOrEqual(g.vh);
   });
 
-  /* 批七（2026-11-17，用户按标注图三问裁定）：顶栏中部 Session 名 + 左栏 3×2 快捷格 +
-     右栏五区顺序。真浏览器几何守候——不靠 jsdom 推演（历史上有过推演错落点、main 连红 5 笔）。 */
-  test("批七新结构：顶栏 Session 名居中 + 左栏六快捷入口 + 右栏五区顺序 + 零横向溢出", async ({ page }) => {
+  /* 批八（2026-11-17，用户二次标注图 + 三问裁定）：顶栏 Session 名 / 左栏快捷格 / 左栏会话列表
+     全部删除；模式胶囊迁移左栏顶部；用户+设置固定左栏底部；右栏五区保持。
+     真浏览器几何守候——不靠 jsdom 推演（历史上有过推演错落点、main 连红 5 笔）。 */
+  test("批八新结构：无 Session 名/快捷格 + 模式胶囊在左栏顶 + 用户设置居底 + 右栏五区 + 零溢出", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#main", { timeout: 15_000 });
     await waitMainRendered(page);
@@ -149,27 +141,35 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
       const q = (s) => document.querySelector(s);
       const rect = (s) => { const e = q(s); if (!e) return null; const r = e.getBoundingClientRect();
         return { x: r.x, y: r.y, w: r.width, h: r.height, display: getComputedStyle(e).display }; };
+      const side = q("#side");
       return {
-        session: q("#mbSessionName") ? q("#mbSessionName").textContent.trim() : null,
-        sessionBox: rect("#mbSessionName"),
-        logoBox: rect(".menubar .logo"),
-        rightBox: rect(".menubar .topbar"),
-        quickCount: document.querySelectorAll(".side-quick-item").length,
-        quickBox: rect(".side-quick-grid"),
+        sessionExists: !!q("#mbSessionName"),
+        quickCount: document.querySelectorAll(".side-quick-item, .side-sess-item").length,
+        pill: rect("#uiModePill"),
+        side: side ? rect("#side") : null,
+        nav: rect("#side .side-nav"),
+        foot: rect("#side .side-foot"),
+        footLabels: Array.from(document.querySelectorAll("#side .side-foot-lbl")).map((e) => e.textContent.trim()),
         railSecs: Array.from(document.querySelectorAll("#taskRail .rr-sec"))
           .map((s) => s.getAttribute("data-rr-sec")),
         usagePane: !!q("#railUsagePane"),
         scrollW: document.documentElement.scrollWidth,
         vw: window.innerWidth,
+        vh: window.innerHeight,
       };
     });
 
-    expect(g.session && g.session.length, "顶栏中部应显示当前 Session 名").toBeGreaterThan(0);
-    expect(g.sessionBox.display, "宽屏顶栏 Session 名应可见").not.toBe("none");
-    expect(g.sessionBox.x, "Session 名应在 logo 之后").toBeGreaterThan(g.logoBox.x + g.logoBox.w);
-    expect(g.sessionBox.x + g.sessionBox.w, "Session 名应在右侧图标组之前").toBeLessThan(g.rightBox.x);
-    expect(g.quickCount, "左栏顶部快捷格应为 6 个（新建会话/任务/定时任务/Agents/知识库/发现）").toBe(6);
-    expect(g.quickBox.display, "快捷格应显示").toBe("grid");
+    expect(g.sessionExists, "顶栏中部 Session 名应彻底删除").toBe(false);
+    expect(g.quickCount, "左栏快捷格与会话列表应彻底删除").toBe(0);
+    expect(g.pill && g.pill.display, "模式胶囊应显示").not.toBe("none");
+    expect(g.pill.x, "胶囊应落在左栏内").toBeGreaterThanOrEqual(g.side.x - 1);
+    expect(g.pill.x + g.pill.w, "胶囊右缘不得越出左栏").toBeLessThanOrEqual(g.side.x + g.side.w + 1);
+    expect(g.pill.y + g.pill.h, "胶囊应在导航区之上").toBeLessThanOrEqual(g.nav.y + 1);
+    expect(g.foot && g.foot.display, "用户/设置行应显示").not.toBe("none");
+    expect(g.foot.y, "用户/设置应在导航区下方（左栏最底部）").toBeGreaterThanOrEqual(g.nav.y);
+    expect(g.side.y + g.side.h - (g.foot.y + g.foot.h), "用户/设置应贴左栏底缘（留白 ≤20px）").toBeLessThanOrEqual(20);
+    expect(g.foot.y + g.foot.h, "用户/设置不得溢出视口底").toBeLessThanOrEqual(g.vh + 1);
+    expect(g.footLabels, "同一行应为用户 + 设置").toEqual(["登录", "设置"]);
     expect(g.railSecs, "右栏五区顺序＝todo/文件/会话/大模型用量/运行与能力")
       .toEqual(["today", "files", "sessions", "usage", "agent"]);
     expect(g.usagePane, "大模型用量 pane 应在位").toBe(true);
@@ -210,11 +210,14 @@ test.describe("窄屏 390×844 · 胶囊禁用与抽屉层（P2-8、P2-7）", ()
 
   test("模式胶囊：「代码」段禁用 + setUIMode 拒绝 + 循环跳过 code（P2-8）", async ({ page }) => {
     await page.goto(APP_URL);
-    await page.waitForSelector("#uiModePill", { timeout: 15_000 });
+    /* 批八：胶囊在窄屏隐藏的左栏里，等待附着即可（可见性由底栏导航承担）。 */
+    await page.waitForSelector("#uiModePill", { state: "attached", timeout: 15_000 });
     await waitMainRendered(page);
 
     const codeItem = page.locator('#uiModePill .mode-pill-item[data-mode="code"]');
-    await expect(codeItem, "「代码」段应可见（禁用不是藏起来）").toBeVisible();
+    /* 批八：胶囊已迁入左侧栏，窄屏 #side 整体隐藏（模式切换由底栏/快捷键的 toggleUIMode 承担），
+       因此这里不再钉「可见」，只钉三段仍在 DOM 且禁用态正确——禁用不是从 DOM 删掉。 */
+    await expect(page.locator("#uiModePill .mode-pill-item"), "三段仍应存在于 DOM").toHaveCount(3);
     await expect(codeItem, "窄屏「代码」段应 disabled").toBeDisabled();
     await expect(codeItem, "窄屏「代码」段应 aria-disabled=true").toHaveAttribute("aria-disabled", "true");
     await expect(codeItem, "窄屏「代码」段应带 is-disabled 样式类").toHaveClass(/is-disabled/);
@@ -244,7 +247,7 @@ test.describe("窄屏 390×844 · 胶囊禁用与抽屉层（P2-8、P2-7）", ()
       try { localStorage.removeItem("wb_agent_uimode"); } catch (e) { /* 存储不可用时保持原行为 */ }
     });
     await page.goto(APP_URL);
-    await page.waitForSelector("#uiModePill", { timeout: 15_000 });
+    await page.waitForSelector("#uiModePill", { state: "attached", timeout: 15_000 });
     await waitMainRendered(page);
 
     const mode = await page.evaluate(() => document.querySelector("#uiModePill .mode-pill-item.is-on").getAttribute("data-mode"));
@@ -303,29 +306,28 @@ test.describe("沉浸页 :has() 六选择器族（B3 §4，真 :has() 引擎）"
     await page.goto(APP_URL);
     await page.waitForSelector("#chatPanel", { timeout: 15_000 });
 
-    /* 壳唯一（HTML 内 .tabbar/.composer/.statusbar 各 1 处；evaluate+querySelector 无严格模式歧义）。
+    /* 批八：tabbar 已整条删除，沉浸壳族收敛为 .composer / .statusbar 两处
+       （menubar 与左栏保留，应用内轻菜单/模式切换仍可用）。
        加 class 模拟真实触发：drawer-page 真实流程是 JS 把 #drawer 移入 .main-wrap 再加 class
        （src/ui-drawer.js _showDrawerPage），:has() 只看后代关系，体外加 class 与真流程对 CSS 而言等价；
-       page-recycle 真实流程是 $("#main").classList.add("page-recycle")（src/render-widgets.js:770）。
-       容器必须是 body（.tabbar/.statusbar/#drawer 均在 .main-wrap 之外，.main-wrap:has() 是死选择器，
-       2026-11-12 七档探针真浏览器实测抓到，B3 当轮修）。 */
+       page-recycle 真实流程是 $("#main").classList.add("page-recycle")。
+       容器必须是 body（.statusbar/#drawer 在 .main-wrap 之外，.main-wrap:has() 是死选择器）。 */
     const shellsDisplay = () => page.evaluate(() => {
       const cs = (s) => { const el = document.querySelector(s); return el ? getComputedStyle(el).display : "MISSING"; };
-      return { tabbar: cs(".tabbar"), composer: cs(".composer"), statusbar: cs(".statusbar") };
+      return { composer: cs(".composer"), statusbar: cs(".statusbar"), tabbarMissing: !document.querySelector(".tabbar") };
     });
 
     for (const [sel, cls] of [["#drawer", "drawer-page"], [".main", "page-recycle"]]) {
       await page.evaluate((o) => document.querySelector(o.sel).classList.add(o.c), { sel, c: cls });
       await page.waitForTimeout(100);
       const hidden = await shellsDisplay();
-      expect(hidden.tabbar, `[${cls}] .tabbar 应 display:none`).toBe("none");
+      expect(hidden.tabbarMissing, "批八：.tabbar 应不存在").toBe(true);
       expect(hidden.composer, `[${cls}] .composer 应 display:none`).toBe("none");
       expect(hidden.statusbar, `[${cls}] .statusbar 应 display:none`).toBe("none");
 
       await page.evaluate((o) => document.querySelector(o.sel).classList.remove(o.c), { sel, c: cls });
       await page.waitForTimeout(100);
       const restored = await shellsDisplay();
-      expect(restored.tabbar, `[${cls}] 撤 class 后 .tabbar 应恢复显示`).not.toBe("none");
       expect(restored.composer, `[${cls}] 撤 class 后 .composer 应恢复显示`).not.toBe("none");
       expect(restored.statusbar, `[${cls}] 撤 class 后 .statusbar 应恢复显示`).not.toBe("none");
     }
@@ -339,11 +341,11 @@ test.describe("沉浸页 :has() 六选择器族（B3 §4，真 :has() 引擎）"
 
     const shellsDisplay = () => page.evaluate(() => {
       const cs = (s) => { const el = document.querySelector(s); return el ? getComputedStyle(el).display : "MISSING"; };
-      return { tabbar: cs(".tabbar"), composer: cs(".composer"), statusbar: cs(".statusbar") };
+      return { composer: cs(".composer"), statusbar: cs(".statusbar") };
     });
-    const SHELLS = ["tabbar", "composer", "statusbar"];
+    const SHELLS = ["composer", "statusbar"];
 
-    /* 1) 手动开专注 ⇒ 三壳 hidden */
+    /* 1) 手动开专注 ⇒ 两壳 hidden（批八 tabbar 已删） */
     await page.evaluate(() => document.body.classList.add("is-focus"));
     await page.waitForTimeout(100);
     const focusOn = await shellsDisplay();
@@ -361,7 +363,7 @@ test.describe("沉浸页 :has() 六选择器族（B3 §4，真 :has() 引擎）"
     const stillFocus = await shellsDisplay();
     for (const k of SHELLS) expect(stillFocus[k], `撤页面后 ${k} 应仍 none（专注未退）`).toBe("none");
 
-    /* 4) 关专注 ⇒ 恢复三种壳 */
+    /* 4) 关专注 ⇒ 恢复两种壳 */
     await page.evaluate(() => document.body.classList.remove("is-focus"));
     await page.waitForTimeout(100);
     const restored = await shellsDisplay();
@@ -370,7 +372,7 @@ test.describe("沉浸页 :has() 六选择器族（B3 §4，真 :has() 引擎）"
     /* 5) 反向对照：页面驱动单独仍有效（证明并集没把旧路径弄坏） */
     await page.evaluate(() => document.querySelector("#main").classList.add("page-recycle"));
     await page.waitForTimeout(100);
-    expect((await shellsDisplay()).tabbar, "单靠 page-recycle 也必须 hidden").toBe("none");
+    expect((await shellsDisplay()).composer, "单靠 page-recycle 也必须 hidden").toBe("none");
     await page.evaluate(() => document.querySelector("#main").classList.remove("page-recycle"));
   });
 });

@@ -169,67 +169,17 @@ function _buildSideMenu(){
 function renderSide(){
   const expanded = _loadSideExpanded();
 
-  /* 2026-11-17（主流 Agent 化 · 骨架级重排，用户：'导航栏在左侧边栏只占一小部分'）：
-     侧栏改成三段式 —— ① 顶部「新建会话」主行动；② 中部会话列表（占满并独立滚动）；
-     ③ 底部紧凑导航（10 入口压成 5×2 图标格）。
-     对齐 Cursor / Codex desktop / Qoder：左栏首屏是会话历史，功能导航只占底部一小条。
+  /* 2026-11-17 批八（用户标注图逐项裁定「彻底删掉」）：左栏的四段 =
+     ① 模式胶囊（静态 DOM #uiModePill，见 agent-workbench.html）；
+     ② 10 个导航入口（5×2 图标格）；③ 折叠键；④ 最底部「用户 + 设置」同行。
+     会话列表与 3×2 快捷格整块删除——会话只在右栏 sessions 区管理。
      入口数据与点击路径零改：`#side .nav-item` 仍是 10 个（ia-three-zones 钉 nodes.length===10，
      nav-pages-smoke 的 waitSideNav 与 [data-sc]/[data-menu] 选择器全部照旧）。 */
-  const sideSessionsHtml = function(){
-    let list = [], act = "";
-    try{ list = getSessions() || []; }catch(_e){ list = []; }
-    try{ act = getActiveSession() || ""; }catch(_e){ act = ""; }
-    /* 会话列表现在是主体：不再只取 4 条（那是"快捷区"时代的尺寸），最多 60 条，超出滚动。
-       每条带一行次要信息（场景 · 日期）——主流 Agent 的会话列表都有这种密度，
-       只有标题一行会显得像"最近打开过的文件"。 */
-    const items = list.slice(0, 60).map(function(s2){
-      const title = s2.title || t("sess.new", "新会话");
-      let meta = "";
-      try{
-        const scName = (typeof SCENARIOS !== "undefined" && SCENARIOS[s2.sc]) ? SCENARIOS[s2.sc].name : (s2.sc || "");
-        let when = "";
-        const d = new Date(s2.updatedAt || s2.createdAt || "");
-        if(!isNaN(d.getTime())) when = (d.getMonth() + 1) + "-" + d.getDate();
-        meta = [scName, when].filter(Boolean).join(" · ");
-      }catch(_e){ meta = ""; }
-      return '<button type="button" class="side-sess-item' + (s2.id === act ? " is-active" : "")
-        + '" data-sess-id="' + esc(s2.id) + '" title="' + esc(title) + '">'
-        + '<span class="side-sess-name">' + esc(title) + "</span>"
-        + (meta ? '<span class="side-sess-meta">' + esc(meta) + "</span>" : "")
-        + "</button>";
-    }).join("");
-    /* 批七（用户标注图）：原「新建会话」主行动上移进顶部 .side-quick 快捷格（同一 data-sess-new
-       委托路径，不新建会话逻辑），这里只保留会话列表主体。CSS 的 .side-top 规则留作历史兼容，
-       没有 DOM 命中即自然失效。 */
-    return '<div class="side-sess">'
-      + '<div class="side-sess-head"><span class="side-sess-t">' + esc(t("side.sess.title", "最近会话")) + "</span>"
-      + '<button type="button" class="side-sess-all" data-sess-all="1" title="' + esc(t("side.sess.all", "全部会话"))
-      + '" aria-label="' + esc(t("side.sess.all", "全部会话")) + '">' + esc(t("side.sess.allShort", "全部")) + "</button></div>"
-      + '<div class="side-sess-list">' + (items || '<div class="side-sess-empty">' + esc(t("dock.noSessions", "暂无会话")) + "</div>") + "</div>"
-      + "</div>";
-  };
-
-  /* 批七（2026-11-17，用户标注图「左栏从上到下：模式切换/定时任务/agents/知识库/sessions」+
-     裁定「另两个入口＝新建任务 + 发现」）：顶部 3×2 快捷格。全部转发既有真入口——
-     不新建任务/会话逻辑、不重复 id、不套 .nav-item（ia-three-zones 钉 nodes.length===10、
-     nav-pages-smoke 钉 #side .nav-item 数，快捷格走独立 data-quick 委托）。 */
-  const quickDefs = [
-    ["newSess", "chat", "side.quick.newSess", "新建会话", "data-sess-new=\"1\""],
-    ["newTask", "plus", "side.quick.newTask", "新建任务", ""],
-    ["todo", "check", "side.quick.todo", "定时任务", ""],
-    ["agents", "robot", "side.quick.agents", "Agents", ""],
-    ["kb", "book", "side.quick.kb", "知识库", ""],
-    ["discover", "puzzle", "side.quick.discover", "发现", ""]
-  ];
-  const quickHtml = '<div class="side-quick">'
-    + '<div class="side-quick-t">' + esc(t("side.quick.title", "快捷入口")) + "</div>"
-    + '<div class="side-quick-grid">' + quickDefs.map(function(x){
-        const label = esc(t(x[2], x[3]));
-        return '<button type="button" class="side-quick-item" data-quick="' + x[0] + '" ' + x[4]
-          + ' title="' + label + '" aria-label="' + label + '">'
-          + '<span class="side-quick-ic" aria-hidden="true">' + (UI_ICONS[x[1]] || "") + "</span>"
-          + '<span class="side-quick-lbl">' + label + "</span></button>";
-      }).join("") + "</div></div>";
+  const sideEl = $("#side");
+  const pillEl = sideEl ? sideEl.querySelector("#uiModePill") : null;
+  /* 胶囊是静态节点：renderSide 每次重建 innerHTML 时必须原样带回，否则节点被换掉后
+     _bindUiModePill 在 #side 上的委托虽还在、is-on 视觉却要等下一次 applyUIMode 才同步。 */
+  const pillHtml = pillEl ? pillEl.outerHTML : "";
 
   /* 子项渲染：圆点标记 + 标签（v3.0.2：stub:「新」角标机制已随 stub:true 清理移除） */
   const subBtn = (nodeId, it)=>{
@@ -282,7 +232,7 @@ function renderSide(){
     + '<span class="side-foot-ic" aria-hidden="true">' + UI_ICONS.gear.replace("<svg", '<svg aria-hidden="true"') + "</span>"
     + '<span class="side-foot-lbl">' + esc(t("side.menu.settings", "设置")) + "</span></button>"
     + "</div>";
-  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + quickHtml + sideSessionsHtml() + navHtml + footHtml);
+  if(sideEl) sideEl.innerHTML = sanitizeHtml(pillHtml + SIDE_TOGGLE_HTML + navHtml + footHtml);
 
   /* 激活子项的父分支自动展开（一次性同步，不触发额外存储写） */
   if(_sideActive){
@@ -304,9 +254,7 @@ function renderSide(){
      不依赖异步 startup() 时序 */
   setupSideMenu();
   setupMobNav();
-  /* 批七「Session 名称 → 顶栏中部」：与右栏同理由挂在 renderSide 里（不是 render() 直调），
-     避免 render-entry → render-widgets 新增静态边；会话切换路径都会走到 renderSide。 */
-  renderTopSessionName();
+  /* 批八：顶栏 Session 名函数与调用一并退役，会话只在右栏 sessions 区呈现。 */
   /* 右栏今日任务随侧栏同批更新：挂在 renderSide 里而不是 render() 直调，
      否则 render-entry → render-widgets 会新增一条静态边，改变依赖基线的环集合。 */
   renderTaskRail();
@@ -314,22 +262,7 @@ function renderSide(){
   applyUIMode();
 }
 
-/**
- * 顶栏中部的「Session 名称」同步（批七，用户选「顶栏中部」）。
- * 单一真相源 = getActiveSessionObj().title；只写 textContent（不拼 HTML），无 XSS 面。
- * 窄屏 DOM 仍在但 CSS 隐藏，故这里无条件更新、零布局副作用。
- * @returns {void}
- */
-function renderTopSessionName(){
-  const el = $("#mbSessionName");
-  if(!el) return;
-  let s = null;
-  try{ s = (typeof getActiveSessionObj === "function") ? getActiveSessionObj() : null; }catch(_e){ /* 会话存储损坏时退回默认标题 */ }
-  const title = (s && s.title) ? s.title : t("sess.new", "新会话");
-  const label = el.querySelector(".mb-session-t");
-  if(label) label.textContent = title;
-  el.setAttribute("title", title);
-}
+/* 批八：renderTopSessionName() 已随顶栏 Session 名一并删除（用户裁定「移除」）。 */
 
 /* ---------- 右栏「今日任务」任务轨（2026-10-21 布局 v2） ----------
  * 定位依据 PRODUCT.md §5：Today 是三个入口区之一；但"看今天该做什么"不该要求先切页面。
@@ -718,29 +651,8 @@ function setupSideMenu(){
   if(!side || side._menuBound) return;
   side._menuBound = true;
   side.addEventListener("click", (e)=>{
-    /* 2026-11-17：左栏「最近会话」区（独立 class，先于 .nav-item 分支处理） */
-    const sessItem = e.target && e.target.closest ? e.target.closest(".side-sess-item") : null;
-    if(sessItem){
-      const sid = sessItem.getAttribute("data-sess-id");
-      if(sid && typeof switchSession === "function"){
-        const ok = switchSession(sid);
-        if(ok !== false){ if(typeof renderChat === "function"){ const _c=(typeof getCfg==="function")?getCfg():null; if(_c && !_c.enabled && typeof renderChatDisabled==="function") renderChatDisabled(); else renderChat(); } if(typeof render === "function") render(); }
-      }
-      return;
-    }
-    const sessNew = e.target && e.target.closest ? e.target.closest("[data-sess-new]") : null;
-    if(sessNew){
-      try{
-        let sc = "office";
-        try{ const cur = getActiveSessionObj(); sc = (cur && cur.sc) || (typeof getActive === "function" ? getActive() : "office"); }catch(_e){ /* 回 office */ }
-        const ns = createSession(sc, t("sess.new", "新会话"));
-        if(ns && ns.id){ switchSession(ns.id); if(typeof render === "function") render(); }
-      }catch(_e3){ /* 新建失败不阻塞侧栏（非诊断兜底，故不沿用 _e2 命名——那个名字被
-                       empty-catch-slice4 约定为"pushDiag 二次保护"的配对标记） */ }
-      return;
-    }
-    const sessAll = e.target && e.target.closest ? e.target.closest("[data-sess-all]") : null;
-    if(sessAll){ if(typeof openSessionModal === "function") openSessionModal(); return; }
+    /* 批八：左栏会话列表与快捷格已删，对应 data-sess-* / data-quick 委托一并退役；
+       会话管理只在右栏 sessions 区，新建会话走顶栏 #chatSessionBtn / 命令面板既有路径。 */
     /* 主流 Agent 化批六·刀1：左栏底部「用户 / 设置」同行（不重复 id，转发既有入口） */
     const foot = e.target && e.target.closest ? e.target.closest("[data-foot]") : null;
     if(foot){
@@ -749,35 +661,6 @@ function setupSideMenu(){
         const ub = document.getElementById("btnUser"); if(ub && typeof ub.click === "function") ub.click();
       }else if(which === "settings"){
         if(typeof AppBridge !== "undefined" && typeof AppBridge.openDrawer === "function") AppBridge.openDrawer();
-      }
-      return;
-    }
-
-    /* 批七顶部 3×2 快捷格：放在 [data-sess-new] 之后 ⇒ 「新建会话」由既有同一委托处理，
-       这里只接其余五格。全部转发既有真入口，不重写业务逻辑。 */
-    const quick = e.target && e.target.closest ? e.target.closest("[data-quick]") : null;
-    if(quick){
-      const which = quick.getAttribute("data-quick");
-      if(which === "newTask"){
-        /* 与右栏 + 同一条路径：setActive("office") + render + focusTaskTitleInput，
-           不另写一遍建任务逻辑；DOM 缺失时静默（窄屏仍可从底部导航进任务页）。 */
-        const b = document.getElementById("taskRailAdd");
-        if(b && typeof b.click === "function") b.click();
-        else if(typeof setActive === "function" && typeof render === "function"){ setActive("office"); render(); }
-      }else if(which === "todo"){
-        const b = document.getElementById("btnTaskRail");
-        if(b && typeof b.click === "function") b.click();
-      }else if(which === "agents"){
-        const b = document.getElementById("btnTaskRail");
-        if(b && typeof b.click === "function") b.click();
-        const rail = document.getElementById("taskRail");
-        if(rail) rail.classList.add("open");
-        const sec = rail && rail.querySelector('#taskRail [data-rr-sec="agent"]');
-        if(sec && typeof sec.scrollIntoView === "function") sec.scrollIntoView({ block:"nearest" });
-      }else if(which === "kb"){
-        try{ AppBridge.openKnowledgeBaseModal(); }catch(_e){ /* 知识库打开失败不阻塞侧栏 */ }
-      }else if(which === "discover"){
-        if(typeof setActive === "function" && typeof render === "function"){ setActive("store"); render(); }
       }
       return;
     }
@@ -4234,9 +4117,7 @@ function applyUIMode(){
     if(_cfg && !_cfg.enabled && typeof renderChatDisabled === "function") renderChatDisabled();
     else if(typeof renderChat === "function") renderChat();
   }catch(_e){ /* 聊天区重绘失败不阻断模式切换 */ }
-  /* 2026-11-17 批六刀2：模式切换后 tab 条要即时同步——code 模式才有「对话」标签、切走要撤掉。
-     typeof 守卫调用，避免 render-widgets → render-entry 形成静态依赖环（lint-layers）。幂等重绘。 */
-  try{ if(typeof renderFormATabs === "function") renderFormATabs(); }catch(_e){ /* tab 条重绘失败不阻断模式切换 */ }
+  /* 批八：tab 条已退役，模式切换后只剩胶囊视觉态同步（本函数上方 _renderUiModePill）。 */
 }
 function toggleUIMode(){
   const cur = _uiMode();
@@ -4396,11 +4277,15 @@ function _renderUiModePill(){
   });
 }
 (function _bindUiModePill(){
-  const pill = $("#uiModePill");
-  if(!pill || pill._pillBound) return;
-  pill._pillBound = true;
-  $$("#uiModePill .mode-pill-item").forEach(function(el){
-    el.addEventListener("click", function(){ setUIMode(el.getAttribute("data-mode")); });
+  /* 批八：胶囊迁入 #side，而 renderSide() 会整体重建 #side.innerHTML —— 逐按钮绑定会随
+     重渲染丢失。改为 document 级委托 + `#uiModePill .mode-pill-item` 作用域，节点换了也不断线；
+     禁用态由 _renderUiModePill 维护，这里再挡一次 disabled，避免程序化点击穿透。 */
+  if(window._uiModePillBound) return;
+  window._uiModePillBound = true;
+  document.addEventListener("click", function(e){
+    const el = e.target && e.target.closest ? e.target.closest("#uiModePill .mode-pill-item") : null;
+    if(!el || el.disabled) return;
+    setUIMode(el.getAttribute("data-mode"));
   });
   /* 「代码」段禁用态是宽度的函数：resize 跨越 1024 阈值时同步 pill 态。
      原菜单形态打开时才查宽度，胶囊常驻可见必须跟随窗口；只同步 pill 视觉态，不碰模式状态。 */

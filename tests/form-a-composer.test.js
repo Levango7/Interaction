@@ -54,16 +54,17 @@ describe("B3 容器契约：壳迁 id 留", () => {
     });
   });
 
-  it("⑧ 静态口径：40vh 展开上限 + 沉浸 :has() 六条选择器族齐", () => {
+  it("⑧ 静态口径：40vh 展开上限 + 沉浸 :has() 四条选择器族齐（批八 tabbar 已删）", () => {
     const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
     const HTML = fs.readFileSync(path.join(ROOT, "agent-workbench.html"), "utf8");
     expect(HTML, ".chat-panel 展开上限应对齐 40vh").toContain("max-height:40vh");
     ["drawer-page", "page-recycle"].forEach((page) => {
-      ["tabbar", "composer", "statusbar"].forEach((shell) => {
+      ["composer", "statusbar"].forEach((shell) => {
         const sel = ":has(" + (page === "drawer-page" ? "#drawer.drawer-page" : ".main.page-recycle") + ") ." + shell;
         expect(HTML, "沉浸规则应隐藏 ." + shell + "（" + page + "）").toContain(sel);
       });
     });
+    expect(HTML, "批八：.tabbar 沉浸规则应随之删除").not.toContain(":has(#drawer.drawer-page) .tabbar");
   });
 });
 

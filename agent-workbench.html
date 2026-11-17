@@ -652,14 +652,8 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .menubar{height:var(--mb-h);display:flex;align-items:center;gap:var(--space-1);position:relative;
   padding:0 var(--space-2);background:var(--panel);border-bottom:1px solid var(--line);flex:none}
 .menubar .mb-sp{flex:1}
-/* 批七（用户选「Session名称显示顶栏中部」）：两段 .mb-sp 各 flex:1 ⇒ #mbSessionName 真正居中。
-   只占位不抢交互（pointer-events:none），窄屏 <1024 收起（那里顶栏要留给溢出菜单与 44px 命中区）。 */
-.menubar .mb-session{display:flex;align-items:center;gap:var(--space-1);flex:0 1 auto;
-  max-width:min(28vw,300px);min-width:0;padding:2px var(--space-2);border-radius:var(--radius-md);
-  color:var(--text-dim);font-size:var(--fs-2xs);pointer-events:none}
-.menubar .mb-session-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none}
-.menubar .mb-session-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media(max-width:1023px){.menubar .mb-session{display:none}}
+/* 批八（用户 2026-11-17 标注图）：顶栏中部「当前会话」整块移除，会话只在右栏 sessions 区管理。
+   两段 .mb-sp 收敛为一段：左 logo + 右系统图标，中间留白，不再有第二层 flex 占位。 */
 /* 2026-11-16 topbar 退役：原独立一行 .topbar 现为 menubar 子容器，内联化 + 紧凑档。
    容器与所有 .topbar .tbtn 既有 CSS（窄屏溢出、主题着色、44px 命中区）保持不动——只覆盖
    在本容器内的「外观与尺寸」：去掉它作为独立行时的 padding/背景/模糊/下边框（menubar 已有），
@@ -716,20 +710,9 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .help-item{min-height:28px;padding:0 var(--space-2);border:0;background:transparent;color:var(--text);
   font-size:var(--fs-xs);text-align:left;border-radius:var(--radius-sm);cursor:pointer}
 .help-item:hover{background:var(--accent-soft)}
-.tabbar{height:var(--tb-h);display:flex;align-items:center;gap:var(--space-2);
-  padding:0 var(--space-2);background:var(--panel);border-bottom:1px solid var(--line);flex:none}
-.tabs{display:flex;align-items:center;gap:var(--space-1);flex:1;min-width:0;overflow-x:auto}
-/* 形态 A B2：视图注册表 tab（控件三档 28；栏高 --tb-h:36 是栏高非控件高，DESIGN-SYSTEM §2.2） */
-.tab{display:flex;align-items:center;height:28px;padding:0 20px 0 10px;border:1px solid var(--line);border-radius:var(--radius-md);background:transparent;color:var(--muted);font-size:var(--fs-xs);cursor:pointer;flex:none;white-space:nowrap}
-.tab.is-on{border-color:var(--accent);color:var(--accent)}
-.tab-x{flex:none;width:28px;height:28px;margin-left:-16px;padding:0;border:0;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
-.tab-x svg{width:12px;height:12px}
-.tabadd,.railbtn{flex:none;width:28px;height:28px;border:1px solid var(--line);border-radius:var(--radius-md);background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center}
-.tabadd{border-style:dashed}
-.tabadd svg,.railbtn svg{width:14px;height:14px}
-/* 宽屏右栏常驻，tab 条上的把手冗余；≤1023px 右栏滑出，把手才出现（原型口径，同 .hamb） */
-.railbtn{display:none}
-@media (max-width:1023px){ .railbtn{display:flex} }
+/* 批八（用户裁定「取消 tabbar 那一栏 / 不需要工作区入口，直接常驻聊天」）：
+   整条 .tabbar 连同 tabs/＋/railbtn 已从骨架删除；视图注册表仅保留为数据层（工作台 tile 用）。
+   --tb-h 作为历史布局令牌保留，供 :root 与注释口径兼容，但不再有任何可见壳使用它。 */
 .statusbar{height:var(--st-h);display:flex;align-items:center;gap:var(--space-3);
   padding:0 var(--space-2);background:var(--panel);border-top:1px solid var(--line);
   color:var(--muted);font-size:var(--fs-xs);flex:none}
@@ -1069,9 +1052,9 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   font-size:var(--fs-3xs);font-weight:600;line-height:16px;text-align:center;pointer-events:none}
 
 /* ===== 系统级消息中心：下拉面板 ===== */
-/* top 锚 = menubar+tabbar+topbar 下缘（B1 起顶区四壳；JS 只切 u-hidden 类从不设 top，
+/* top 锚 = menubar+topbar 下缘（批八 tabbar 已删；JS 只切 u-hidden 类从不设 top，
    ui-global-events.js —— 旧注释「JS 打开时会锚定到按钮实际下缘」为假）。相对 topbar 的偏移与 B1 前同构。 */
-.msg-panel{position:fixed;top:calc(var(--mb-h) + var(--tb-h) + var(--topbar-h));right:var(--space-5);width:360px;max-width:calc(100vw - 2 * var(--space-5));
+.msg-panel{position:fixed;top:calc(var(--mb-h) + var(--topbar-h));right:var(--space-5);width:360px;max-width:calc(100vw - 2 * var(--space-5));
   max-height:400px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-lg);
   box-shadow:var(--shadow-3);z-index:var(--z-popover);display:flex;flex-direction:column;overflow:hidden}
 .msg-panel-header{display:flex;align-items:center;justify-content:space-between;
@@ -1106,74 +1089,20 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   padding:var(--space-3) var(--space-2);overflow:auto;flex-shrink:0;transition:width .2s ease}
 /* v3.7.37（控件矩阵 P1）：min-height 30 → 32px —— 实测渲染 31px，
    低于可点击区建议下限 32px（触控/鼠标精度）。侧栏是全站最高频的点击区。 */
-/* 2026-11-17（主流 Agent 化）：左栏顶部「最近会话」区。主流 Agent 左栏首屏是会话历史，
-   不是功能菜单。本区块独立 class（不套 .nav-item），因此不改变「10 个导航入口」的既有断言。 */
-.side-sess{padding:0 0 var(--space-2);margin:0 0 var(--space-2);
-  border-bottom:1px solid color-mix(in srgb,var(--line) 45%,transparent)}
-.side-sess-head{display:flex;align-items:center;justify-content:space-between;padding:2px var(--space-2) var(--space-1)}
-.side-sess-t{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.06em}
-.side-sess-new{width:22px;height:22px;padding:0;border:0;background:transparent;color:var(--muted);
-  cursor:pointer;border-radius:var(--radius-sm);font-size:var(--fs-sm);line-height:1;
-  display:inline-flex;align-items:center;justify-content:center}
-.side-sess-new:hover{background:var(--accent-soft);color:var(--accent-text,var(--accent))}
-.side-sess-item{display:block;width:100%;text-align:left;padding:4px var(--space-2);border:0;
-  background:transparent;color:var(--text-dim);font-size:var(--fs-xs);border-radius:var(--radius-sm);
-  cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.side-sess-item:hover{background:var(--surface-hover);color:var(--text)}
-.side-sess-item.is-active{background:color-mix(in srgb,var(--accent) 12%,transparent);
-  color:var(--accent-text,var(--accent))}
-.side-sess-empty{padding:2px var(--space-2);font-size:var(--fs-2xs);color:var(--text-faint)}
-.side-sess-all{display:block;width:100%;text-align:left;padding:4px var(--space-2);border:0;
-  background:transparent;color:var(--muted);font-size:var(--fs-2xs);cursor:pointer;
-  border-radius:var(--radius-sm);margin-top:2px}
-.side-sess-all:hover{color:var(--accent-text,var(--accent));background:var(--accent-soft)}
-/* 2026-11-17（主流 Agent 化 · 骨架级）：侧栏三段式 ——
-   ① 顶部「新建会话」主行动；② 中部会话列表占满剩余高度、独立滚动；③ 底部紧凑导航。
-   10 个入口压成 5×2 图标格（约 118px），从此"导航栏只占左栏一小部分"（改前 nav 十行 ≈ 330px）。
-   对齐 Cursor / Codex desktop / Qoder：左栏首屏是会话历史，功能导航退到底部一条。
-   入口数据未变（.nav-item ×10）、点击路径未变（[data-sc] / [data-menu]），只换排布。
-   ⚠️ 必须 min-width:768 限定：903-905 行的 ≤767 档 `.side{display:none}` 在本块**之前**，
+/* 2026-11-17（主流 Agent 化 · 骨架级）：批八按用户标注图收敛为
+   「模式切换 → 10 个导航入口 → 折叠键 → 用户/设置」四段，会话列表与 3×2 快捷格彻底删除
+   （会话只在右栏 sessions 区管理）。入口数据未变（.nav-item ×10）、点击路径未变（[data-sc] / [data-menu]）。
+   ⚠️ 必须 min-width:768 限定：≤767 档 `.side{display:none}` 在本块**之前**，
    若不加媒体限定，本块的 display:flex 会以同特异性+更靠后把移动端隐藏规则盖掉
    （mobile.spec「启动：侧栏隐藏」就是这么红的）。 */
 @media(min-width:768px){
 .side{display:flex;flex-direction:column;overflow:hidden}
-/* 批七顶部 3×2 快捷格（新建会话 / 新建任务 / 定时任务 / Agents / 知识库 / 发现）。
-   独立类，不套 .nav-item ⇒ 既有「导航 10 项」契约与点击委托零影响；窄屏随底部导航
-   一起由 .side 的既有显隐规则管理，不新增断点。 */
-.side-quick{flex-shrink:0;padding:var(--space-1) var(--space-2) var(--space-2);
-  border-bottom:1px solid color-mix(in srgb,var(--line) 45%,transparent)}
-.side-quick-t{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.06em;
-  padding:0 0 var(--space-1)}
-.side-quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
-.side-quick-item{min-width:0;min-height:40px;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:2px;padding:var(--space-1) 2px;border:0;border-radius:var(--radius-md);
-  background:transparent;color:var(--text-dim);cursor:pointer}
-.side-quick-item:hover{background:var(--accent-soft);color:var(--accent-text,var(--accent))}
-.side-quick-ic{display:inline-flex;align-items:center;justify-content:center}
-.side-quick-ic svg{width:var(--icon-sm);height:var(--icon-sm)}
-.side-quick-lbl{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+/* 批八：模式胶囊从 tabbar 迁入左栏顶部——三段等分、占满 200px 侧栏宽度，
+   标签保留（用户点名「工作/代码/设计」三模式切换放左栏）。胶囊 id/class 不变，JS 绑定与
+   #uiModePill 选择器全部复用；窄屏 .side 整体隐藏，模式入口走折叠栏既有 toggleUIMode 路径。 */
+.side .mode-pill{display:flex;width:100%;margin-bottom:var(--space-2)}
+.side .mode-pill-item{flex:1;min-width:0;justify-content:center;gap:3px;padding:3px 4px;
   font-size:var(--fs-2xs)}
-.side.collapsed .side-quick{display:none}
-.side-top{flex-shrink:0;padding-bottom:var(--space-2)}
-.side-new{display:flex;align-items:center;justify-content:center;gap:var(--space-1);width:100%;
-  min-height:32px;padding:0 var(--space-2);border:1px solid var(--line);border-radius:var(--radius-md);
-  background:var(--panel);color:var(--text);font-size:var(--fs-sm);font-weight:600;cursor:pointer;
-  transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast)}
-.side-new:hover{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
-.side-new-plus{font-size:var(--fs-sm);line-height:1;font-weight:400}
-.side-sess{flex:1;min-height:0;display:flex;flex-direction:column;padding:0;margin:0;
-  border-bottom:0}
-.side-sess-head{padding:0 var(--space-2) var(--space-1)}
-.side-sess-list{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;
-  display:flex;flex-direction:column;gap:1px;padding-bottom:var(--space-2)}
-.side-sess-item{padding:5px var(--space-2);line-height:1.35;flex-shrink:0;
-  display:flex;flex-direction:column;gap:0}
-.side-sess-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.side-sess-meta{display:block;font-size:var(--fs-2xs);color:var(--text-faint);
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.side-sess-item.is-active .side-sess-meta{color:var(--accent-text,var(--accent));opacity:.75}
-.side-sess-all{width:auto;margin-top:0;padding:1px 5px;font-size:var(--fs-2xs);
-  border-radius:var(--radius-sm)}
 .side-nav{flex-shrink:0;border-top:1px solid color-mix(in srgb,var(--line) 45%,transparent);
   margin-top:var(--space-1);padding-top:var(--space-2)}
 .side-nav-t{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.06em;
@@ -1192,28 +1121,25 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .side-nav .nav-item[data-need-cfg]{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,transparent)}
 .side-nav .nav-item[data-need-cfg] .cnt{width:6px;height:6px;padding:0;font-size:0;
   border-radius:50%;background:var(--accent);top:4px;right:6px}
-/* 折叠态：会话区隐藏，导航回单列图标（保留 .collapsed 的全部既有行为） */
-.side.collapsed .side-top,
-.side.collapsed .side-sess{display:none}
+/* 折叠态：模式胶囊收窄为纯图标（.lbl 在 ≤1023/≤767 档已隐藏），导航回单列图标 */
+.side.collapsed .mode-pill{flex-direction:column;width:auto}
+.side.collapsed .mode-pill-item{flex:none}
 .side.collapsed .side-nav{flex:1;min-height:0;overflow-y:auto;border-top:0;margin-top:0;padding-top:var(--space-1)}
 .side.collapsed .side-nav-t{display:none}
 .side.collapsed .side-nav-grid{grid-template-columns:1fr}
-/* 折叠键：原来是一条带 accent 底色 + 描边的满宽按钮，占掉顶部一整行（主流的 Agent 左栏没有这种条）；
-   新布局下会话是主体，它降到侧栏最底部、透明底、小字（.collapsed 态仍走 3595 行的原有居中规则）。 */
-.side .side-top{order:1}
-.side .side-quick{order:1}
-.side .side-sess{order:2}
-.side .side-nav{order:3}
-.side .side-toggle{order:4;width:auto;margin:0;align-self:flex-end;
+/* 折叠键：透明底、小字，紧随导航之后；用户/设置用 margin-top:auto 钉到左栏最下方。 */
+.side .mode-pill{order:1}
+.side .side-nav{order:2}
+.side .side-toggle{order:3;width:auto;margin:0;align-self:flex-end;
   padding:3px var(--space-2);min-height:22px;background:transparent;border:0;
   color:var(--text-faint);font-size:var(--fs-2xs);font-weight:500;gap:2px}
 .side .side-toggle:hover{background:var(--surface-hover);color:var(--text)}
 .side .side-toggle svg{width:11px;height:11px}
 /* 主流 Agent 化批六·刀1：左栏最底部「用户 + 设置」同行（用户「登录放在左下角/用户、设置同一行」）。
    两根等高按钮各占一半，透明底、hover 才显形——与折叠键同一克制口径。数据侧走 data-foot 委托。 */
-.side .side-foot{order:5;flex-shrink:0;display:flex;gap:2px;
+.side .side-foot{order:4;flex-shrink:0;display:flex;gap:2px;
   padding:var(--space-1) var(--space-2) var(--space-2);
-  border-top:1px solid color-mix(in srgb,var(--line) 45%,transparent);margin-top:2px}
+  border-top:1px solid color-mix(in srgb,var(--line) 45%,transparent);margin-top:auto}
 .side-foot-btn{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:5px;
   min-height:30px;padding:2px 4px;border:0;border-radius:var(--radius-md);background:transparent;
   color:var(--text-dim);font-size:var(--fs-2xs);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
@@ -1225,7 +1151,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .side.collapsed .side-foot{padding:var(--space-1) 2px}
 .side.collapsed .side-foot-lbl{display:none}
 .side.collapsed .side-foot-btn{min-height:34px}
-} /* @media(min-width:768px) 三段式左栏（见上：不限定会盖掉 ≤767 的侧栏隐藏） */
+} /* @media(min-width:768px) 四段式左栏（见上：不限定会盖掉 ≤767 的侧栏隐藏） */
 .nav-item{display:flex;align-items:center;gap:var(--space-2);width:100%;padding:6px var(--space-2);
   border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text);margin-bottom:2px;
   text-align:left;transition:background var(--transition-fast),color var(--transition-fast);position:relative;
@@ -3587,7 +3513,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
    y=65..110 —— toast 正好盖在「今天 N 件待处理 · 已完成 N 件」这条消息栏上（390px 实测
    toast y=66..103 vs todo-bar y=69..101，右侧文字被胶囊截断）。容器 pointer-events:none
    所以不挡点击，但 3.6s 内读不到消息栏。改锚 --chrome-h（实测 110px）后即落在正文区。 */
-#toasts{position:fixed;top:calc(var(--mb-h) + var(--tb-h) + var(--chrome-h) + var(--space-3));right:var(--space-4);left:auto;
+#toasts{position:fixed;top:calc(var(--mb-h) + var(--chrome-h) + var(--space-3));right:var(--space-4);left:auto;
   transform:none;z-index:var(--z-toast);
   display:flex;flex-direction:column;gap:var(--space-2);align-items:flex-end;pointer-events:none}
 .toast{background:var(--toast-bg);color:var(--on-accent);padding:var(--space-2) var(--space-4);
@@ -5521,24 +5447,20 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   .chat-panel:not(.collapsed) #chatPanelCollapse svg{transform:rotate(90deg)}
   /* 沉浸页（设置/回收站等整页工作区）隐藏对话坞：这些页面要全高，
      且用户此时在做配置/清理，AI 仍可从命令面板进入。
-     B3（§4）：选择器族扩展——同页隐藏规则追加 .tabbar / .composer / .statusbar
-     （menubar 保留——应用内轻菜单仍可用）。
-     容器用 body 不用 .main-wrap：.tabbar / .statusbar / #drawer 均在 .main-wrap 之外
-     （tabbar 在 .app 内、statusbar/drawer 是 .app 兄弟层），.main-wrap:has() 对它们是死选择器
-     （七档探针真浏览器实测抓到，2026-11-12 B3）；.composer 虽在 .main-wrap 内，六条统一 body 同构。 */
+     B3（§4）：选择器族扩展——同页隐藏规则追加 .composer / .statusbar
+     （menubar 与左栏保留——应用内轻菜单与模式切换仍可用）。
+     批八：tabbar 整条已删，上述 :has() 族不再包含 .tabbar；容器仍用 body 不用 .main-wrap
+     （.statusbar / #drawer 在 .main-wrap 之外，.main-wrap:has() 对它们是死选择器）。 */
   body:has(#drawer.drawer-page) .chat-panel,
   body:has(.main.page-recycle) .chat-panel,
-  body:has(#drawer.drawer-page) .tabbar,
   body:has(#drawer.drawer-page) .composer,
   body:has(#drawer.drawer-page) .statusbar,
-  body:has(.main.page-recycle) .tabbar,
   body:has(.main.page-recycle) .composer,
   body:has(.main.page-recycle) .statusbar{display:none}
   /* B6 专注模式（faFocusToggle）：用户主动切换，与上面「页面驱动」取并集 ——
      进设置页仍自动隐；手动开专注后退出页面也不残留（两条件各管各的，互不覆盖）。
-     选择器与上八条同构（menubar 保留），不引入第二套命名。 */
+     选择器与上六条同构（menubar 与左栏保留），不引入第二套命名。 */
   body.is-focus .chat-panel,
-  body.is-focus .tabbar,
   body.is-focus .composer,
   body.is-focus .statusbar{display:none}
 }
@@ -5659,10 +5581,9 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 @media (min-width:1024px){
   .body.code-mode{display:grid;grid-template-columns:240px minmax(0,1fr) 300px;
     grid-template-rows:minmax(0,1fr) auto;min-height:0}
-  .body.code-mode .side{grid-column:1;grid-row:1;width:auto;min-height:0}
-  .body.code-mode .session-dock{display:flex;flex-direction:column;min-height:0;max-height:38vh;
-    grid-column:1;grid-row:2;border-top:1px solid var(--line);overflow-y:auto;
-    background:color-mix(in srgb,var(--panel) 75%,transparent);padding:var(--space-2)}
+  /* 批八：左栏占满两行（会话只在右栏 sessions 区管理），用户/设置因此能钉在左栏最下方。 */
+  .body.code-mode .side{grid-column:1;grid-row:1 / span 2;width:auto;min-height:0}
+  .body.code-mode .session-dock{display:none}
   /* 中栏 = main-wrap 本身（grid 项）：只钉网格位，display/方向/滚动全部沿用基座 943 行
      （列向、overflow-y:auto）——与 work 模式同一只滚动容器，贴底对话坞的 sticky 才有得贴。
      收起工具行（code 模式右栏已有今日任务，顶部待办栏是重复信息）。 */
@@ -5675,11 +5596,10 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
      纯 CSS 覆盖，只在 .body.code-mode 作用域生效：work 贴底坞 / design 画布零影响。
      折叠键在分屏态隐藏（无折叠概念，布局固定）；#chat 与运行态条无视 .collapsed 强制常驻——
      这是「气泡常驻可见」的产品裁决，不是放宽折叠判据（折叠行为在 work 模式原样保留）。 */
-  /* ===== 2026-11-17 批六刀2（用户「中间页面是聊天区」+ 裁定「工作区收进顶部标签页」）=====
-     code 模式默认 = 对话优先：#chatPanel 占满中栏主体、#main 让位（功能没删——点顶部任一
-     工作区标签即加 .workspace-open 恢复工作区）。这是产品裁决反转：覆盖 11-02「主客颠倒」
-     与 11-16「分屏」（用户新结构以对话为中栏主体）；ui-mode-layout 判据同步改写，非放宽。
-     工作区视图（.workspace-open）仍沿用下面 11-16 的分屏几何，保证任务/设置/知识库可达。 */
+  /* ===== 2026-11-17 批八（用户「不需要了，直接常驻聊天」）=====
+     code 模式中栏 = 纯聊天常驻：#chatPanel 占满中栏、#main 让位且无任何工作区入口。
+     覆盖 11-02「主客颠倒」、11-16「分屏」与 11-17 批六「顶部标签页往返」三次旧裁决；
+     work/design 模式的中栏渲染不受影响（本规则只在 .body.code-mode 作用域生效）。 */
   .body.code-mode .main-wrap{overflow:hidden}
   /* 默认对话优先：main 隐藏，chat 占满中栏（flex:1，非贴底坞） */
   .body.code-mode .main-wrap>.main{display:none;flex:1 1 auto;min-height:0;overflow-y:auto}
@@ -5693,11 +5613,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   .body.code-mode .main-wrap>.chat-panel.collapsed .chat-toolbar{display:flex}
   .body.code-mode .main-wrap>.chat-panel #chatPanelCollapse{display:none}
   .body.code-mode .main-wrap>.chat-panel .chat-input-area{max-height:none}
-  /* 工作区视图（点顶部工作区标签）：恢复 11-16 分屏——main 上半 / chat 下半，各约半屏 */
-  .body.code-mode.workspace-open .main-wrap>.main{display:block;flex:1 1 auto;min-height:0;overflow-y:auto}
-  .body.code-mode.workspace-open .main-wrap>.chat-panel{
-    position:static;flex:0 0 50%;max-height:none;min-height:0;
-    overflow:hidden;border-top:1px solid var(--line)}
+  /* 批八：旧工作区分屏几何整块退役（tabbar 已删，无任何入口再加那个状态类）。 */
   .body.code-mode .task-rail{grid-column:3;grid-row:1;width:auto;min-height:0}
   /* P2-5（2026-11-02）：code 模式的能力面在右下 agentDock（同源数据 + 2.5s 活轮询），
      右栏 Agent 节是同一批数据的静态副本——藏掉，避免两个入口两份渲染互相漂移。
@@ -5856,12 +5772,8 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   <header class="menubar">
     <div class="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M40 18.2A17 17 0 1 1 29.8 8"/><circle cx="24" cy="24" r="4.5" fill="currentColor" stroke="none"/><circle cx="38.8" cy="9.2" r="3.5" fill="currentColor" stroke="none"/></svg></span> <span data-i18n="app.name">Agent 工坊</span></div>
     <div class="mb-sp"></div>
-    <!-- 批七（2026-11-17，用户选「Session名称 → 顶栏中部」）：把当前会话名提到顶栏正中。
-         两段 .mb-sp 各 flex:1 ⇒ 名称真正居中；窄屏（<1024）隐藏，避免挤掉溢出菜单与触控命中区。
-         只加独立 id/class，不碰 #chatSessionBtn 的会话管理弹窗（两个分工不同：这里是"当前是谁"）。 -->
-    <div class="mb-session" id="mbSessionName" aria-live="polite" title="当前会话">
-      <span class="mb-session-dot" aria-hidden="true"></span><span class="mb-session-t">新会话</span></div>
-    <div class="mb-sp"></div>
+    <!-- 批八：顶栏中部「当前会话」整块移除（用户标注图裁定），会话管理只在右栏 sessions 区；
+         #chatSessionBtn 保留为顶栏会话弹窗入口，二者不重复。 -->
     <!-- 聊天区信息架构改造（2026-11-16）：会话管理是「导航」不是消息，从 AI 面板头部迁到应用顶栏。
          id / title / aria / data-i18n-* 全部沿用，#chatSessionBtn 的 onclick 绑定按 ID 命中，零改 JS。
          用独立的 .mi-session 类（不套 .mi）——窄屏 `@media(max-width:767px){.menubar .mi{display:none}}`
@@ -5926,27 +5838,8 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       <button type="button" class="help-item" role="menuitem" data-help-item="about" data-i18n="menu.about">关于本应用</button>
     </div>
   </header>
-  <!-- 形态 A B1：tabbar 壳。模式胶囊整块从 topbar 剪贴迁入（id/类名不变 ⇒ _renderUiModePill 零 JS 随行）；tabs 槽由 B2 视图注册表填。 -->
-  <div class="tabbar">
-    <!-- 界面模式切换（2026-11-10：左上角胶囊分段开关，取代原「按钮+三态菜单」）：
-         当前段高亮、点段即切；≤1023px「代码」段禁用——三栏网格需要宽屏 -->
-    <div class="mode-pill" id="uiModePill" role="group" data-i18n-aria="ui.mode.title" aria-label="切换界面模式（工作/代码/设计）">
-      <button type="button" class="mode-pill-item is-on" data-mode="work" aria-pressed="true">
-        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1"/><path d="M14 5h7M14 10h7M14 15h7"/></svg><span class="lbl" data-i18n="ui.mode.work">工作</span>
-      </button>
-      <button type="button" class="mode-pill-item" data-mode="code" aria-pressed="false">
-        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg><span class="lbl" data-i18n="ui.mode.code">代码</span>
-      </button>
-      <button type="button" class="mode-pill-item" data-mode="design" aria-pressed="false">
-        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg><span class="lbl" data-i18n="ui.mode.design">设计</span>
-      </button>
-    </div>
-    <div class="tabs" id="formATabs"></div>
-    <!-- 形态 A B2：＋ 追加默认场景视图 / 右栏把手（行为转发 #btnTaskRail，不重写）。
-         图标一律 SVG（P0 字符图标规）；railbtn 仅 ≤1023px 出现——宽屏右栏常驻、把手冗余（原型口径） -->
-    <button type="button" class="tabadd" data-action="faTabAdd" data-i18n-title="formA.addTab" data-i18n-aria="formA.addTab" title="新建标签页" aria-label="新建标签页"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></button>
-    <button type="button" class="railbtn" data-action="faRailToggle" data-i18n-title="taskRail.open" data-i18n-aria="taskRail.open" title="今日任务" aria-label="今日任务"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg></button>
-  </div>
+  <!-- 批八（用户标定「取消 tabbar 那一栏」）：整条壳删除。模式胶囊迁入左侧栏顶部；
+       视图标签/＋/右栏把手全部退役——中栏常驻纯聊天，右栏在宽屏常驻、窄屏走顶栏 #btnTaskRail。 -->
 
   <!-- B5：窄屏顶栏溢出面板（内联展开，与 #msgPanel 同型 —— 静态定位、不进 flex 排布、不算坐标）。
        行项只是"入口镜像"：点击转给原按钮，行为与快捷键完全同路，不在这里重写一遍逻辑。
@@ -5968,7 +5861,22 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   </div>
 
   <div class="body">
-    <nav class="side" id="side"></nav>
+    <nav class="side" id="side">
+      <!-- 批八：模式切换从 tabbar 迁入左栏顶部（用户「工作/代码/设计放左侧边栏」）。
+           id / 类名 / data-mode 全部不变 ⇒ _renderUiModePill 与既有测试选择器零改；
+           renderSide() 重建内容时会保留本节点，点击走 #side 委托（见 _bindUiModePill）。 -->
+      <div class="mode-pill" id="uiModePill" role="group" data-i18n-aria="ui.mode.title" aria-label="切换界面模式（工作/代码/设计）">
+        <button type="button" class="mode-pill-item is-on" data-mode="work" aria-pressed="true">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1"/><path d="M14 5h7M14 10h7M14 15h7"/></svg><span class="lbl" data-i18n="ui.mode.work">工作</span>
+        </button>
+        <button type="button" class="mode-pill-item" data-mode="code" aria-pressed="false">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg><span class="lbl" data-i18n="ui.mode.code">代码</span>
+        </button>
+        <button type="button" class="mode-pill-item" data-mode="design" aria-pressed="false">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg><span class="lbl" data-i18n="ui.mode.design">设计</span>
+        </button>
+      </div>
+    </nav>
     <!-- Code 模式（2026-10-26）：左栏下半 = 会话停靠栏（列表/切换/新建；重命名删除留在设置→会话管理，
          不做第二套 CRUD。仅 .body.code-mode 且 ≥1024px 显示；切换 = 恢复该会话到工作缓冲，见 data-links.switchSession） -->
     <div class="session-dock" id="sessionDock" data-i18n-aria="dock.sessions" aria-label="会话"></div>

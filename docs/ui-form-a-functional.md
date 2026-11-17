@@ -33,18 +33,22 @@
   （`data-move/data-del/data-chain-sc` `src/ui-scene-bind.js:36-75` 等；`data-rail-tab` 分页已于 B4 退役，
   右栏折叠改走 `faRrSec` 委托）。
 - 设计：形态 A 新增控件一律走 `data-action`，集中一张表
-  `FORM_A_ACTIONS = {faTabSwitch, faTabAdd, faTabClose, faRailToggle, faRrSec, faCmpToggle, faMenuOpen, faFocusToggle}`
+  `FORM_A_ACTIONS = {faCmpToggle, faRrSec, faMenuOpen, faFocusToggle}`
   （B6 起原型里的 `faImmersive` 定名为 `faFocusToggle`——语义是「用户主动切专注」，不是页面驱动的沉浸页）
   挂在 `ui-global-events.js` 委托分支；既有绑定（data-move/data-del/data-chain-sc 等）原路径不动
   （B4 起 data-rail-tab 分页退役，右栏折叠统一走本表 faRrSec）。
+  **批八（2026-11-17，用户「取消 tabbar 那一栏」）**：`faTabSwitch` / `faTabAdd` / `faTabClose` /
+  `faRailToggle` / `faChatFocus` 五个发射点随 tabbar 整条删除，handler 同步退役（双向包含门禁不许留死键）；
+  视图注册表保留为数据层，供工作台 tile 按场景开/切视图，不再有顶部标签 UI。
 - 覆盖门禁：新脚本 `scripts/lint-bindings.mjs` 静态扫 `agent-workbench.html` 的 `[data-action]` ⇄
   `FORM_A_ACTIONS` 键集，**双向包含**，缺一边即红。窄变异自证：临时删一个 handler 引用 → 门红；恢复 → 绿
   （同 #134 窄变异口径）。
 
 ## 3. 焦点顺序与 Esc 栈
 
-- 顺序：menubar → tabbar（pill → tabs → ＋ → railbtn → immersive）→ sidebar → main（面包屑 → 内容 →
-  Composer 输入行）→ rightrail → statusbar。靠 DOM 顺序实现，不写正 tabindex。
+- 顺序（批八）：menubar → sidebar（模式胶囊 → 10 入口导航 → 折叠键 → 底部用户/设置）→
+  main（面包屑 → 内容 → Composer 输入行）→ rightrail → statusbar。整条 tabbar 已删除，
+  靠 DOM 顺序实现，不写正 tabindex。
 - Composer 展开：焦点落 `#chatTextInput`（原型期占位名 `#cmpInput`，B3 落地按壳迁 id 留原则改用真实 id，同义映射、行为不变）；Esc 先关 composer（若开），再走各面板既有 Esc 惯例
   （`ui-global-events.js:133`、`render-widgets.js:499`、`ai-retry.js:1483`、`ui-drawer.js:410`）；
   关闭后焦点归还 `#chatPanelCollapse`（原型期占位名 `#cmpToggle`，同义映射；复用 `trapFocus` 的归还语义，`src/core-shared.js:418`）。
@@ -52,19 +56,18 @@
 
 ## 4. 沉浸页隐藏规则（扩展）
 
-- 沉浸页隐藏三壳 `.tabbar` / `.composer` / `.statusbar` + 对话坞 `.chat-panel`（menubar 保留——应用内轻菜单仍可用）：
-  规则块共 8 条选择器：三壳 `.tabbar` / `.composer` / `.statusbar` × 两页壳 `#drawer.drawer-page` / `.main.page-recycle` ＝ 6 条本批新增
-  （`body:has(#drawer.drawer-page) .tabbar, body:has(.main.page-recycle) .tabbar {display:none}` 等）；
+- 沉浸页隐藏两壳 `.composer` / `.statusbar` + 对话坞 `.chat-panel`（menubar 与左栏保留——应用内轻菜单与模式切换仍可用）：
+  批八 tabbar 整条删除，规则块共 6 条选择器：两壳 `.composer` / `.statusbar` × 两页壳 `#drawer.drawer-page` / `.main.page-recycle` ＝ 4 条，
   `.chat-panel` 2 条本批前已存在（`7997e225` 入仓，容器原 `.main-wrap:has()`：drawer-page 案死选择器、page-recycle 案命中），B3 同批迁容器到 `body`。
   **B3 实测修订**：初版按本节原字面落 `.main-wrap:has(...)`，真浏览器七档探针抓到死选择器——
-  `.tabbar` / `.statusbar` / `#drawer` 均在 `.main-wrap` 之外（tabbar 在 `.app` 内、statusbar/drawer 是 `.app` 兄弟层），
+  `.statusbar` / `#drawer` 均在 `.main-wrap` 之外（statusbar/drawer 是 `.app` 兄弟层），
   `.main-wrap:has()` 对它们永不命中（page-recycle 案仅 `.composer` 命中）；容器改 `body`
   （同文件 `body:has(#drawer.drawer-page.open) .topbar` 先例），并在 `tests/e2e/ui-mode-layout.spec.js`
   加真 `:has()` 引擎断言钉死（jsdom 无排版/:has 引擎，静态扫只能兜底字面）。
 
 ## 5. 删除面（旧 topbar 退役）
 
-- `#uiModePill` 从 `.topbar` 迁到 tab 条左（#134 已删 `#btnUIMode`/`#uiModeMenu`，全仓 grep 0 命中）。
+- `#uiModePill` 从 `.topbar` 迁到 tab 条左，批八再随 tabbar 删除迁入左侧栏顶部（#134 已删 `#btnUIMode`/`#uiModeMenu`，全仓 grep 0 命中）。
 - `.topbar` 整体退役，控件逐一定好新家后再删旧壳（每批可回退）：
 
 | 旧控件 | 新家 | 契约随迁 |

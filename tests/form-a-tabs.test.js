@@ -1,130 +1,92 @@
 /**
- * form-a-tabs.test.js —— 形态 A B2：视图注册表 + data-action 委托（功能设计 §1/§2/§3）
+ * form-a-tabs.test.js —— 批八：视图注册表（数据层）+ tabbar 退役契约
  * ----------------------------------------------------------------------------
- * 守的契约：
- *  ① 默认注册表一个「今日」视图（scene=office——§1 字面 today 无此场景，11-12 裁 office，
- *     render-entry.js FORM_A_DEFAULT_SCENE 注释同）；单 tab 不渲染 ×；
- *  ② 切 tab = setActive(scene)+render()：wb_agent_active 变 + is-on/aria-selected 跟随
- *     （is-on 翻转本身即 render() 重绘的证据——renderFormATabs 由 render() 调用）；
- *  ③ ＋ 追加默认场景视图并落盘（wb_agent_form_a_tabs，JSON），非默认场景活跃时拉回 office；
- *  ④ × 移除且常驻 ≥1（单 tab 直接调 formATabClose 是 no-op；存储不变）；关活跃项
- *     setActive 兜底剩余首项；重复场景只亮首个；
- *  ⑤ 委托真通路：el.click() 经 document 级 [data-action] 委托命中 FORM_A_ACTIONS
- *     （faTabSwitch/faTabAdd/faTabClose/faRailToggle 四键首落）；
- *  ⑥ faRailToggle 只转发不重写：#btnTaskRail 原处理器真执行（rail-collapsed 类 + 落盘）；
- *  ⑦ 未登记 action 点击无异常无副作用（委托表查不到即 return）；
- *  ⑧ §3 焦点序：tabbar 内 DOM 序 pill → tabs → ＋ → railbtn，无正 tabindex；
- *  ⑨ 存储键登记契约（data-keys-registry 同口径）。
+ * 用户 2026-11-17 裁定「取消 tabbar 那一栏 / 工作区入口不需要了，直接常驻聊天」。
+ * 顶部标签页 UI（#formATabs / #tabChat / ＋ / 右栏把手 / .workspace-open）整条删除；
+ * 视图注册表 getFormATabs / formATabAdd / formATabClose / formATabOpenScene 保留为数据层，
+ * 工作台 tile 仍按场景开/切视图，只是不再渲染成可见标签页。
+ *
+ * 本文件守的契约：
+ *  ① 默认注册表一个「今日」视图（scene=office——§1 字面 today 无此场景，11-12 裁 office）；
+ *  ② 脏存储降级 / 合法数组原样读入（形状守卫）；
+ *  ③ formATabSwitch = setActive(scene)+render()，不存在 id 是 no-op；
+ *  ④ ＋ 追加默认场景视图并落盘；× 移除且常驻 ≥1；关活跃项兜底剩余首项；
+ *  ⑤ 静态骨架无 tabbar / 无 tab 发射点 / 无 workspace-open 类；
+ *  ⑥ 模式胶囊迁入左栏且 renderSide 重绘后仍存活（id 复用既有绑定）；
+ *  ⑦ 未登记 data-action 点击无异常无副作用；
+ *  ⑧ 存储键登记契约（data-keys-registry 同口径）。
  * 运行：npm test -- form-a-tabs
  */
 import { describe, it, expect, vi } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadApp } from "./helpers/loadApp.js";
 
 const PREFIX = "wb_agent_";
 const TABS_KEY = PREFIX + "form_a_tabs";
 const DFLT = [{ id: "today", scene: "office", title: "今日" }];
+const SEED2 = [{ id: "t1", scene: "office", title: "今日" }, { id: "o1", scene: "overview", title: "总览" }];
 
 function boot(extra) {
-  /* 2026-11-17 批六刀2：本文件守的是「形态 A 工作区 tab 注册表」契约（默认今日 tab is-on 等），
-     写于默认 work 时代。产品默认翻 agent-first（code + 对话优先）后，jsdom 的 window.innerWidth
-     也 ≥1024 ⇒ 默认落 code 模式，顶部多出「对话」标签且它高亮，抢走今日 tab 的 is-on ⇒ 6 条红。
-     这里显式声明 work 前提（与其它 spec 的 fixture 同手法），零改任何断言——测的是 tab 注册表
-     本身，不是产品默认模式（默认模式由 ui-mode.test.js 独占守护）。只在缺省时注入，不覆盖用例预置。 */
-  const storage = Object.assign({ [PREFIX + "onboarded"]: "true" }, extra || {});
-  if (storage[PREFIX + "uimode"] === undefined) storage[PREFIX + "uimode"] = JSON.stringify("work");
-  return loadApp({ storage });
+  return loadApp({ storage: Object.assign({ [PREFIX + "onboarded"]: "true" }, extra || {}) });
 }
 async function ready(win) {
   await vi.waitFor(() => expect(win.document.getElementById("chatPanel")._bound).toBe(true));
   return win;
 }
-const tabBtns = (win) => Array.from(win.document.querySelectorAll("#formATabs [data-action='faTabSwitch']"));
-const xBtns = (win) => Array.from(win.document.querySelectorAll("#formATabs [data-action='faTabClose']"));
-const onIds = (win) => tabBtns(win).filter((b) => b.classList.contains("is-on")).map((b) => b.getAttribute("data-tab-id"));
 const stored = (win) => JSON.parse(win.localStorage.getItem(TABS_KEY) || "null");
-const SEED2 = [{ id: "t1", scene: "office", title: "今日" }, { id: "o1", scene: "overview", title: "总览" }];
 
-describe("视图注册表：默认与渲染", () => {
-  it("① 默认一个今日视图（office）；单 tab 无 ×；is-on/aria-selected 落在它身上", async () => {
+describe("视图注册表：数据层默认与形状守卫", () => {
+  it("① 默认一个今日视图（scene=office）", async () => {
     const win = await ready(boot());
     expect(win.getFormATabs()).toEqual(DFLT);
-    expect(tabBtns(win)).toHaveLength(1);
-    expect(xBtns(win)).toHaveLength(0);
-    const b = tabBtns(win)[0];
-    expect(b.getAttribute("data-tab-id")).toBe("today");
-    expect(b.classList.contains("is-on")).toBe(true);
-    expect(b.getAttribute("aria-selected")).toBe("true");
   });
 
-  it("① 重复场景视图只亮首个（active 是唯一事实源）", async () => {
-    const win = await ready(boot({ [TABS_KEY]: JSON.stringify([{ id: "a", scene: "office", title: "今日" }, { id: "b", scene: "office", title: "今日 2" }]) }));
-    expect(onIds(win)).toEqual(["a"]);
-  });
-
-  it("⑧ tabbar 焦点序＝DOM 序（pill → tabs → ＋ → railbtn），无正 tabindex", async () => {
-    const win = await ready(boot());
-    const kids = Array.from(win.document.querySelector(".tabbar").children);
-    expect(kids.map((k) => k.id || k.getAttribute("data-action"))).toEqual(["uiModePill", "formATabs", "faTabAdd", "faRailToggle"]);
-    kids.forEach((k) => {
-      const ti = k.getAttribute && k.getAttribute("tabindex");
-      expect(ti === null || Number(ti) <= 0).toBe(true);
-    });
-    expect(win.document.querySelector('[data-action="faTabAdd"]').getAttribute("data-action")).toBe("faTabAdd");
-    expect(win.document.querySelector('[data-action="faRailToggle"]').getAttribute("data-action")).toBe("faRailToggle");
-  });
-
-  it("③ 脏存储降级：非数组 / 空数组 / 元素缺字段 ⇒ 回默认", async () => {
+  it("② 脏存储降级：非数组 / 空数组 / 元素缺字段 ⇒ 回默认", async () => {
     for (const bad of ["not-json", "[]", '[{"id":"x"}]', '[{"id":"x","scene":"office"}]']) {
       const win = await ready(boot({ [TABS_KEY]: bad }));
       expect(win.getFormATabs()).toEqual(DFLT);
     }
   });
 
-  it("③ 预置合法数组原样读入并渲染（形状守卫保留合法条目）", async () => {
+  it("② 预置合法数组原样读入", async () => {
     const win = await ready(boot({ [TABS_KEY]: JSON.stringify(SEED2) }));
     expect(win.getFormATabs()).toEqual(SEED2);
-    expect(tabBtns(win)).toHaveLength(2);
-    expect(onIds(win)).toEqual(["t1"]); // active 默认 office
   });
 });
 
-describe("切 tab（§1：setActive(scene)+render）", () => {
-  it("② 真实点击委托 ⇒ wb_agent_active 变 + is-on 跟随", async () => {
+describe("切场景（数据层 API）", () => {
+  it("③ formATabSwitch(id) ⇒ setActive(scene) 并落盘", async () => {
     const win = await ready(boot({ [TABS_KEY]: JSON.stringify(SEED2) }));
-    tabBtns(win).find((b) => b.getAttribute("data-tab-id") === "o1").click();
-    expect(JSON.parse(win.localStorage.getItem(PREFIX + "active"))).toBe("overview"); // save() 存 JSON 串
-    expect(onIds(win)).toEqual(["o1"]);
+    win.formATabSwitch("o1");
+    expect(JSON.parse(win.localStorage.getItem(PREFIX + "active"))).toBe("overview");
   });
 
-  it("② 切不存在的 id ⇒ 无变化不抛", async () => {
+  it("③ 切不存在的 id ⇒ 无变化不抛", async () => {
     const win = await ready(boot({ [TABS_KEY]: JSON.stringify(SEED2) }));
     expect(() => win.formATabSwitch("ghost")).not.toThrow();
-    expect(win.localStorage.getItem(PREFIX + "active")).toBe(null); // 未发生 setActive ⇒ 从不落盘
-    expect(onIds(win)).toEqual(["t1"]);
+    expect(win.localStorage.getItem(PREFIX + "active")).toBe(null);
   });
 });
 
-describe("＋ 追加默认场景视图", () => {
-  it("③ 真实点击 ＋ ⇒ 追加 office 视图、标题「今日 N」、落盘", async () => {
+describe("＋ 追加 / × 移除（常驻 ≥1）", () => {
+  it("④ formATabAdd 追加 office 视图、标题「今日 2」并落盘", async () => {
     const win = await ready(boot());
-    win.document.querySelector('[data-action="faTabAdd"]').click();
+    win.formATabAdd();
     const tabs = win.getFormATabs();
     expect(tabs).toHaveLength(2);
     expect(tabs[1].scene).toBe("office");
     expect(tabs[1].title).toBe("今日 2");
     expect(stored(win)).toEqual(tabs);
-    expect(tabBtns(win)).toHaveLength(2); // 重绘后两 tab 在条上
   });
 
-  it("③ 非默认场景活跃时点 ＋ ⇒ active 拉回 office", async () => {
+  it("④ 非默认场景活跃时追加 ⇒ active 拉回 office", async () => {
     const win = await ready(boot({ [TABS_KEY]: JSON.stringify(SEED2), [PREFIX + "active"]: JSON.stringify("overview") }));
-    win.document.querySelector('[data-action="faTabAdd"]').click();
+    win.formATabAdd();
     expect(JSON.parse(win.localStorage.getItem(PREFIX + "active"))).toBe("office");
-    expect(onIds(win)[0]).toBe("t1"); // active=office ⇒ 首个 office 场景 tab 亮起（重复场景只亮首个）
   });
-});
 
-describe("× 移除（常驻 ≥1）", () => {
   it("④ 单 tab 直接调 formATabClose ⇒ no-op，存储不被写", async () => {
     const win = await ready(boot());
     win.formATabClose("today");
@@ -136,48 +98,51 @@ describe("× 移除（常驻 ≥1）", () => {
     const win = await ready(boot({ [TABS_KEY]: JSON.stringify(SEED2) }));
     win.formATabClose("o1");
     expect(win.getFormATabs()).toEqual([SEED2[0]]);
-    expect(win.localStorage.getItem(PREFIX + "active")).toBe(null); // active 未变，无 setActive 落盘
+    expect(win.localStorage.getItem(PREFIX + "active")).toBe(null);
     expect(stored(win)).toEqual([SEED2[0]]);
   });
 
-  it("④ 关活跃项 ⇒ setActive 兜底剩余首项 + is-on 跟随", async () => {
+  it("④ 关活跃项 ⇒ setActive 兜底剩余首项", async () => {
     const win = await ready(boot({ [TABS_KEY]: JSON.stringify(SEED2) }));
-    win.formATabClose("t1"); // t1.scene=office=active
-    expect(JSON.parse(win.localStorage.getItem(PREFIX + "active"))).toBe("overview"); // save() 存 JSON 串
-    expect(onIds(win)).toEqual(["o1"]);
-  });
-
-  it("④ 关到只剩一个 ⇒ × 从 DOM 消失（多 tab 才渲染 ×）", async () => {
-    const win = await ready(boot({ [TABS_KEY]: JSON.stringify(SEED2) }));
-    expect(xBtns(win)).toHaveLength(2);
-    win.formATabClose("o1");
-    expect(xBtns(win)).toHaveLength(0);
-  });
-
-  it("④ × 按钮形状：aria-label=关闭标签页、内容是 SVG（lint-icons 只扫 src，运行时钉住这处 JS 发射）", async () => {
-    const win = await ready(boot({ [TABS_KEY]: JSON.stringify(SEED2) }));
-    const x = xBtns(win)[0];
-    expect(x.getAttribute("aria-label")).toBe("关闭标签页");
-    expect(x.innerHTML).toContain("<svg");
+    win.formATabClose("t1");
+    expect(JSON.parse(win.localStorage.getItem(PREFIX + "active"))).toBe("overview");
   });
 });
 
-describe("faRailToggle 转发（行项不重写行为）", () => {
-  it("⑥ 点 tabbar 把手 ⇒ #btnTaskRail 原处理器真执行（类 + 落盘双证）", async () => {
-    const win = await ready(boot()); // jsdom innerWidth=1024 ⇒ isWide() 走桌面分支
-    const layoutBody = win.document.querySelector(".body"); // collapseDesktop 加类在 .body 布局层
-    expect(win.localStorage.getItem(PREFIX + "task_rail_collapsed")).toBe(null);
-    win.document.querySelector('[data-action="faRailToggle"]').click();
-    expect(layoutBody.classList.contains("rail-collapsed")).toBe(true);
-    expect(JSON.parse(win.localStorage.getItem(PREFIX + "task_rail_collapsed"))).toBe("1");
-    win.document.querySelector('[data-action="faRailToggle"]').click();
-    expect(layoutBody.classList.contains("rail-collapsed")).toBe(false);
-    expect(JSON.parse(win.localStorage.getItem(PREFIX + "task_rail_collapsed"))).toBe("0");
+describe("批八骨架：tabbar 整条退役", () => {
+  const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+  it("⑤ 静态 HTML 无 .tabbar / #formATabs / #tabChat / tab 发射点 / workspace-open 规则", () => {
+    const HTML = fs.readFileSync(path.join(ROOT, "agent-workbench.html"), "utf8");
+    for (const token of ['class="tabbar"', 'id="formATabs"', 'id="tabChat"',
+      'data-action="faTabAdd"', 'data-action="faTabSwitch"', 'data-action="faTabClose"',
+      'data-action="faRailToggle"', 'data-action="faChatFocus"', '.workspace-open']) {
+      expect(HTML, `批八应彻底移除 ${token}`).not.toContain(token);
+    }
+  });
+
+  it("⑤ 运行时 DOM 同样无残留（tab 条节点不因渲染复活）", async () => {
+    const win = await ready(boot());
+    for (const sel of [".tabbar", "#formATabs", "#tabChat", '[data-action="faTabSwitch"]',
+      '[data-action="faTabAdd"]', '[data-action="faRailToggle"]']) {
+      expect(win.document.querySelector(sel), `批八不应存在 ${sel}`).toBeNull();
+    }
+    expect(win.document.querySelector(".body").classList.contains("workspace-open")).toBe(false);
+  });
+
+  it("⑥ 模式胶囊在左栏内，且 renderSide 重绘后仍存活（id 复用既有绑定）", async () => {
+    const win = await ready(boot());
+    const side = win.document.querySelector("#side");
+    expect(side.querySelector("#uiModePill"), "胶囊应是 #side 的直接后代").toBeTruthy();
+    win.__test.render();
+    const after = win.document.querySelector("#side #uiModePill");
+    expect(after, "renderSide 重建 innerHTML 时须保留胶囊节点").toBeTruthy();
+    expect(after.querySelectorAll(".mode-pill-item")).toHaveLength(3);
   });
 });
 
-describe("委托表边界", () => {
-  it("⑦ 未登记 action 点击 ⇒ 无异常、无副作用", async () => {
+describe("委托边界", () => {
+  it("⑦ 未登记 data-action 点击 ⇒ 无异常、无副作用", async () => {
     const win = await ready(boot());
     const ghost = win.document.createElement("button");
     ghost.setAttribute("data-action", "faGhost");
@@ -187,7 +152,7 @@ describe("委托表边界", () => {
     ghost.remove();
   });
 
-  it("⑨ form_a_tabs 已在 DATA_KEY_REGISTRY 登记", async () => {
+  it("⑧ form_a_tabs 已在 DATA_KEY_REGISTRY 登记", async () => {
     const win = await ready(boot());
     expect(win.__test.dataKeyRegistered("form_a_tabs")).toBe(true);
   });

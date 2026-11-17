@@ -99,38 +99,37 @@ describe("窄变异自证（§2：删 handler / 去发射 必须翻红）", () =
 
   it("基线：真实三处源双向包含（绿）", () => {
     expect(checkBindings({ used: baseline, handlers }).ok).toBe(true);
-    /* 2026-11-17 批六刀2：新增 faChatFocus（「对话」标签回纯聊天），8→9。
-       B2 首落 4 + B3 faCmpToggle + B4 faRrSec + B6 faMenuOpen/faFocusToggle + faChatFocus。 */
-    expect(handlers).toHaveLength(9);
+    /* 2026-11-17 批八：tabbar 整条删除，faChatFocus / faTabSwitch / faTabAdd / faTabClose /
+       faRailToggle 五个发射点归零，handler 同步删除 ⇒ 9→4。
+       存活 4 键：B3 faCmpToggle + B4 faRrSec + B6 faMenuOpen/faFocusToggle。 */
+    expect(handlers).toEqual(["faCmpToggle", "faRrSec", "faMenuOpen", "faFocusToggle"]);
+    expect(handlers).toHaveLength(4);
   });
 
   it("变异①：删一个 handler 引用 ⇒ 门红（死控件面）", () => {
-    const mutated = EVENTS.replace("faTabClose: function(el){ formATabClose(el.getAttribute(\"data-tab-id\")); },", "");
+    const mutated = EVENTS.replace('faRrSec: function(el){ _railSecToggle(el.getAttribute("data-rr-sec")); },', "");
     expect(mutated).not.toBe(EVENTS); // 变异必须真发生
     const r = checkBindings({ used: baseline, handlers: parseFormAActions(mutated) });
     expect(r.ok).toBe(false);
-    expect(r.missingHandler).toEqual(["faTabClose"]); // 发射还在、handler 没了 ⇒ 死控件
+    expect(r.missingHandler).toEqual(["faRrSec"]); // 发射还在、handler 没了 ⇒ 死控件
   });
 
-  it("变异②：去掉 src 的一处发射 ⇒ 门红（死 handler 面）", () => {
-    /* 双态仓：with-injected 跑测时 HTML 是交付态，render-entry 的内容同时存在于
-       agent-workbench.html 内联块与 src/render-entry.js —— 一处逻辑变异必须两处同改，
-       否则并集里还剩内联副本，门禁假绿。 */
-    const mutatedSrc = RENDER.replace('data-action="faTabClose"', 'data-actionx="faTabClose"');
-    const mutatedHtml = HTML.replace('data-action="faTabClose"', 'data-actionx="faTabClose"');
-    expect(mutatedSrc).not.toBe(RENDER);
+  it("变异②：去掉一处发射 ⇒ 门红（死 handler 面）", () => {
+    /* 批八后四个发射点全在静态 HTML（render-entry 已无 data-action 发射）。
+       用 faCmpToggle 做窄变异：去掉唯一发射后 handler 应被判死键。 */
+    const mutatedHtml = HTML.replace('data-action="faCmpToggle"', 'data-actionx="faCmpToggle"');
     expect(mutatedHtml).not.toBe(HTML);
-    const r = checkBindings({ used: usedOf(mutatedHtml, mutatedSrc), handlers });
+    const r = checkBindings({ used: usedOf(mutatedHtml, RENDER), handlers });
     expect(r.ok).toBe(false);
-    expect(r.deadHandler).toEqual(["faTabClose"]); // handler 还在、没人发射 ⇒ 死键
+    expect(r.deadHandler).toEqual(["faCmpToggle"]); // handler 还在、没人发射 ⇒ 死键
   });
 
   it("变异③：HTML 骨架的发射改名 ⇒ 门红（死控件面）", () => {
-    const mutated = HTML.replace('data-action="faRailToggle"', 'data-action="faRailTogglex"');
+    const mutated = HTML.replace('data-action="faFocusToggle"', 'data-action="faFocusTogglex"');
     expect(mutated).not.toBe(HTML);
     const r = checkBindings({ used: usedOf(mutated, RENDER), handlers });
     expect(r.ok).toBe(false);
-    expect(r.missingHandler).toEqual(["faRailTogglex"]); // 改名后的发射没人接 ⇒ 死控件
-    expect(r.deadHandler).toEqual(["faRailToggle"]);      // 原键成了死 handler ⇒ 双向都红
+    expect(r.missingHandler).toEqual(["faFocusTogglex"]); // 改名后的发射没人接 ⇒ 死控件
+    expect(r.deadHandler).toEqual(["faFocusToggle"]);      // 原键成了死 handler ⇒ 双向都红
   });
 });
