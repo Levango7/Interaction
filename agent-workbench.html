@@ -1103,6 +1103,71 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   background:transparent;color:var(--muted);font-size:var(--fs-2xs);cursor:pointer;
   border-radius:var(--radius-sm);margin-top:2px}
 .side-sess-all:hover{color:var(--accent-text,var(--accent));background:var(--accent-soft)}
+/* 2026-11-17（主流 Agent 化 · 骨架级）：侧栏三段式 ——
+   ① 顶部「新建会话」主行动；② 中部会话列表占满剩余高度、独立滚动；③ 底部紧凑导航。
+   10 个入口压成 5×2 图标格（约 118px），从此"导航栏只占左栏一小部分"（改前 nav 十行 ≈ 330px）。
+   对齐 Cursor / Codex desktop / Qoder：左栏首屏是会话历史，功能导航退到底部一条。
+   入口数据未变（.nav-item ×10）、点击路径未变（[data-sc] / [data-menu]），只换排布。
+   ⚠️ 必须 min-width:768 限定：903-905 行的 ≤767 档 `.side{display:none}` 在本块**之前**，
+   若不加媒体限定，本块的 display:flex 会以同特异性+更靠后把移动端隐藏规则盖掉
+   （mobile.spec「启动：侧栏隐藏」就是这么红的）。 */
+@media(min-width:768px){
+.side{display:flex;flex-direction:column;overflow:hidden}
+.side-top{flex-shrink:0;padding-bottom:var(--space-2)}
+.side-new{display:flex;align-items:center;justify-content:center;gap:var(--space-1);width:100%;
+  min-height:32px;padding:0 var(--space-2);border:1px solid var(--line);border-radius:var(--radius-md);
+  background:var(--panel);color:var(--text);font-size:var(--fs-sm);font-weight:600;cursor:pointer;
+  transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast)}
+.side-new:hover{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.side-new-plus{font-size:var(--fs-sm);line-height:1;font-weight:400}
+.side-sess{flex:1;min-height:0;display:flex;flex-direction:column;padding:0;margin:0;
+  border-bottom:0}
+.side-sess-head{padding:0 var(--space-2) var(--space-1)}
+.side-sess-list{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;
+  display:flex;flex-direction:column;gap:1px;padding-bottom:var(--space-2)}
+.side-sess-item{padding:5px var(--space-2);line-height:1.35;flex-shrink:0;
+  display:flex;flex-direction:column;gap:0}
+.side-sess-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-sess-meta{display:block;font-size:var(--fs-2xs);color:var(--text-faint);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-sess-item.is-active .side-sess-meta{color:var(--accent-text,var(--accent));opacity:.75}
+.side-sess-all{width:auto;margin-top:0;padding:1px 5px;font-size:var(--fs-2xs);
+  border-radius:var(--radius-sm)}
+.side-nav{flex-shrink:0;border-top:1px solid color-mix(in srgb,var(--line) 45%,transparent);
+  margin-top:var(--space-1);padding-top:var(--space-2)}
+.side-nav-t{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.06em;
+  padding:0 var(--space-2) var(--space-1)}
+.side-nav-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:2px}
+.side-nav .nav-item{flex-direction:column;justify-content:center;gap:3px;min-height:44px;
+  min-width:0;padding:5px 1px;margin-bottom:0;border-radius:var(--radius-sm)}
+.side-nav .nav-item .nm{flex:none;width:100%;text-align:center;font-size:var(--fs-2xs);
+  line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-dim-2)}
+.side-nav .nav-item:hover .nm{color:var(--text)}
+.side-nav .nav-item.active .nm{color:var(--on-accent)}
+.side-nav .nav-item .cnt{position:absolute;top:2px;right:2px;min-width:0;padding:0 3px;
+  font-size:var(--fs-2xs);line-height:12px;border-radius:8px}
+.side-nav .nav-item.active::before{display:none}
+/* 「待配置」在格子里放不下文字 ⇒ 角标圆点 + 一圈 accent 描边；文字退到 title / aria-label */
+.side-nav .nav-item[data-need-cfg]{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,transparent)}
+.side-nav .nav-item[data-need-cfg] .cnt{width:6px;height:6px;padding:0;font-size:0;
+  border-radius:50%;background:var(--accent);top:4px;right:6px}
+/* 折叠态：会话区隐藏，导航回单列图标（保留 .collapsed 的全部既有行为） */
+.side.collapsed .side-top,
+.side.collapsed .side-sess{display:none}
+.side.collapsed .side-nav{flex:1;min-height:0;overflow-y:auto;border-top:0;margin-top:0;padding-top:var(--space-1)}
+.side.collapsed .side-nav-t{display:none}
+.side.collapsed .side-nav-grid{grid-template-columns:1fr}
+/* 折叠键：原来是一条带 accent 底色 + 描边的满宽按钮，占掉顶部一整行（主流的 Agent 左栏没有这种条）；
+   新布局下会话是主体，它降到侧栏最底部、透明底、小字（.collapsed 态仍走 3595 行的原有居中规则）。 */
+.side .side-top{order:1}
+.side .side-sess{order:2}
+.side .side-nav{order:3}
+.side .side-toggle{order:4;width:auto;margin:0;align-self:flex-end;
+  padding:3px var(--space-2);min-height:22px;background:transparent;border:0;
+  color:var(--text-faint);font-size:var(--fs-2xs);font-weight:500;gap:2px}
+.side .side-toggle:hover{background:var(--surface-hover);color:var(--text)}
+.side .side-toggle svg{width:11px;height:11px}
+} /* @media(min-width:768px) 三段式左栏（见上：不限定会盖掉 ≤767 的侧栏隐藏） */
 .nav-item{display:flex;align-items:center;gap:var(--space-2);width:100%;padding:6px var(--space-2);
   border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text);margin-bottom:2px;
   text-align:left;transition:background var(--transition-fast),color var(--transition-fast);position:relative;
