@@ -50,6 +50,10 @@ const probeCodeMode = () => {
     collapseDisplay: collapseBtn ? getComputedStyle(collapseBtn).display : null,
     sessionBtnInMenubar: !!q(".menubar #chatSessionBtn"),
     chipInStatusbar: !!q(".statusbar #ctxBudgetChip"),
+    /* 2026-11-17 批六刀2：对话优先 / 工作区 tab 可达 */
+    workspaceOpen: q(".body").classList.contains("workspace-open"),
+    chatTabExists: !!q("#tabChat"),
+    chatTabOn: q("#tabChat") ? q("#tabChat").classList.contains("is-on") : null,
     dockDisplay: dock ? getComputedStyle(dock).display : null,
     dock: dock ? box(dock) : null,
     sdDisplay: sd ? getComputedStyle(sd).display : null,
@@ -65,12 +69,12 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
   });
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  /* 2026-11-16 判据随产品裁决改写（非放宽）：用户裁「核心两刀」刀2＝中栏分屏
-     （上半工作面 / 下半对话区常驻气泡），明确选「分屏」而非「全高对话」，
-     不推翻 11-02「主客颠倒」修复（工作面仍居中在上、可滚、有高度）。
-     旧判据钉「贴底坞 sticky/≤40vh/顶缘>45%」随布局退役；新判据钉「两段各约半屏、
-     消息区 display:flex 且非空、折叠键隐藏、会话管理在顶栏、上下文芯片在状态栏」。 */
-  test("中栏分屏：上半工作面可滚、下半对话区气泡常驻（非贴底坞、非全高对话）", async ({ page }) => {
+  /* 2026-11-17 批六刀2 判据随产品裁决**反转**改写（用户新结构「中间页面是聊天区」明确覆盖
+     11-02「主客颠倒」与 11-16「分屏」裁决）。这是产品裁决反转，**不是放宽判据**：
+     旧判据钉「工作区居中在上 + chat 下半屏」；新判据钉「chat 占满中栏主体、#main 默认隐藏、
+     工作区经顶部 #tabChat / 工作区标签往返可达」——两侧都钉，缺一不可。
+     工作区功能不删除：点任一工作区标签加 .workspace-open 恢复 #main（分屏几何，任务/设置/知识库可达）。 */
+  test("对话优先：chat 占满中栏主体、工作区收进顶部标签页可达（产品裁决反转）", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#main", { timeout: 15_000 });
     await waitMainRendered(page);
@@ -80,39 +84,46 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
     await waitMainRendered(page);
     const g = await page.evaluate(probeCodeMode);
 
-    /* ---- P1 主客颠倒的回归判据：旧实现是 .main{display:none} + chat 占满中栏 ---- */
+    /* ---- 对话优先：body 带 code-mode 但不带 workspace-open（默认落对话） ---- */
     expect(g.bodyClass, "body 应带 code-mode").toContain("code-mode");
-    expect(g.mainDisplay, `#main 被 display:${g.mainDisplay} 藏掉（主客颠倒回归）`).not.toBe("none");
-    expect(g.main.w, `#main 宽 ${g.main.w}px，应是有宽度的中栏`).toBeGreaterThan(200);
-    expect(g.main.h, `#main 高 ${g.main.h}px，应是有高度的中栏`).toBeGreaterThan(200);
+    expect(g.workspaceOpen, "默认应对话优先，不带 workspace-open").toBe(false);
+    expect(g.mainDisplay, `默认对话优先时 #main 应 display:none（实测 ${g.mainDisplay}）`).toBe("none");
 
-    /* ---- 三栏位：中栏在 240 左栏与 300 右栏之间 ---- */
+    /* ---- 三栏位：中栏在 240 左栏与 300 右栏之间（不变） ---- */
     expect(g.wrap.x, `中栏左缘 ${g.wrap.x}，应在 240px 左栏之后`).toBeGreaterThanOrEqual(238);
     expect(g.wrap.x + g.wrap.w, `中栏右缘 ${g.wrap.x + g.wrap.w}，应在 300px 右栏之前`).toBeLessThanOrEqual(g.vw - 298);
-    expect(g.main.x, `#main 左缘 ${g.main.x} 应落在中栏内`).toBeGreaterThanOrEqual(g.wrap.x - 1);
 
-    /* ---- 中栏分屏（2026-11-16）：上半 #main / 下半 #chatPanel，各约半屏、互不重叠 ----
-       两段之和=中栏高；任一段退化成贴底坞（≤40vh）或全高中栏都会被下面三条抓到。 */
-    expect(g.chatPos, `聊天面板 position=${g.chatPos}，分屏应为 static（非贴底 sticky）`).toBe("static");
-    expect(g.chat.h, `对话区高 ${g.chat.h}px，应约为中栏半屏（${Math.round(g.wrap.h * 0.5)}px）`).toBeGreaterThan(g.wrap.h * 0.42);
-    expect(g.main.h, `工作区高 ${g.main.h}px，应约为中栏半屏（${Math.round(g.wrap.h * 0.5)}px）`).toBeGreaterThan(g.wrap.h * 0.42);
-    expect(g.chat.y, `对话区顶缘 ${g.chat.y}，应在工作区之后（分屏下段）`).toBeGreaterThanOrEqual(g.main.y + g.main.h - 1);
-    expect(g.main.y + g.main.h + g.chat.h, "两段高度之和应≈中栏高（无溢出/无重叠）")
-      .toBeLessThanOrEqual(g.wrap.y + g.wrap.h + 2);
+    /* ---- chat 占满中栏主体（非贴底坞、非半屏）：static + 高度≈中栏全高 ---- */
+    expect(g.chatPos, `聊天面板 position=${g.chatPos}，主形态应为 static`).toBe("static");
+    expect(g.chat.h, `对话区高 ${g.chat.h}px，应≈中栏全高（${Math.round(g.wrap.h)}px）`).toBeGreaterThan(g.wrap.h * 0.85);
+    expect(g.chat.y, "对话区顶缘应落在中栏顶部附近").toBeLessThanOrEqual(g.wrap.y + 4);
     expect(g.chat.y + g.chat.h, "对话区底缘不得超出中栏").toBeLessThanOrEqual(g.wrap.y + g.wrap.h + 1);
     expect(g.chat.x, "对话区应在中栏内（左缘）").toBeGreaterThanOrEqual(g.wrap.x - 1);
     expect(g.chat.x + g.chat.w, "对话区应在中栏内（右缘）").toBeLessThanOrEqual(g.wrap.x + g.wrap.w + 1);
 
-    /* ---- 气泡常驻（刀2 核心）：#chat display:flex 且有实质高度，不是 collapsed 时的 display:none ---- */
-    expect(g.msgsDisplay, `#chat display=${g.msgsDisplay}，分屏应常驻 flex（气泡有位置）`).toBe("flex");
+    /* ---- 气泡常驻：#chat display:flex 且有实质高度 ---- */
+    expect(g.msgsDisplay, `#chat display=${g.msgsDisplay}，应常驻 flex`).toBe("flex");
     expect(g.msgs.h, `#chat 高 ${g.msgs.h}px，应有实质高度承载气泡`).toBeGreaterThan(80);
     expect(g.msgs.y, "消息区应落在对话区内").toBeGreaterThanOrEqual(g.chat.y - 1);
-    expect(g.msgs.y + g.msgs.h, "消息区底缘不得超出对话区").toBeLessThanOrEqual(g.chat.y + g.chat.h + 1);
 
-    /* ---- 刀1 控件落位：折叠键在分屏态隐藏；会话管理归顶栏、上下文芯片归状态栏 ---- */
-    expect(g.collapseDisplay, "分屏态无折叠概念，#chatPanelCollapse 应隐藏").toBe("none");
+    /* ---- 工作区 tab 入口在位 + 控件落位 ---- */
+    expect(g.chatTabExists, "顶部应有「对话」标签 #tabChat").toBe(true);
+    expect(g.chatTabOn, "对话优先时 #tabChat 应高亮").toBe(true);
+    expect(g.collapseDisplay, "主形态无折叠概念，#chatPanelCollapse 应隐藏").toBe("none");
     expect(g.sessionBtnInMenubar, "会话管理按钮应迁至顶栏 menubar").toBe(true);
     expect(g.chipInStatusbar, "上下文预算芯片应迁至状态栏").toBe(true);
+
+    /* ---- 往返：点工作区标签 → #main 出现且分屏；点「对话」→ 回纯聊天 ---- */
+    await page.click("#formATabs .tab:not(.tab-chat)");
+    const g2 = await page.evaluate(probeCodeMode);
+    expect(g2.workspaceOpen, "点工作区标签应加 workspace-open").toBe(true);
+    expect(g2.mainDisplay, "工作区视图下 #main 应显示").not.toBe("none");
+    expect(g2.main.h, "工作区视图下 #main 应有可滚高度").toBeGreaterThan(120);
+    expect(g2.chatTabOn, "工作区视图下「对话」标签应取消高亮").toBe(false);
+    await page.click("#tabChat");
+    const g3 = await page.evaluate(probeCodeMode);
+    expect(g3.workspaceOpen, "点「对话」应回 workspace-open=false").toBe(false);
+    expect(g3.mainDisplay, "回到对话优先 #main 应再隐藏").toBe("none");
 
     /* ---- P2-5：右栏 Agent 节让位 agentDock（B4 起按节藏，不再按 tab） ---- */
     expect(g.agentSecDisplay, "code 模式右栏 Agent 节应隐藏").toBe("none");

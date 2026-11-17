@@ -203,6 +203,8 @@ function _helpRun(item){
    faRailToggle 不重写行为，只把点击转给原按钮 #btnTaskRail（同仓「行项不重写行为」惯例）。
    覆盖门禁：scripts/lint-bindings.mjs 扫 HTML＋src 发射并集 ⇄ 本表键集双向包含。 */
 const FORM_A_ACTIONS = {
+  /* 主流 Agent 化批六·刀2：点「对话」标签 → 关闭工作区视图，中栏回纯聊天 */
+  faChatFocus: function(){ if(typeof formAChatFocus === "function") formAChatFocus(); },
   faTabSwitch: function(el){ formATabSwitch(el.getAttribute("data-tab-id")); },
   faTabAdd: function(){ formATabAdd(); },
   faTabClose: function(el){ formATabClose(el.getAttribute("data-tab-id")); },

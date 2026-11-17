@@ -684,6 +684,22 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   display:inline-flex;align-items:center;justify-content:center;min-height:22px;background:transparent;border:0}
 .menubar .mi-session:hover{background:var(--accent-soft);color:var(--text)}
 .menubar .mi-session svg{width:14px;height:14px}
+/* ===== 主流 Agent 化批六·刀1（2026-11-17，用户截图「还要改」+ 目标结构）=====
+   顶栏右侧（.topbar 容器）在宽屏（≥1024，三栏 agent 形态的门槛）严格只留三枚图标：
+   搜索 / 消息 / 下载。用户原话「顶栏 左侧不变，右侧只放几个图标：搜索、消息、下载；
+   登录放在左下角，帮助是设置里面的能力；快捷命令…放进设置或右侧边栏」。
+   —— 左侧 .menubar > .logo / .mi 一律不动（「左侧不变」）；这里只作用于右侧 .topbar。
+   —— 隐藏的按钮 DOM / id / data-action 全保留：JS 绑定、Ctrl+K 命令面板、主题切换
+      （设置页外观卡）、右栏 todo（宽屏常驻）均不受影响；登录由左栏底部 .side-foot 转发。
+   —— 用 @media(min-width:1024) 限定：≤1023 窄屏顶栏完全维持原样，topbar-overflow
+      ①②③⑤ 的窄屏判据（44px 命中 / 溢出入口 / 更多菜单）零影响，只改 ④ 的宽屏断言。 */
+@media (min-width:1024px){
+  .menubar .topbar #btnCmd,
+  .menubar .topbar #btnTaskRail,
+  .menubar .topbar #btnTheme,
+  .menubar .topbar #btnInstall,
+  .menubar .topbar #btnUser{display:none}
+}
 /* B6：帮助菜单浮层——脱离流、右锚 menubar 下缘；[hidden] 优先，不靠类切换 */
 .help-menu{position:absolute;top:calc(var(--mb-h) - 2px);right:var(--space-2);z-index:var(--z-popover);
   display:flex;flex-direction:column;min-width:180px;padding:var(--space-1);
@@ -1167,6 +1183,22 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   color:var(--text-faint);font-size:var(--fs-2xs);font-weight:500;gap:2px}
 .side .side-toggle:hover{background:var(--surface-hover);color:var(--text)}
 .side .side-toggle svg{width:11px;height:11px}
+/* 主流 Agent 化批六·刀1：左栏最底部「用户 + 设置」同行（用户「登录放在左下角/用户、设置同一行」）。
+   两根等高按钮各占一半，透明底、hover 才显形——与折叠键同一克制口径。数据侧走 data-foot 委托。 */
+.side .side-foot{order:5;flex-shrink:0;display:flex;gap:2px;
+  padding:var(--space-1) var(--space-2) var(--space-2);
+  border-top:1px solid color-mix(in srgb,var(--line) 45%,transparent);margin-top:2px}
+.side-foot-btn{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:5px;
+  min-height:30px;padding:2px 4px;border:0;border-radius:var(--radius-md);background:transparent;
+  color:var(--text-dim);font-size:var(--fs-2xs);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
+.side-foot-btn:hover{background:var(--accent-soft);color:var(--accent-text,var(--accent))}
+.side-foot-ic{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.side-foot-ic svg{width:var(--icon-sm);height:var(--icon-sm)}
+.side-foot-lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 折叠态：只留两个图标，各占半格；label 退场 */
+.side.collapsed .side-foot{padding:var(--space-1) 2px}
+.side.collapsed .side-foot-lbl{display:none}
+.side.collapsed .side-foot-btn{min-height:34px}
 } /* @media(min-width:768px) 三段式左栏（见上：不限定会盖掉 ≤767 的侧栏隐藏） */
 .nav-item{display:flex;align-items:center;gap:var(--space-2);width:100%;padding:6px var(--space-2);
   border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text);margin-bottom:2px;
@@ -5610,11 +5642,17 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
      纯 CSS 覆盖，只在 .body.code-mode 作用域生效：work 贴底坞 / design 画布零影响。
      折叠键在分屏态隐藏（无折叠概念，布局固定）；#chat 与运行态条无视 .collapsed 强制常驻——
      这是「气泡常驻可见」的产品裁决，不是放宽折叠判据（折叠行为在 work 模式原样保留）。 */
+  /* ===== 2026-11-17 批六刀2（用户「中间页面是聊天区」+ 裁定「工作区收进顶部标签页」）=====
+     code 模式默认 = 对话优先：#chatPanel 占满中栏主体、#main 让位（功能没删——点顶部任一
+     工作区标签即加 .workspace-open 恢复工作区）。这是产品裁决反转：覆盖 11-02「主客颠倒」
+     与 11-16「分屏」（用户新结构以对话为中栏主体）；ui-mode-layout 判据同步改写，非放宽。
+     工作区视图（.workspace-open）仍沿用下面 11-16 的分屏几何，保证任务/设置/知识库可达。 */
   .body.code-mode .main-wrap{overflow:hidden}
-  .body.code-mode .main-wrap>.main{flex:1 1 auto;min-height:0;overflow-y:auto}
+  /* 默认对话优先：main 隐藏，chat 占满中栏（flex:1，非贴底坞） */
+  .body.code-mode .main-wrap>.main{display:none;flex:1 1 auto;min-height:0;overflow-y:auto}
   .body.code-mode .main-wrap>.chat-panel{
-    position:static;flex:0 0 50%;max-height:none;min-height:0;
-    overflow:hidden;border-top:1px solid var(--line)}
+    position:static;flex:1 1 auto;max-height:none;min-height:0;
+    overflow:hidden;border-top:none}
   .body.code-mode .main-wrap>.chat-panel .chat,
   .body.code-mode .main-wrap>.chat-panel.collapsed .chat{
     display:flex;flex:1 1 auto;max-height:none;min-height:0;overflow-y:auto}
@@ -5622,6 +5660,11 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   .body.code-mode .main-wrap>.chat-panel.collapsed .chat-toolbar{display:flex}
   .body.code-mode .main-wrap>.chat-panel #chatPanelCollapse{display:none}
   .body.code-mode .main-wrap>.chat-panel .chat-input-area{max-height:none}
+  /* 工作区视图（点顶部工作区标签）：恢复 11-16 分屏——main 上半 / chat 下半，各约半屏 */
+  .body.code-mode.workspace-open .main-wrap>.main{display:block;flex:1 1 auto;min-height:0;overflow-y:auto}
+  .body.code-mode.workspace-open .main-wrap>.chat-panel{
+    position:static;flex:0 0 50%;max-height:none;min-height:0;
+    overflow:hidden;border-top:1px solid var(--line)}
   .body.code-mode .task-rail{grid-column:3;grid-row:1;width:auto;min-height:0}
   /* P2-5（2026-11-02）：code 模式的能力面在右下 agentDock（同源数据 + 2.5s 活轮询），
      右栏 Agent 节是同一批数据的静态副本——藏掉，避免两个入口两份渲染互相漂移。

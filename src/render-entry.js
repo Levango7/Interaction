@@ -218,14 +218,32 @@ function getFormATabs(){
 function _saveFormATabs(){ try{ return save(FORM_A_TABS_KEY, _formATabs); }catch(e){
   try{ if(typeof pushDiag === "function") pushDiag("warn", "form_a_tabs persist failed: "+((e&&e.message)||e), {where:"_saveFormATabs"}); }catch(_e2){}
 } }
-/* tab 条渲染：与 active 场景匹配的首个 tab 高亮（active 是唯一事实源；重复场景视图只亮首个） */
+/* ===== 主流 Agent 化批六·刀2（2026-11-17，用户「中间页面是聊天区」+ 两问裁定「工作区收进顶部标签页」）=====
+   中栏在 code 模式默认 = 纯聊天（chat 占满中栏、#main 让位）；工作区不删除，收进顶部 formATabs
+   标签页——点任一工作区标签才打开 #main（body 加 .workspace-open）。#tabChat 是回到纯聊天的显式入口。
+   与 11-02「主客颠倒」/11-16「分屏」是产品裁决反转（用户新结构覆盖旧裁决），不是放宽判据。
+   workspace-open 不持久化：每次刷新回到对话优先——与「无偏好默认 agent-first」同口径。 */
+function _workspaceOpen(){ const b=document.querySelector(".body"); return !!(b && b.classList.contains("workspace-open")); }
+function _setWorkspaceOpen(on){
+  const b=document.querySelector(".body"); if(!b) return;
+  b.classList.toggle("workspace-open", !!on);
+  const chatTab = document.getElementById("tabChat");
+  if(chatTab){ chatTab.classList.toggle("is-on", !on); chatTab.setAttribute("aria-selected", on?"false":"true"); }
+  renderFormATabs();
+}
+/* tab 条渲染：与 active 场景匹配的首个 tab 高亮（active 是唯一事实源；重复场景视图只亮首个）。
+   新增最前「对话」标签 #tabChat：工作区未打开时高亮它，其余工作区标签高亮让位于它。 */
 function renderFormATabs(){
   const host = $("#formATabs"); if(!host) return;
   const tabs = getFormATabs();
   const multi = tabs.length > 1;
+  const chatOn = !_workspaceOpen();
+  const chatTabHtml = '<button type="button" class="tab tab-chat'+(chatOn?' is-on':'')+'" id="tabChat" role="tab"'
+    + ' aria-selected="'+(chatOn?"true":"false")+'" data-action="faChatFocus"'
+    + ' title="'+esc(t("formA.tabChat","对话"))+'">'+esc(t("formA.tabChat","对话"))+'</button>';
   let marked = false;
-  host.innerHTML = sanitizeHtml(tabs.map(function(tb){
-    const on = !marked && tb.scene === active;
+  host.innerHTML = sanitizeHtml(chatTabHtml + tabs.map(function(tb){
+    const on = !chatOn && !marked && tb.scene === active;
     if(on) marked = true;
     return '<button type="button" class="tab'+(on?' is-on':'')+'" role="tab" aria-selected="'+(on?"true":"false")+'" data-action="faTabSwitch" data-tab-id="'+esc(tb.id)+'">'+esc(tb.title)+'</button>'
       + (multi ? '<button type="button" class="tab-x" data-action="faTabClose" data-tab-id="'+esc(tb.id)+'" aria-label="'+esc(t("a11y.closeTab","关闭标签页"))+'">'+UI_ICONS.close+'</button>' : '');
@@ -233,9 +251,16 @@ function renderFormATabs(){
 }
 function formATabSwitch(id){
   const tab = getFormATabs().filter(function(x){ return x.id === id; })[0];
-  if(!tab || active === tab.scene) return;
+  if(!tab) return;
+  /* 点工作区标签 = 打开工作区视图（即使 scene 未变也要开，例如从对话态点「今日」） */
+  if(!_workspaceOpen()) _setWorkspaceOpen(true);
+  if(active === tab.scene){ render(); return; }
   setActive(tab.scene);
   render();
+}
+/** 回到「对话优先」：关闭工作区视图，#main 让位给 chat（不换 scene，工作区状态保留在 tab 里） */
+function formAChatFocus(){
+  if(_workspaceOpen()) _setWorkspaceOpen(false);
 }
 function formATabAdd(){
   const tabs = getFormATabs();

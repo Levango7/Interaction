@@ -3,6 +3,17 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-17 · **主流 Agent 化批六（刀1+刀2）：顶栏收敛三枚 + 中栏纯聊天 + 工作区收进顶部标签页**
+
+_用户发截图「还要改」并给出目标结构：「顶栏左侧图标与产品名，右侧只放搜索/消息/下载；登录放左下角，帮助是设置里的能力，快捷命令放进设置或右栏；下面左中右三栏……中间页面是聊天区……右侧边栏是 todo/skills/mcps/tools/plugins」。两问裁定：中栏工作区「收进顶部标签页」、右栏「合并进相关区」。本批先落刀1（顶栏+左栏底部）与刀2 的中栏部分；右栏五分区拆下一批（撞 rail-sections/ui-agent-parity/ui-mode-layout 三处 sessions 节硬断言，拆开控风险）。_
+
+- **刀1 顶栏收敛（`agent-workbench.html` CSS）**：宽屏（≥1024，三栏 agent 形态门槛）`.topbar` 严格只留**搜索/消息/下载**三枚——`#btnCmd`/`#btnTaskRail`/`#btnTheme`/`#btnInstall`/`#btnUser` 用 `@media(min-width:1024)` 隐藏。**左侧 `.menubar`（logo + 帮助/专注/会话管理 .mi）一律不动**（用户「顶栏左侧不变」）。DOM/id/data-action 全保留：Ctrl+K 命令面板、设置页主题、右栏常驻 todo 均不受影响；窄屏（<1024）完全不动，溢出菜单/底栏功能可达。`tests/e2e/topbar-overflow.spec.js` ④ 从「宽屏 btnCmd/btnTheme visible」改钉「三枚在 + 五枚不在」，是产品形态更新、非放宽。
+- **刀1 左栏底部用户/设置行（`src/render-widgets.js` renderSide + CSS）**：左栏最底加 `.side-foot`「登录 + 设置」同行（各半格 30px、hover 显形、折叠态退成双图标）。不重复 id——用户转发 `#btnUser.click()`（保留登录态渲染），设置走 `AppBridge.openDrawer()`（与 data-gear 同路）。顶栏宽屏隐藏 `#btnUser` 后，这里是登录唯一替代。
+- **刀2 中栏纯聊天（`src/render-entry.js` + `src/ui-global-events.js` + CSS + `src/core-i18n.js`）**：code 模式默认 = **对话优先**——`#chatPanel` 占满中栏主体（实测 1440×900：890×832≈全高，消息区 647px），`#main` display:none。**工作区不删除，收进顶部标签页**：新增 `#tabChat`「对话」标签（i18n `formA.tabChat` 对话/Chat），点任一工作区标签 → body 加 `.workspace-open` 恢复 11-16 分屏（#main 上半 416px / chat 下半 416px），点「对话」回纯聊天——往返实测状态正确、零横向溢出。`workspace-open` 不持久化（刷新回对话优先，与新用户默认 agent-first 同口径）。
+- **判据随产品裁决反转（非放宽）**：`tests/e2e/ui-mode-layout.spec.js` 主用例从「主客颠倒回归 + 中栏分屏各半屏」改钉「chat 占中栏 ≥85% 全高 + #main 默认 none + 工作区标签往返可达」——用户新结构「中间是聊天区」明确覆盖 11-02「主客颠倒」与 11-16「分屏」裁决；两侧都钉，不是把断言删绿。
+- **验证**：真机三态取证（宽屏/工作区/回退）+ 顶栏 1280/375 双档截图；e2e `topbar-overflow` **16/16**、`ui-mode-layout` **14/14**、`ui-agent-parity`+`nav-pages-smoke`+`mobile` **15 passed/2 skipped**；单测 5 文件 **69/69** + 3 文件 **47/47**（共 116）；`npm run lint` rc=0。源码态已抽回复核（705KB / 40 标记）。
+- **高共写面声明**：`agent-workbench.html`、`src/render-entry.js`、`src/render-widgets.js`、`src/ui-global-events.js`、`src/core-i18n.js`、`tests/e2e/topbar-overflow.spec.js`、`tests/e2e/ui-mode-layout.spec.js`、`CHANGELOG.md`、`docs/agent-board.md`；workflow / 两份 package-lock / node_modules / server / electron 零改动。
+
 ### 2026-11-17 · **默认落地页翻成 agent-first：打开即对话工作区（code 模式）**
 
 _用户「那就做？」——批五末尾我提出"唯一没动的骨架级问题：默认落地页仍是工作模式（今日页），改成对话优先会破 `ui-mode.test.js`「默认 Work」契约，你说改我就立项改"，这句就是放行。_

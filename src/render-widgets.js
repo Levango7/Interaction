@@ -248,7 +248,22 @@ function renderSide(){
     + '<div class="side-nav-t">' + esc(t("side.nav.title", "导航")) + "</div>"
     + '<div class="side-nav-grid">' + groups.map((g)=>g.nodes.map(nodeHtml).join("")).join("") + "</div>"
     + "</div>";
-  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + sideSessionsHtml() + navHtml);
+  /* 主流 Agent 化批六·刀1（2026-11-17，用户「登录放在左下角 / 用户、设置在同一行」）：
+     左栏最底部加一行「用户 + 设置」。不重复 id（#btnUser / #btnGear 各只有一份），
+     用独立 data-foot 属性走 setupSideMenu 委托：用户转发 #btnUser.click()（保留其登录态
+     渲染与 onclick），设置走 AppBridge.openDrawer()（与侧栏 data-gear 同路）。顶栏宽屏
+     隐藏 #btnUser 后，这里是登录入口的唯一替代；窄屏顶栏 #btnUser 仍在，两处并存不冲突。 */
+  const footHtml = '<div class="side-foot">'
+    + '<button type="button" class="side-foot-btn" data-foot="user" title="' + esc(t("api.login", "登录"))
+    + '" aria-label="' + esc(t("api.login", "登录")) + '">'
+    + '<span class="side-foot-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>'
+    + '<span class="side-foot-lbl">' + esc(t("api.login", "登录")) + "</span></button>"
+    + '<button type="button" class="side-foot-btn" data-foot="settings" title="' + esc(t("side.menu.settings", "设置"))
+    + '" aria-label="' + esc(t("side.menu.settings", "设置")) + '">'
+    + '<span class="side-foot-ic" aria-hidden="true">' + UI_ICONS.gear.replace("<svg", '<svg aria-hidden="true"') + "</span>"
+    + '<span class="side-foot-lbl">' + esc(t("side.menu.settings", "设置")) + "</span></button>"
+    + "</div>";
+  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + sideSessionsHtml() + navHtml + footHtml);
 
   /* 激活子项的父分支自动展开（一次性同步，不触发额外存储写） */
   if(_sideActive){
@@ -629,6 +644,17 @@ function setupSideMenu(){
     }
     const sessAll = e.target && e.target.closest ? e.target.closest("[data-sess-all]") : null;
     if(sessAll){ if(typeof openSessionModal === "function") openSessionModal(); return; }
+    /* 主流 Agent 化批六·刀1：左栏底部「用户 / 设置」同行（不重复 id，转发既有入口） */
+    const foot = e.target && e.target.closest ? e.target.closest("[data-foot]") : null;
+    if(foot){
+      const which = foot.getAttribute("data-foot");
+      if(which === "user"){
+        const ub = document.getElementById("btnUser"); if(ub && typeof ub.click === "function") ub.click();
+      }else if(which === "settings"){
+        if(typeof AppBridge !== "undefined" && typeof AppBridge.openDrawer === "function") AppBridge.openDrawer();
+      }
+      return;
+    }
 
     const btn = e.target && e.target.closest ? e.target.closest(".nav-item") : null;
     if(!btn) return;

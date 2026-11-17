@@ -95,11 +95,20 @@ test.describe("窄屏顶栏溢出菜单", () => {
     expect(after, `点「主题」行必须换主题（前后都是 ${before}）`).not.toBe(before);
   });
 
-  test("④ 「更多」入口在宽屏收起（否则桌面顶栏凭空多一个按钮）", async ({ page }) => {
+  test("④ 宽屏顶栏右侧严格只留 搜索/消息/下载（主流 Agent 化批六刀1，用户目标结构）", async ({ page }) => {
+    /* 2026-11-17 产品形态更新（用户「右侧只放几个图标：搜索、消息、下载；登录放左下角，
+       帮助是设置里的能力；快捷命令放进设置或右栏」）。这是**产品裁决**，不是放宽判据：
+       旧形态宽屏露出 命令/主题/今日/安装/登录 共 8 枚，新形态收敛到 3 枚。
+       断言射程：既钉「该留的三枚都在」，又钉「不该留的五枚真不在」，少一侧都不算达标。
+       DOM/id/data-action 全保留，故只是可见性收敛，功能经设置/快捷键/左栏底部仍在。 */
     await page.setViewportSize({ width: 1280, height: 800 });
     await expect(page.locator("#btnMore")).toBeHidden();
-    await expect(page.locator("#btnCmd")).toBeVisible();
-    await expect(page.locator("#btnTheme")).toBeVisible();
+    for (const id of ["btnSearchTop", "btnMessages", "btnDownload"]) {
+      await expect(page.locator("#" + id), `宽屏应保留 #${id}`).toBeVisible();
+    }
+    for (const id of ["btnCmd", "btnTheme", "btnTaskRail", "btnInstall", "btnUser", "btnHelp"]) {
+      await expect(page.locator("#" + id), `宽屏 #${id} 应收起`).toBeHidden();
+    }
   });
 
   test("⑤ Esc 收起（键盘路径与触屏路径行为一致）", async ({ page }) => {
