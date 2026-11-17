@@ -1103,6 +1103,71 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   background:transparent;color:var(--muted);font-size:var(--fs-2xs);cursor:pointer;
   border-radius:var(--radius-sm);margin-top:2px}
 .side-sess-all:hover{color:var(--accent-text,var(--accent));background:var(--accent-soft)}
+/* 2026-11-17（主流 Agent 化 · 骨架级）：侧栏三段式 ——
+   ① 顶部「新建会话」主行动；② 中部会话列表占满剩余高度、独立滚动；③ 底部紧凑导航。
+   10 个入口压成 5×2 图标格（约 118px），从此"导航栏只占左栏一小部分"（改前 nav 十行 ≈ 330px）。
+   对齐 Cursor / Codex desktop / Qoder：左栏首屏是会话历史，功能导航退到底部一条。
+   入口数据未变（.nav-item ×10）、点击路径未变（[data-sc] / [data-menu]），只换排布。
+   ⚠️ 必须 min-width:768 限定：903-905 行的 ≤767 档 `.side{display:none}` 在本块**之前**，
+   若不加媒体限定，本块的 display:flex 会以同特异性+更靠后把移动端隐藏规则盖掉
+   （mobile.spec「启动：侧栏隐藏」就是这么红的）。 */
+@media(min-width:768px){
+.side{display:flex;flex-direction:column;overflow:hidden}
+.side-top{flex-shrink:0;padding-bottom:var(--space-2)}
+.side-new{display:flex;align-items:center;justify-content:center;gap:var(--space-1);width:100%;
+  min-height:32px;padding:0 var(--space-2);border:1px solid var(--line);border-radius:var(--radius-md);
+  background:var(--panel);color:var(--text);font-size:var(--fs-sm);font-weight:600;cursor:pointer;
+  transition:background var(--transition-fast),color var(--transition-fast),border-color var(--transition-fast)}
+.side-new:hover{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.side-new-plus{font-size:var(--fs-sm);line-height:1;font-weight:400}
+.side-sess{flex:1;min-height:0;display:flex;flex-direction:column;padding:0;margin:0;
+  border-bottom:0}
+.side-sess-head{padding:0 var(--space-2) var(--space-1)}
+.side-sess-list{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;
+  display:flex;flex-direction:column;gap:1px;padding-bottom:var(--space-2)}
+.side-sess-item{padding:5px var(--space-2);line-height:1.35;flex-shrink:0;
+  display:flex;flex-direction:column;gap:0}
+.side-sess-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-sess-meta{display:block;font-size:var(--fs-2xs);color:var(--text-faint);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-sess-item.is-active .side-sess-meta{color:var(--accent-text,var(--accent));opacity:.75}
+.side-sess-all{width:auto;margin-top:0;padding:1px 5px;font-size:var(--fs-2xs);
+  border-radius:var(--radius-sm)}
+.side-nav{flex-shrink:0;border-top:1px solid color-mix(in srgb,var(--line) 45%,transparent);
+  margin-top:var(--space-1);padding-top:var(--space-2)}
+.side-nav-t{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.06em;
+  padding:0 var(--space-2) var(--space-1)}
+.side-nav-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:2px}
+.side-nav .nav-item{flex-direction:column;justify-content:center;gap:3px;min-height:44px;
+  min-width:0;padding:5px 1px;margin-bottom:0;border-radius:var(--radius-sm)}
+.side-nav .nav-item .nm{flex:none;width:100%;text-align:center;font-size:var(--fs-2xs);
+  line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-dim-2)}
+.side-nav .nav-item:hover .nm{color:var(--text)}
+.side-nav .nav-item.active .nm{color:var(--on-accent)}
+.side-nav .nav-item .cnt{position:absolute;top:2px;right:2px;min-width:0;padding:0 3px;
+  font-size:var(--fs-2xs);line-height:12px;border-radius:8px}
+.side-nav .nav-item.active::before{display:none}
+/* 「待配置」在格子里放不下文字 ⇒ 角标圆点 + 一圈 accent 描边；文字退到 title / aria-label */
+.side-nav .nav-item[data-need-cfg]{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,transparent)}
+.side-nav .nav-item[data-need-cfg] .cnt{width:6px;height:6px;padding:0;font-size:0;
+  border-radius:50%;background:var(--accent);top:4px;right:6px}
+/* 折叠态：会话区隐藏，导航回单列图标（保留 .collapsed 的全部既有行为） */
+.side.collapsed .side-top,
+.side.collapsed .side-sess{display:none}
+.side.collapsed .side-nav{flex:1;min-height:0;overflow-y:auto;border-top:0;margin-top:0;padding-top:var(--space-1)}
+.side.collapsed .side-nav-t{display:none}
+.side.collapsed .side-nav-grid{grid-template-columns:1fr}
+/* 折叠键：原来是一条带 accent 底色 + 描边的满宽按钮，占掉顶部一整行（主流的 Agent 左栏没有这种条）；
+   新布局下会话是主体，它降到侧栏最底部、透明底、小字（.collapsed 态仍走 3595 行的原有居中规则）。 */
+.side .side-top{order:1}
+.side .side-sess{order:2}
+.side .side-nav{order:3}
+.side .side-toggle{order:4;width:auto;margin:0;align-self:flex-end;
+  padding:3px var(--space-2);min-height:22px;background:transparent;border:0;
+  color:var(--text-faint);font-size:var(--fs-2xs);font-weight:500;gap:2px}
+.side .side-toggle:hover{background:var(--surface-hover);color:var(--text)}
+.side .side-toggle svg{width:11px;height:11px}
+} /* @media(min-width:768px) 三段式左栏（见上：不限定会盖掉 ≤767 的侧栏隐藏） */
 .nav-item{display:flex;align-items:center;gap:var(--space-2);width:100%;padding:6px var(--space-2);
   border-radius:var(--radius-md);font-size:var(--fs-sm);color:var(--text);margin-bottom:2px;
   text-align:left;transition:background var(--transition-fast),color var(--transition-fast);position:relative;
@@ -10090,6 +10155,8 @@ const MESSAGES = {
     "chat.emptyGuide.item4": "检索知识库文件并带出处引用",
     "side.sess.title": "最近会话",
     "side.sess.all": "全部会话",
+    "side.sess.allShort": "全部",
+    "side.nav.title": "导航",
     "side.ai.needCfg": "待配置",
     "p3.html.batchChk": "<input type=\"checkbox\" class=\"batch-chk\" aria-label=\"选择此任务\">",
     "p3.html.chartEmpty": "<div class=\"mini-chart-empty\">暂无可视化数据 · 在「数据点」中填入 JSON 数组，如 [{\"label\":\"Q1\",\"value\":30}]</div>",
@@ -14305,6 +14372,8 @@ const MESSAGES = {
     "chat.emptyGuide.item4": "Retrieve knowledge-base files with source citations",
     "side.sess.title": "Recent sessions",
     "side.sess.all": "All sessions",
+    "side.sess.allShort": "All",
+    "side.nav.title": "Nav",
     "side.ai.needCfg": "Setup needed",
     "p3.html.batchChk": "<input type=\"checkbox\" class=\"batch-chk\" aria-label=\"Select this task\">",
     "p3.html.chartEmpty": "<div class=\"mini-chart-empty\">No chart data · enter a JSON array in the Data points field, e.g. [{\"label\":\"Q1\",\"value\":30}]</div>",
@@ -25842,25 +25911,46 @@ function _buildSideMenu(){
 function renderSide(){
   const expanded = _loadSideExpanded();
 
-  /* 2026-11-17（主流 Agent 化，用户：'左栏仍是导航菜单样式'）：左栏顶部加「最近会话」快捷区。
-     只加会话区，功能导航组原样保留在下方——10 个入口一个不丢（ia-three-zones 钉 nodes.length===10，
-     `#side .nav-item` 数量由 nav-pages-smoke 的 waitSideNav(page,10) 守）。本区块**不用 .nav-item 类**，
-     故两条断言均不受影响。 */
+  /* 2026-11-17（主流 Agent 化 · 骨架级重排，用户：'导航栏在左侧边栏只占一小部分'）：
+     侧栏改成三段式 —— ① 顶部「新建会话」主行动；② 中部会话列表（占满并独立滚动）；
+     ③ 底部紧凑导航（10 入口压成 5×2 图标格）。
+     对齐 Cursor / Codex desktop / Qoder：左栏首屏是会话历史，功能导航只占底部一小条。
+     入口数据与点击路径零改：`#side .nav-item` 仍是 10 个（ia-three-zones 钉 nodes.length===10，
+     nav-pages-smoke 的 waitSideNav 与 [data-sc]/[data-menu] 选择器全部照旧）。 */
   const sideSessionsHtml = function(){
     let list = [], act = "";
     try{ list = getSessions() || []; }catch(_e){ list = []; }
     try{ act = getActiveSession() || ""; }catch(_e){ act = ""; }
-    const items = list.slice(0, 4).map(function(s2){
+    /* 会话列表现在是主体：不再只取 4 条（那是"快捷区"时代的尺寸），最多 60 条，超出滚动。
+       每条带一行次要信息（场景 · 日期）——主流 Agent 的会话列表都有这种密度，
+       只有标题一行会显得像"最近打开过的文件"。 */
+    const items = list.slice(0, 60).map(function(s2){
       const title = s2.title || t("sess.new", "新会话");
+      let meta = "";
+      try{
+        const scName = (typeof SCENARIOS !== "undefined" && SCENARIOS[s2.sc]) ? SCENARIOS[s2.sc].name : (s2.sc || "");
+        let when = "";
+        const d = new Date(s2.updatedAt || s2.createdAt || "");
+        if(!isNaN(d.getTime())) when = (d.getMonth() + 1) + "-" + d.getDate();
+        meta = [scName, when].filter(Boolean).join(" · ");
+      }catch(_e){ meta = ""; }
       return '<button type="button" class="side-sess-item' + (s2.id === act ? " is-active" : "")
-        + '" data-sess-id="' + esc(s2.id) + '" title="' + esc(title) + '">' + esc(title) + "</button>";
+        + '" data-sess-id="' + esc(s2.id) + '" title="' + esc(title) + '">'
+        + '<span class="side-sess-name">' + esc(title) + "</span>"
+        + (meta ? '<span class="side-sess-meta">' + esc(meta) + "</span>" : "")
+        + "</button>";
     }).join("");
-    return '<div class="side-sess">'
+    return '<div class="side-top">'
+      + '<button type="button" class="side-new" data-sess-new="1" title="' + esc(t("dock.newSession", "新建会话"))
+      + '" aria-label="' + esc(t("dock.newSession", "新建会话")) + '">'
+      + '<span class="side-new-plus" aria-hidden="true">＋</span>'
+      + '<span class="side-new-t">' + esc(t("dock.newSession", "新建会话")) + "</span></button>"
+      + "</div>"
+      + '<div class="side-sess">'
       + '<div class="side-sess-head"><span class="side-sess-t">' + esc(t("side.sess.title", "最近会话")) + "</span>"
-      + '<button type="button" class="side-sess-new" data-sess-new="1" title="' + esc(t("dock.newSession", "新建会话"))
-      + '" aria-label="' + esc(t("dock.newSession", "新建会话")) + '">＋</button></div>'
-      + (items || '<div class="side-sess-empty">' + esc(t("dock.noSessions", "暂无会话")) + "</div>")
-      + '<button type="button" class="side-sess-all" data-sess-all="1">' + esc(t("side.sess.all", "全部会话")) + "</button>"
+      + '<button type="button" class="side-sess-all" data-sess-all="1" title="' + esc(t("side.sess.all", "全部会话"))
+      + '" aria-label="' + esc(t("side.sess.all", "全部会话")) + '">' + esc(t("side.sess.allShort", "全部")) + "</button></div>"
+      + '<div class="side-sess-list">' + (items || '<div class="side-sess-empty">' + esc(t("dock.noSessions", "暂无会话")) + "</div>") + "</div>"
       + "</div>";
   };
 
@@ -25875,11 +25965,16 @@ function renderSide(){
     const isExp = !!expanded[o.id];
     const act = o.active ? " active" : "";
     const hasAct = o.hasActive ? " has-active" : "";
+    /* 图标格里「待配置」文字放不下（格子约 37px 宽）⇒ 视觉上退化成角标圆点，
+       语义退到 title / aria-label（见 .side-nav .nav-item[data-need-cfg] 样式）。 */
+    const ariaLabel = (o.extraAttrs && o.extraAttrs.indexOf("data-need-cfg") >= 0)
+      ? esc(o.label) + "（" + esc(t("side.ai.needCfg", "待配置")) + "）"
+      : esc(o.label);
     const caret = o.children ? `<span class="side-caret" data-caret="1" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>` : "";
     const cnt = (o.cnt!==null && o.cnt!=="") ? `<span class="cnt">${o.cnt}</span>` : "";
     const dataAttr = o.sc ? ` data-sc="${o.sc}"` : ` data-menu="${o.id}"`;
     const extra = o.extraAttrs || "";
-    return `<button type="button" class="nav-item nav-parent${act}${hasAct}"${dataAttr}${o.children?` aria-expanded="${isExp}"`:""}${extra} style="--sc:${o.color ? scCss(o.color) : "var(--muted)"}" title="${esc(o.label)}" aria-label="${esc(o.label)}">
+    return `<button type="button" class="nav-item nav-parent${act}${hasAct}"${dataAttr}${o.children?` aria-expanded="${isExp}"`:""}${extra} style="--sc:${o.color ? scCss(o.color) : "var(--muted)"}" title="${ariaLabel}" aria-label="${ariaLabel}">
       ${o.icon}<span class="nm">${esc(o.label)}</span>${cnt}${caret}</button>`;
   };
   const nodeHtml = (o)=>{
@@ -25888,10 +25983,14 @@ function renderSide(){
   };
 
   const groups = _buildSideMenu();
-  /* 刀 2：work 组收为单入口后组头与入口同名（工作台/工作台）⇒ 该组不渲染组头。
-     仅影响 work 组（assistant 组虽也单节点，但「助手/AI」两名不同义，保留组头）。 */
-  const groupHtml = (g)=> (g.gid==="work" ? "" : '<div class="nav-group">'+g.name+'</div>') + g.nodes.map(nodeHtml).join("");
-  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + sideSessionsHtml() + groups.map(groupHtml).join(""));
+  /* 底部导航：10 入口收成 5×2 图标格，组头不再渲染（2 行天然按组断行：
+     今日3 + 工作台1 + 助手1 占首行，更多 5 占次行）。
+     仍用 nodeHtml 包 .nav-node，子项（若有）走 .nav-sub 的既有展开逻辑，不破坏 click 委托。 */
+  const navHtml = '<div class="side-nav">'
+    + '<div class="side-nav-t">' + esc(t("side.nav.title", "导航")) + "</div>"
+    + '<div class="side-nav-grid">' + groups.map((g)=>g.nodes.map(nodeHtml).join("")).join("") + "</div>"
+    + "</div>";
+  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + sideSessionsHtml() + navHtml);
 
   /* 激活子项的父分支自动展开（一次性同步，不触发额外存储写） */
   if(_sideActive){
