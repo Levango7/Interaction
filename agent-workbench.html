@@ -652,6 +652,14 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .menubar{height:var(--mb-h);display:flex;align-items:center;gap:var(--space-1);position:relative;
   padding:0 var(--space-2);background:var(--panel);border-bottom:1px solid var(--line);flex:none}
 .menubar .mb-sp{flex:1}
+/* 批七（用户选「Session名称显示顶栏中部」）：两段 .mb-sp 各 flex:1 ⇒ #mbSessionName 真正居中。
+   只占位不抢交互（pointer-events:none），窄屏 <1024 收起（那里顶栏要留给溢出菜单与 44px 命中区）。 */
+.menubar .mb-session{display:flex;align-items:center;gap:var(--space-1);flex:0 1 auto;
+  max-width:min(28vw,300px);min-width:0;padding:2px var(--space-2);border-radius:var(--radius-md);
+  color:var(--text-dim);font-size:var(--fs-2xs);pointer-events:none}
+.menubar .mb-session-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none}
+.menubar .mb-session-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:1023px){.menubar .mb-session{display:none}}
 /* 2026-11-16 topbar 退役：原独立一行 .topbar 现为 menubar 子容器，内联化 + 紧凑档。
    容器与所有 .topbar .tbtn 既有 CSS（窄屏溢出、主题着色、44px 命中区）保持不动——只覆盖
    在本容器内的「外观与尺寸」：去掉它作为独立行时的 padding/背景/模糊/下边框（menubar 已有），
@@ -1129,6 +1137,23 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
    （mobile.spec「启动：侧栏隐藏」就是这么红的）。 */
 @media(min-width:768px){
 .side{display:flex;flex-direction:column;overflow:hidden}
+/* 批七顶部 3×2 快捷格（新建会话 / 新建任务 / 定时任务 / Agents / 知识库 / 发现）。
+   独立类，不套 .nav-item ⇒ 既有「导航 10 项」契约与点击委托零影响；窄屏随底部导航
+   一起由 .side 的既有显隐规则管理，不新增断点。 */
+.side-quick{flex-shrink:0;padding:var(--space-1) var(--space-2) var(--space-2);
+  border-bottom:1px solid color-mix(in srgb,var(--line) 45%,transparent)}
+.side-quick-t{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.06em;
+  padding:0 0 var(--space-1)}
+.side-quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.side-quick-item{min-width:0;min-height:40px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:2px;padding:var(--space-1) 2px;border:0;border-radius:var(--radius-md);
+  background:transparent;color:var(--text-dim);cursor:pointer}
+.side-quick-item:hover{background:var(--accent-soft);color:var(--accent-text,var(--accent))}
+.side-quick-ic{display:inline-flex;align-items:center;justify-content:center}
+.side-quick-ic svg{width:var(--icon-sm);height:var(--icon-sm)}
+.side-quick-lbl{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:var(--fs-2xs)}
+.side.collapsed .side-quick{display:none}
 .side-top{flex-shrink:0;padding-bottom:var(--space-2)}
 .side-new{display:flex;align-items:center;justify-content:center;gap:var(--space-1);width:100%;
   min-height:32px;padding:0 var(--space-2);border:1px solid var(--line);border-radius:var(--radius-md);
@@ -1176,6 +1201,7 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* 折叠键：原来是一条带 accent 底色 + 描边的满宽按钮，占掉顶部一整行（主流的 Agent 左栏没有这种条）；
    新布局下会话是主体，它降到侧栏最底部、透明底、小字（.collapsed 态仍走 3595 行的原有居中规则）。 */
 .side .side-top{order:1}
+.side .side-quick{order:1}
 .side .side-sess{order:2}
 .side .side-nav{order:3}
 .side .side-toggle{order:4;width:auto;margin:0;align-self:flex-end;
@@ -5580,6 +5606,13 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   padding:0 6px;border-radius:var(--radius-sm);cursor:pointer;min-width:24px;min-height:24px}
 .rail-sess-new:hover{background:var(--surface-hover);color:var(--text)}
 .rail-item-meta{font-size:var(--fs-2xs);color:var(--muted);white-space:nowrap}
+/* 批七「大模型用量」：进度条只表达「今日 / 累计」这个真实比值（没有配额数据就不画配额%），
+   all CSS 走既有令牌，不新增色值。空态与有数据态同一结构，避免布局跳动。 */
+.rail-usage-row{display:flex;align-items:center;gap:var(--space-1);padding:1px var(--space-1)}
+.rail-usage-row .rail-item-name{font-size:var(--fs-xs)}
+.rail-usage-meter{height:5px;border-radius:var(--radius-full);background:var(--surface-hover);
+  overflow:hidden;margin:var(--space-1) var(--space-1) var(--space-1h)}
+.rail-usage-meter>i{display:block;height:100%;background:var(--accent);border-radius:inherit}
 
 @media(min-width:1024px){
   .task-rail{width:280px;flex:0 0 280px}
@@ -5823,6 +5856,12 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   <header class="menubar">
     <div class="logo"><span class="mark" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M40 18.2A17 17 0 1 1 29.8 8"/><circle cx="24" cy="24" r="4.5" fill="currentColor" stroke="none"/><circle cx="38.8" cy="9.2" r="3.5" fill="currentColor" stroke="none"/></svg></span> <span data-i18n="app.name">Agent 工坊</span></div>
     <div class="mb-sp"></div>
+    <!-- 批七（2026-11-17，用户选「Session名称 → 顶栏中部」）：把当前会话名提到顶栏正中。
+         两段 .mb-sp 各 flex:1 ⇒ 名称真正居中；窄屏（<1024）隐藏，避免挤掉溢出菜单与触控命中区。
+         只加独立 id/class，不碰 #chatSessionBtn 的会话管理弹窗（两个分工不同：这里是"当前是谁"）。 -->
+    <div class="mb-session" id="mbSessionName" aria-live="polite" title="当前会话">
+      <span class="mb-session-dot" aria-hidden="true"></span><span class="mb-session-t">新会话</span></div>
+    <div class="mb-sp"></div>
     <!-- 聊天区信息架构改造（2026-11-16）：会话管理是「导航」不是消息，从 AI 面板头部迁到应用顶栏。
          id / title / aria / data-i18n-* 全部沿用，#chatSessionBtn 的 onclick 绑定按 ID 命中，零改 JS。
          用独立的 .mi-session 类（不套 .mi）——窄屏 `@media(max-width:767px){.menubar .mi{display:none}}`
@@ -6024,9 +6063,11 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         <button type="button" class="task-rail-add" id="taskRailAdd" data-i18n-title="taskRail.add" title="新建任务" data-i18n-aria="taskRail.add" aria-label="新建任务">+</button>
         <button type="button" class="task-rail-collapse" id="taskRailCollapse" data-i18n-title="taskRail.collapse" title="收起任务栏" data-i18n-aria="taskRail.collapse" aria-label="收起任务栏">›</button>
       </div>
-      <!-- 形态 A B4（2026-11-13）：四节堆叠取代四 tab 分页（用户裁选项甲：现状 pane 转节）。
+      <!-- 形态 A B4（2026-11-13）：节堆叠取代 tab 分页（用户裁选项甲：现状 pane 转节）。
            每节 h4 内一个 faRrSec 按钮管折叠，折叠态持久化 form_a_rr_sec（收起节 id 数组）。
-           首节 today 即原 renderTaskRail；其余三节壳迁 id 留（#railAgentPane 等）。 -->
+           批七（2026-11-17，用户按标注图裁定右栏五区）：顺序改为
+           todo / 文件 / 会话 / 大模型用量 / 运行与能力 —— 四节原 id/pane 全部保留（数据与绑定零改），
+           新增 usage 节（#railUsagePane），agent 节只改显示为「运行与能力」。 -->
       <div class="task-rail-secs">
         <section class="rr-sec" data-rr-sec="today">
           <h4><button type="button" class="rr-sec-toggle" data-action="faRrSec" data-rr-sec="today" aria-expanded="true" data-i18n="rail.tab.today">今日</button></h4>
@@ -6035,10 +6076,6 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
             <button type="button" class="task-rail-more" id="taskRailMore" data-i18n="taskRail.more">全部任务</button>
           </div>
         </section>
-        <section class="rr-sec" data-rr-sec="agent">
-          <h4><button type="button" class="rr-sec-toggle" data-action="faRrSec" data-rr-sec="agent" aria-expanded="true" data-i18n="rail.tab.agent">Agent</button></h4>
-          <div class="rr-body" id="railAgentPane"></div>
-        </section>
         <section class="rr-sec" data-rr-sec="files">
           <h4><button type="button" class="rr-sec-toggle" data-action="faRrSec" data-rr-sec="files" aria-expanded="true" data-i18n="rail.tab.files">文件</button></h4>
           <div class="rr-body" id="railFilesPane"></div>
@@ -6046,6 +6083,14 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
         <section class="rr-sec" data-rr-sec="sessions">
           <h4><button type="button" class="rr-sec-toggle" data-action="faRrSec" data-rr-sec="sessions" aria-expanded="true" data-i18n="dock.sessions">会话</button></h4>
           <div class="rr-body" id="railSessionPane"></div>
+        </section>
+        <section class="rr-sec" data-rr-sec="usage">
+          <h4><button type="button" class="rr-sec-toggle" data-action="faRrSec" data-rr-sec="usage" aria-expanded="true" data-i18n="rail.tab.usage">大模型用量</button></h4>
+          <div class="rr-body" id="railUsagePane"></div>
+        </section>
+        <section class="rr-sec" data-rr-sec="agent">
+          <h4><button type="button" class="rr-sec-toggle" data-action="faRrSec" data-rr-sec="agent" aria-expanded="true" data-i18n="rail.tab.agent">运行与能力</button></h4>
+          <div class="rr-body" id="railAgentPane"></div>
         </section>
       </div>
     </aside>

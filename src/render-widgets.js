@@ -198,19 +198,38 @@ function renderSide(){
         + (meta ? '<span class="side-sess-meta">' + esc(meta) + "</span>" : "")
         + "</button>";
     }).join("");
-    return '<div class="side-top">'
-      + '<button type="button" class="side-new" data-sess-new="1" title="' + esc(t("dock.newSession", "新建会话"))
-      + '" aria-label="' + esc(t("dock.newSession", "新建会话")) + '">'
-      + '<span class="side-new-plus" aria-hidden="true">＋</span>'
-      + '<span class="side-new-t">' + esc(t("dock.newSession", "新建会话")) + "</span></button>"
-      + "</div>"
-      + '<div class="side-sess">'
+    /* 批七（用户标注图）：原「新建会话」主行动上移进顶部 .side-quick 快捷格（同一 data-sess-new
+       委托路径，不新建会话逻辑），这里只保留会话列表主体。CSS 的 .side-top 规则留作历史兼容，
+       没有 DOM 命中即自然失效。 */
+    return '<div class="side-sess">'
       + '<div class="side-sess-head"><span class="side-sess-t">' + esc(t("side.sess.title", "最近会话")) + "</span>"
       + '<button type="button" class="side-sess-all" data-sess-all="1" title="' + esc(t("side.sess.all", "全部会话"))
       + '" aria-label="' + esc(t("side.sess.all", "全部会话")) + '">' + esc(t("side.sess.allShort", "全部")) + "</button></div>"
       + '<div class="side-sess-list">' + (items || '<div class="side-sess-empty">' + esc(t("dock.noSessions", "暂无会话")) + "</div>") + "</div>"
       + "</div>";
   };
+
+  /* 批七（2026-11-17，用户标注图「左栏从上到下：模式切换/定时任务/agents/知识库/sessions」+
+     裁定「另两个入口＝新建任务 + 发现」）：顶部 3×2 快捷格。全部转发既有真入口——
+     不新建任务/会话逻辑、不重复 id、不套 .nav-item（ia-three-zones 钉 nodes.length===10、
+     nav-pages-smoke 钉 #side .nav-item 数，快捷格走独立 data-quick 委托）。 */
+  const quickDefs = [
+    ["newSess", "chat", "side.quick.newSess", "新建会话", "data-sess-new=\"1\""],
+    ["newTask", "plus", "side.quick.newTask", "新建任务", ""],
+    ["todo", "check", "side.quick.todo", "定时任务", ""],
+    ["agents", "robot", "side.quick.agents", "Agents", ""],
+    ["kb", "book", "side.quick.kb", "知识库", ""],
+    ["discover", "puzzle", "side.quick.discover", "发现", ""]
+  ];
+  const quickHtml = '<div class="side-quick">'
+    + '<div class="side-quick-t">' + esc(t("side.quick.title", "快捷入口")) + "</div>"
+    + '<div class="side-quick-grid">' + quickDefs.map(function(x){
+        const label = esc(t(x[2], x[3]));
+        return '<button type="button" class="side-quick-item" data-quick="' + x[0] + '" ' + x[4]
+          + ' title="' + label + '" aria-label="' + label + '">'
+          + '<span class="side-quick-ic" aria-hidden="true">' + (UI_ICONS[x[1]] || "") + "</span>"
+          + '<span class="side-quick-lbl">' + label + "</span></button>";
+      }).join("") + "</div></div>";
 
   /* 子项渲染：圆点标记 + 标签（v3.0.2：stub:「新」角标机制已随 stub:true 清理移除） */
   const subBtn = (nodeId, it)=>{
@@ -263,7 +282,7 @@ function renderSide(){
     + '<span class="side-foot-ic" aria-hidden="true">' + UI_ICONS.gear.replace("<svg", '<svg aria-hidden="true"') + "</span>"
     + '<span class="side-foot-lbl">' + esc(t("side.menu.settings", "设置")) + "</span></button>"
     + "</div>";
-  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + sideSessionsHtml() + navHtml + footHtml);
+  $("#side").innerHTML = sanitizeHtml(SIDE_TOGGLE_HTML + quickHtml + sideSessionsHtml() + navHtml + footHtml);
 
   /* 激活子项的父分支自动展开（一次性同步，不触发额外存储写） */
   if(_sideActive){
@@ -285,11 +304,31 @@ function renderSide(){
      不依赖异步 startup() 时序 */
   setupSideMenu();
   setupMobNav();
+  /* 批七「Session 名称 → 顶栏中部」：与右栏同理由挂在 renderSide 里（不是 render() 直调），
+     避免 render-entry → render-widgets 新增静态边；会话切换路径都会走到 renderSide。 */
+  renderTopSessionName();
   /* 右栏今日任务随侧栏同批更新：挂在 renderSide 里而不是 render() 直调，
      否则 render-entry → render-widgets 会新增一条静态边，改变依赖基线的环集合。 */
   renderTaskRail();
   /* Code 模式（2026-10-26）：同上理由挂在这里——每次渲染同步模式类与两个 dock（幂等）。 */
   applyUIMode();
+}
+
+/**
+ * 顶栏中部的「Session 名称」同步（批七，用户选「顶栏中部」）。
+ * 单一真相源 = getActiveSessionObj().title；只写 textContent（不拼 HTML），无 XSS 面。
+ * 窄屏 DOM 仍在但 CSS 隐藏，故这里无条件更新、零布局副作用。
+ * @returns {void}
+ */
+function renderTopSessionName(){
+  const el = $("#mbSessionName");
+  if(!el) return;
+  let s = null;
+  try{ s = (typeof getActiveSessionObj === "function") ? getActiveSessionObj() : null; }catch(_e){ /* 会话存储损坏时退回默认标题 */ }
+  const title = (s && s.title) ? s.title : t("sess.new", "新会话");
+  const label = el.querySelector(".mb-session-t");
+  if(label) label.textContent = title;
+  el.setAttribute("title", title);
 }
 
 /* ---------- 右栏「今日任务」任务轨（2026-10-21 布局 v2） ----------
@@ -338,6 +377,7 @@ function renderTaskRail(){
   _renderRailAgent();
   _renderRailFiles();
   _renderRailSessions();
+  _renderRailUsage();
   _applyRailSec();
 }
 
@@ -347,7 +387,9 @@ function renderTaskRail(){
  * 设置 → 扩展里做；轨道只留"看和勾"，不在这里重复一份（两份清单必然漂移）。
  * 分页（data-rail-tab / data-rail-pane / rail_tab 键）同批退役：节折叠态持久化
  * form_a_rr_sec（收起的节 id 数组），默认全展开。 */
-const RAIL_SECS = ["today", "agent", "files", "sessions"];
+/* 批七（用户标注图裁定）：五区顺序 today / files / sessions / usage / agent。
+   原四节 id 全留（折叠态 form_a_rr_sec 旧值继续生效），只新增 usage 合法 id。 */
+const RAIL_SECS = ["today", "files", "sessions", "usage", "agent"];
 /** 宽屏判据（>=1024px）：三栏网格（code/design 模式）只在宽屏生效，窄屏强制单栏。
  *  下面 taskRail 折叠 IIFE 原有一份同名局部（语义相同），统一用这一份避免漂移。 */
 const isWide = ()=> (window.innerWidth || 0) >= 1024;
@@ -385,13 +427,36 @@ function _renderRailAgent(){
   const skills = (typeof listEnabledSkills === "function") ? listEnabledSkills() : [];
   const prog = (typeof getChatProgress === "function") ? getChatProgress() : null;
   const ready = (typeof aiReadyProfile === "function") ? !!aiReadyProfile() : false;
+  /* 批七「运行与能力」（用户标注图：todo/文件/会话/用量/运行与能力）：MCP 与插件都取真值，
+     不造列表壳——MCP 用 mcpServers()（已启用且 URL 合法），插件读 Data 层 _plugins 注册表。
+     放在 .rail-usage-row 里复用同一行样式，不新增 CSS。 */
+  const caps = (function(){
+    let mcp = [], plugins = 0;
+    try{ mcp = (typeof mcpServers === "function") ? mcpServers() : []; }catch(_e){ /* MCP 配置损坏不拖垮右栏 */ }
+    try{
+      const reg = (typeof _plugins === "object" && _plugins) ? _plugins : {};
+      plugins = Object.keys(reg).filter(function(k){ return !!reg[k].enabled; }).length;
+    }catch(_e){ /* 插件注册表异常时按 0 显示，不虚构 */ }
+    let out = '<div class="rail-sec-title">' + esc(t("rail.tab.agent", "运行与能力")) + "</div>"
+      + '<div class="rail-usage-row"><span class="rail-item-name">MCP</span>'
+      + '<span class="rail-item-meta">' + mcp.length + "</span></div>";
+    if(mcp.length) out += '<ul class="rail-list">' + mcp.slice(0, 5).map(function(s){
+      return '<li class="rail-item"><span class="rail-item-name">' + esc(s.name || "") + "</span>"
+        + '<span class="rail-item-meta">' + ((s.allow || []).length) + "</span></li>";
+    }).join("") + "</ul>";
+    out += '<div class="rail-usage-row"><span class="rail-item-name">'
+      + esc(t("rail.caps.plugins", "插件")) + "</span>"
+      + '<span class="rail-item-meta">' + plugins + "</span></div>";
+    return out;
+  })();
   /* 2026-11-16 空态收敛（用户：「右栏四节空态拥挤」）：全空时压成一行「技能 0 · 未配置」，
      不再渲染三段（技能标题 + 空提示 + AI 状态标题 + 未配置行）。实测空态原 216px，压后约 56px。
      有技能、或正在运行、或已配置时仍走下面的完整版——不丢任何真实信息，只去掉"0 + 空提示"的占位。 */
   if(!skills.length && !prog){
     el.innerHTML = sanitizeHtml('<div class="rail-sec-title">' + esc(t("rail.agent.skills", "技能"))
       + ' <span class="task-rail-count">0</span>'
-      + '<span class="rail-empty-inline">· ' + esc(ready ? t("rail.agent.configured", "已配置") : t("rail.agent.unconfigured", "未配置")) + "</span></div>");
+      + '<span class="rail-empty-inline">· ' + esc(ready ? t("rail.agent.configured", "已配置") : t("rail.agent.unconfigured", "未配置")) + "</span></div>"
+      + caps);
     return;
   }
   let html = '<div class="rail-sec-title">' + esc(t("rail.agent.skills", "技能"))
@@ -410,7 +475,39 @@ function _renderRailAgent(){
   }
   html += '<div class="rail-sec-title">' + esc(t("rail.agent.ready", "AI 状态")) + "</div>"
     + '<div class="rail-item"><span class="rail-item-name">'
-    + esc(ready ? t("rail.agent.configured", "已配置") : t("rail.agent.unconfigured", "未配置")) + "</span></div>";
+    + esc(ready ? t("rail.agent.configured", "已配置") : t("rail.agent.unconfigured", "未配置")) + "</span></div>"
+    + caps;
+  el.innerHTML = sanitizeHtml(html);
+}
+/**
+ * 右栏「大模型用量」（批七，2026-11-17）：afaik 首个消费 aiTokensUsage() 的右侧入口。
+ * 只用真数：`ai_tokens` 落盘值（今日 / 累计）+ aiReadyProfile 的当前模型名；
+ * 没有配额数据 ⇒ 进度条只表达「今日占累计」这个真实比值，绝不画一个假配额百分比。
+ * @returns {void}
+ */
+function _renderRailUsage(){
+  const el = $("#railUsagePane");
+  if(!el) return;
+  const u = (typeof aiTokensUsage === "function") ? aiTokensUsage() : { today:0, total:0, days:0 };
+  const ready = (typeof aiReadyProfile === "function") ? aiReadyProfile() : null;
+  const model = ready && ready.profile ? (ready.profile.model || "") : "";
+  const today = Number(u && u.today) || 0, total = Number(u && u.total) || 0;
+  const pct = total > 0 ? Math.min(100, Math.round(today / total * 100)) : 0;
+  const fmt = (n)=> n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(n);
+  let html = '<div class="rail-sec-title">' + esc(t("rail.usage.title", "当前模型")) + "</div>"
+    + '<div class="rail-usage-row"><span class="rail-item-name">'
+    + esc(model || t("rail.usage.noModel", "未选择模型")) + "</span></div>";
+  if(!total){
+    html += '<p class="task-rail-empty">' + esc(t("rail.usage.empty", "尚无用量记录")) + "</p>";
+  }else{
+    html += '<div class="rail-usage-row"><span class="rail-item-name">'
+      + esc(t("rail.usage.today", "今日")) + " " + esc(fmt(today))
+      + ' · ' + esc(t("rail.usage.total", "累计")) + " " + esc(fmt(total)) + "</span>"
+      + '<span class="rail-item-meta">' + pct + "%</span></div>"
+      + '<div class="rail-usage-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100"'
+      + ' aria-valuenow="' + pct + '" aria-label="' + esc(t("rail.usage.share", "今日占累计")) + '">'
+      + '<i style="width:' + pct + '%"></i></div>';
+  }
   el.innerHTML = sanitizeHtml(html);
 }
 function _renderRailFiles(){
@@ -652,6 +749,35 @@ function setupSideMenu(){
         const ub = document.getElementById("btnUser"); if(ub && typeof ub.click === "function") ub.click();
       }else if(which === "settings"){
         if(typeof AppBridge !== "undefined" && typeof AppBridge.openDrawer === "function") AppBridge.openDrawer();
+      }
+      return;
+    }
+
+    /* 批七顶部 3×2 快捷格：放在 [data-sess-new] 之后 ⇒ 「新建会话」由既有同一委托处理，
+       这里只接其余五格。全部转发既有真入口，不重写业务逻辑。 */
+    const quick = e.target && e.target.closest ? e.target.closest("[data-quick]") : null;
+    if(quick){
+      const which = quick.getAttribute("data-quick");
+      if(which === "newTask"){
+        /* 与右栏 + 同一条路径：setActive("office") + render + focusTaskTitleInput，
+           不另写一遍建任务逻辑；DOM 缺失时静默（窄屏仍可从底部导航进任务页）。 */
+        const b = document.getElementById("taskRailAdd");
+        if(b && typeof b.click === "function") b.click();
+        else if(typeof setActive === "function" && typeof render === "function"){ setActive("office"); render(); }
+      }else if(which === "todo"){
+        const b = document.getElementById("btnTaskRail");
+        if(b && typeof b.click === "function") b.click();
+      }else if(which === "agents"){
+        const b = document.getElementById("btnTaskRail");
+        if(b && typeof b.click === "function") b.click();
+        const rail = document.getElementById("taskRail");
+        if(rail) rail.classList.add("open");
+        const sec = rail && rail.querySelector('#taskRail [data-rr-sec="agent"]');
+        if(sec && typeof sec.scrollIntoView === "function") sec.scrollIntoView({ block:"nearest" });
+      }else if(which === "kb"){
+        try{ AppBridge.openKnowledgeBaseModal(); }catch(_e){ /* 知识库打开失败不阻塞侧栏 */ }
+      }else if(which === "discover"){
+        if(typeof setActive === "function" && typeof render === "function"){ setActive("store"); render(); }
       }
       return;
     }

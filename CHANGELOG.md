@@ -3,6 +3,17 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-17 · **主流 Agent 化批七：顶栏 Session 名 + 左栏六快捷入口 + 右栏五区（用户标注图三问裁定）**
+
+_用户按标注图裁定三处：① 「Session 名称」放顶栏中部；② 左栏顶部除「定时任务/知识库」外另两个入口＝新建任务 + agents + 发现；③ 右栏「按这次图标」＝todo / 文件 / 会话 / 大模型用量 / 运行与能力（覆盖上一轮「文件并入 Tools、会话并入左栏」的合并方案）。_
+
+- **顶栏中部 Session 名（`agent-workbench.html` + `src/render-widgets.js` `renderTopSessionName()`）**：menubar  logo 之后插 `#mbSessionName`，两段 `.mb-sp{flex:1}` 夹住实现真正居中；单一真相源 = `getActiveSessionObj().title`，只写 `textContent`（无 XSS 面）。窄屏 `<1024` 收起（那里顶栏要让位溢出菜单与 44px 命中区），实测 390×844 无溢出、无遮挡。挂在 `renderSide()` 尾部同步（不在 `render()` 直调，避免 render-entry → render-widgets 新增静态边）。
+- **左栏顶部 3×2 快捷格（`src/render-widgets.js` `renderSide()` + `setupSideMenu()`）**：六入口 = 新建会话 / 新建任务 / 定时任务 / Agents / 知识库 / 发现。全部转发既有真入口：`data-sess-new` 原委托、`#taskRailAdd.click()`、`#btnTaskRail.click()`、`AppBridge.openKnowledgeBaseModal()`、`setActive("store")+render()`；独立 `.side-quick` / `data-quick` 类，**不套 `.nav-item`**（ia-three-zones 钉 nodes.length===10、nav-pages-smoke 钉 10 项，零改判据）。原 `.side-top` 新建会话条移除（同一入口上移，CSS 旧规则留作兼容自然失效）。
+- **右栏五区（`agent-workbench.html` + `src/render-widgets.js`）**：顺序改 todo / 文件 / 会话 / 大模型用量 / 运行与能力。四节原 id/pane 全留（折叠态旧值继续生效），新增 `usage` 节与 `#railUsagePane`；`RAIL_SECS` 4→5。`_renderRailUsage()` 是 `ai_tokens` 落盘值（v3.5.0 起写、此前全仓无读者）的首个右侧消费方：今日 / 累计 + 当前模型名，进度条只表达「今日占累计」真实比值——没有配额数据就不画假配额%。`_renderRailAgent()` 增补真 MCP（`mcpServers()` 已启用且 URL 合法）与插件（Data 层 `_plugins` 启用数）计数，不造占位壳。
+- **判据随产品裁决更新（非放宽）**：`tests/rail-sections.test.js` 原「MCP 不出现」被用户新结构覆盖 → 改钉「MCP 计数来自真配置」；节数 4→5 + 顺序锁定 + usage 空态/真值比值两侧都钉。`tests/e2e/ui-mode-layout.spec.js` 新增一条真浏览器几何守护（居中位置 + 六入口 + 五区顺序 + 零横向溢出）。
+- **验证**：定向单测 7 文件 **109/109**、i18n 死键 fresh=0；e2e `ui-mode-layout`+`topbar-overflow`+`ui-agent-parity`+`nav-pages-smoke`+`mobile` **45/45**；真机 1440×900 与 390×844 双档截图 + 几何探针（Session 名居中 x=595、快捷格 207×86、右栏五区顺序正确、1440 零溢出、390 零溢出）。全量 e2e 与 CI 终态待收工回执。
+- **高共写面声明**：`agent-workbench.html`、`src/render-widgets.js`、`src/core-i18n.js`、`tests/rail-sections.test.js`、`tests/e2e/ui-mode-layout.spec.js`、`CHANGELOG.md`、`docs/agent-board.md`；`src/render-entry.js` / 工作区 tab 机制 / workflow / 两份 lock / node_modules / server / electron 零触碰。
+
 ### 2026-11-17 · **批六 CI 复绿：chat tab 限定 code 模式 + 测试前提显式化（非放宽判据）**
 
 _`8629f3f` 推后 CI run `44074109446` / Deploy `44074109262` 全红（e2e + test ubuntu/24 两腿）。这是我自己推的提交，先停新布局、定位红因并修绿，再继续用户最新标注图的改造。_

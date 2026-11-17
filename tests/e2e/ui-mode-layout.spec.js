@@ -136,6 +136,46 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
     expect(g.dock.y + g.dock.h, "agentDock 不得溢出视口底").toBeLessThanOrEqual(g.vh);
   });
 
+  /* 批七（2026-11-17，用户按标注图三问裁定）：顶栏中部 Session 名 + 左栏 3×2 快捷格 +
+     右栏五区顺序。真浏览器几何守候——不靠 jsdom 推演（历史上有过推演错落点、main 连红 5 笔）。 */
+  test("批七新结构：顶栏 Session 名居中 + 左栏六快捷入口 + 右栏五区顺序 + 零横向溢出", async ({ page }) => {
+    await page.goto(APP_URL);
+    await page.waitForSelector("#main", { timeout: 15_000 });
+    await waitMainRendered(page);
+    await page.evaluate(() => window.setUIMode("code"));
+    await waitMainRendered(page);
+
+    const g = await page.evaluate(() => {
+      const q = (s) => document.querySelector(s);
+      const rect = (s) => { const e = q(s); if (!e) return null; const r = e.getBoundingClientRect();
+        return { x: r.x, y: r.y, w: r.width, h: r.height, display: getComputedStyle(e).display }; };
+      return {
+        session: q("#mbSessionName") ? q("#mbSessionName").textContent.trim() : null,
+        sessionBox: rect("#mbSessionName"),
+        logoBox: rect(".menubar .logo"),
+        rightBox: rect(".menubar .topbar"),
+        quickCount: document.querySelectorAll(".side-quick-item").length,
+        quickBox: rect(".side-quick-grid"),
+        railSecs: Array.from(document.querySelectorAll("#taskRail .rr-sec"))
+          .map((s) => s.getAttribute("data-rr-sec")),
+        usagePane: !!q("#railUsagePane"),
+        scrollW: document.documentElement.scrollWidth,
+        vw: window.innerWidth,
+      };
+    });
+
+    expect(g.session && g.session.length, "顶栏中部应显示当前 Session 名").toBeGreaterThan(0);
+    expect(g.sessionBox.display, "宽屏顶栏 Session 名应可见").not.toBe("none");
+    expect(g.sessionBox.x, "Session 名应在 logo 之后").toBeGreaterThan(g.logoBox.x + g.logoBox.w);
+    expect(g.sessionBox.x + g.sessionBox.w, "Session 名应在右侧图标组之前").toBeLessThan(g.rightBox.x);
+    expect(g.quickCount, "左栏顶部快捷格应为 6 个（新建会话/任务/定时任务/Agents/知识库/发现）").toBe(6);
+    expect(g.quickBox.display, "快捷格应显示").toBe("grid");
+    expect(g.railSecs, "右栏五区顺序＝todo/文件/会话/大模型用量/运行与能力")
+      .toEqual(["today", "files", "sessions", "usage", "agent"]);
+    expect(g.usagePane, "大模型用量 pane 应在位").toBe(true);
+    expect(g.scrollW, `1440 宽屏零横向溢出（实测 ${g.scrollW}）`).toBeLessThanOrEqual(g.vw);
+  });
+
   test("模式胶囊真实点击路径：三段齐、当前段高亮、点段切换且高亮跟随（P2-3）", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#uiModePill", { timeout: 15_000 });

@@ -1,9 +1,11 @@
 /**
- * rail-sections.test.js —— 右栏分节（形态 A B4，2026-11-13：四 tab 分页 → 四节堆叠）
- * 只认真实数据：技能来自 listEnabledSkills（真注入提示词的那份），文件来自 getRagFiles；
- * 并反向钉住「MCP 不出现」——它仍是配置壳，不能作为能力入口展示。
- * 折叠态持久化 form_a_rr_sec（收起的节 id 数组）；本文件由 rail-tabs.test.js 逐条映射而来
- * （判据零放宽：四条用例各对应原分页契约的一条，只把「切 tab 显 pane」改写为「节常显＋可折叠」）。
+ * rail-sections.test.js —— 右栏分节（形态 A B4，2026-11-13：四 tab 分页 → 节堆叠；
+ * 批七 2026-11-17 按用户标注图扩成五区：todo/文件/会话/大模型用量/运行与能力）。
+ * 只认真实数据：技能来自 listEnabledSkills、文件来自 getRagFiles、用量来自 ai_tokens、
+ * MCP 来自 mcpServers（已启用且 URL 合法）——都不是占位壳。
+ * 折叠态持久化 form_a_rr_sec（收起的节 id 数组）。
+ * ⚠️ 2026-11-17 判据随产品裁决更新（非放宽）：原「MCP 不得出现在右栏」已被用户新结构覆盖
+ * （新结构明确右栏含「运行与能力」，MCP 是真能力入口），现反向钉「MCP 计数必须来自真配置」。
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { loadApp } from "./helpers/loadApp.js";
@@ -21,20 +23,24 @@ function boot() {
 const sec = (win, name) => win.document.querySelector('#taskRail .rr-sec[data-rr-sec="' + name + '"]');
 
 describe("右栏分节", () => {
-  it("默认四节都在且全展开；今日节含任务列表；不含 MCP", () => {
+  it("默认五节按用户新结构顺序全展开；今日节含任务列表；运行与能力节显示真 MCP 计数", () => {
     const win = boot();
     const secs = win.document.querySelectorAll("#taskRail .rr-sec");
-    expect(secs.length).toBe(4);
-    ["today", "agent", "files", "sessions"].forEach(function(name){
+    expect(secs.length).toBe(5);
+    /* 顺序即用户标注图：todo / 文件 / 会话 / 大模型用量 / 运行与能力 */
+    expect(Array.from(secs).map((s) => s.getAttribute("data-rr-sec")))
+      .toEqual(["today", "files", "sessions", "usage", "agent"]);
+    ["today", "files", "sessions", "usage", "agent"].forEach(function(name){
       expect(sec(win, name).classList.contains("closed"), name + " 节默认应展开").toBe(false);
     });
     win.document.querySelectorAll("#taskRail .rr-sec-toggle").forEach(function(b){
       expect(b.getAttribute("aria-expanded")).toBe("true");
     });
-    /* 首节 today 即原今日任务轨：列表与「全部任务」都在 */
     expect(win.document.getElementById("taskRailList")).not.toBeNull();
     expect(win.document.getElementById("taskRailMore")).not.toBeNull();
-    expect(win.document.querySelector("#taskRail").textContent).not.toContain("MCP");
+    /* 新增真值判据：MCP 区存在且计数为 0（无配置时），不再断言「MCP 不出现」 */
+    expect(win.document.getElementById("railUsagePane")).not.toBeNull();
+    expect(win.document.getElementById("railAgentPane").textContent).toContain("MCP");
   });
 
   it("折叠态脏值（非法 id）被滤；退役键 rail_tab 残留值不再被读（零迁移）", () => {
@@ -80,6 +86,23 @@ describe("右栏分节", () => {
     expect(body.textContent).toContain("块");
     win.document.getElementById("railOpenKb").click();
     expect(win.document.getElementById("knowledgeBaseModal").classList.contains("show")).toBe(true);
+  });
+
+  it("大模型用量节读 ai_tokens 真值：空态不画条，有数时只画「今日/累计」真实比值（批七）", () => {
+    const win = boot();
+    const pane = win.document.getElementById("railUsagePane");
+    expect(pane.textContent).toContain("尚无用量记录");
+    expect(pane.querySelector('[role="progressbar"]')).toBeNull();
+    const d = new Date();
+    const k = d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+    win.localStorage.setItem("wb_agent_ai_tokens", JSON.stringify({ total: 1000, days: { [k]: 250 } }));
+    win.renderTaskRail();
+    expect(pane.textContent).toContain("25%");
+    const bar = pane.querySelector('[role="progressbar"]');
+    expect(bar).not.toBeNull();
+    expect(bar.getAttribute("aria-valuenow")).toBe("25");
+    /* 反向钉：没有配额数据就不许画一个假配额百分比 */
+    expect(bar.getAttribute("aria-valuemax")).toBe("100");
   });
 
   it("会话节列真实会话，当前高亮，点击即切换（2026-11-07 起）", () => {
