@@ -29744,8 +29744,19 @@ try{
  * + agentDock。状态持久化：wb_agent_uimode（work|code|design）、wb_agent_agent_dock（各段显隐）。
  * ACP 在本仓无运行时概念（台账已评不适用），右下槽位由「进程/技能/MCP/工作流」承接。 */
 function _uiMode(){
-  try{ const m = load(PREFIX + "uimode", "work"); return m === "code" ? "code" : m === "design" ? "design" : "work"; }
-  catch(e){ return "work"; }
+  /* 2026-11-17（默认落地页翻成 agent-first，用户「大刀阔斧地改」+「那就做？」）：
+     无持久化偏好时默认 code（左会话 + 中工作区/对话 + 右能力轨），
+     这才是 Cursor / Codex desktop / Qoder 打开应用的第一形态。
+     只改"没存过偏好"的默认值：显式选过 work/design 的用户不受影响，三态胶囊照旧可切。
+     e2e 夹具与 ui-mode 单测在启动时显式注入 work 声明自己的前提，不依赖产品默认值。
+
+     ⚠️ 窄屏（<1024）例外：项目既有规则 P2-8 是「窄屏不启用代码模式」（三栏网格在窄屏不生效，
+     setUIMode("code") 会拒绝）。但启动路径 applyUIMode() 直接读本函数、不经过 setUIMode，
+     若默认一律 code，窄屏新用户一打开就是"对话占满全屏、工作区被挤掉"（实测 375×667：chat 667px 全高）。
+     故无偏好时的默认值按屏宽分流：宽屏 code、窄屏 work；已存偏好仍一律优先（含宽屏存 code 后缩小窗口）。 */
+  const fresh = (typeof isWide === "function" && !isWide()) ? "work" : "code";
+  try{ const m = load(PREFIX + "uimode", fresh); return m === "code" ? "code" : m === "design" ? "design" : "work"; }
+  catch(e){ return fresh; }
 }
 /** 应用当前模式到壳（幂等）：切 .body.code-mode 类 + 顶栏标签 + 渲染/清空两个 dock */
 let _agentDockTimer = null;
