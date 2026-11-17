@@ -184,6 +184,23 @@ test.describe("窄屏 390×844 · 胶囊禁用与抽屉层（P2-8、P2-7）", ()
     expect(finalCls, "循环全程不得经过 code-mode").not.toContain("code-mode");
   });
 
+  /* 2026-11-17：产品默认翻成 code 后，启动路径 applyUIMode() 直接读 _uiMode() 而不经过
+     setUIMode 的窄屏拒绝——若不按屏宽分流，窄屏新用户一打开就是"对话占满全屏"（实测 375×667
+     chat 667px 全高）。fixture 会先注入 work，这里再注册一条 initScript 把它删掉，
+     模拟"无偏好的窄屏新用户"（后注册的脚本后执行）。 */
+  test("无偏好启动：窄屏落 work，不被全局默认 code 翻转（P2-8 × 新默认）", async ({ page }) => {
+    await page.addInitScript(() => {
+      try { localStorage.removeItem("wb_agent_uimode"); } catch (e) { /* 存储不可用时保持原行为 */ }
+    });
+    await page.goto(APP_URL);
+    await page.waitForSelector("#uiModePill", { timeout: 15_000 });
+    await waitMainRendered(page);
+
+    const mode = await page.evaluate(() => document.querySelector("#uiModePill .mode-pill-item.is-on").getAttribute("data-mode"));
+    expect(mode, "窄屏无偏好应落 work（默认 code 只给宽屏）").toBe("work");
+    expect(await page.evaluate(() => document.querySelector(".body").className), "body 不得带 code-mode").not.toContain("code-mode");
+  });
+
   test("taskRail 在抽屉层（z=60）且与聊天抽屉互斥（P2-7）", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#main", { timeout: 15_000 });

@@ -5,7 +5,8 @@
  * 中：工作视图 .main，聊天沿用 work 的贴底对话坞（2026-11-02 P1：原实现藏 .main 让聊天占中栏，
  * 主客颠倒，已改回）/ 右：todo 任务轨 + 能力停靠）。Design = 画布优先，会话/聊天隐藏。
  * 本文件守：
- *  ① 默认 Work；toggle → code（.body.code-mode + wb_agent_uimode 持久化）→ design → 回 work；
+ *  ① 无持久化偏好时默认 **Code**（agent-first 落地页；2026-11-17 翻转）；显式存过 work 的用户
+ *     保持原选择；toggle → code（.body.code-mode + wb_agent_uimode 持久化）→ design → 回 work；
  *  ② Work 模式下两 dock 清空（不占 DOM）；
  *  ③ sessionDock 渲染会话列表，点击切换 = 恢复该会话到工作缓冲（switchSession 语义，
  *     见 data-links：场景对齐 → 激活 → 装回 chats[sc]，镜像幂等落盘）；
@@ -24,15 +25,24 @@ import { loadApp } from "./helpers/loadApp.js";
 
 const PREFIX = "wb_agent_";
 
+/* 显式注入 work：本文件的"三态切换"用例写于默认 work 时代、前提是 work；
+   产品默认值已翻成 code，测试要声明自己的前提（默认契约另有一条独立用例守）。 */
 function boot(extra) {
-  return loadApp({ storage: Object.assign({ [PREFIX + "onboarded"]: "true" }, extra || {}) });
+  return loadApp({ storage: Object.assign({ [PREFIX + "onboarded"]: "true", [PREFIX + "uimode"]: JSON.stringify("work") }, extra || {}) });
 }
 const bodyEl = (win) => win.document.querySelector(".body");
 /* 当前模式＝左上角胶囊上 is-on 段的 data-mode（2026-11-10 起模式切换是分段胶囊，不再有 #uiModeLbl） */
 const pillMode = (win) => win.document.querySelector("#uiModePill .mode-pill-item.is-on").getAttribute("data-mode");
 
 describe("Code 模式：切换与持久化", () => {
-  it("1: 默认 Work；toggle → code + 持久化；再 toggle → design（三态循环回 Work）", () => {
+  it("1: 无偏好默认 Code（agent-first 落地）；显式 work 不被翻转；三态循环 + 持久化", () => {
+    /* 新默认：没存过 wb_agent_uimode 的用户打开就是 code（左会话 + 中工作区/对话 + 右能力轨） */
+    const fresh = loadApp({ storage: { [PREFIX + "onboarded"]: "true" } });
+    fresh.applyUIMode();
+    expect(bodyEl(fresh).classList.contains("code-mode")).toBe(true);
+    expect(pillMode(fresh)).toBe("code");
+
+    /* 已存偏好优先：显式选过 work 的用户不被新默认覆盖 */
     const win = boot();
     win.applyUIMode();
     expect(bodyEl(win).classList.contains("code-mode")).toBe(false);

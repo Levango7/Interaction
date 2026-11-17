@@ -10,13 +10,22 @@
  *
  * 做法：在页面脚本执行前写入 `wb_agent_onboarded` 标记，页面直接进入稳态。
  * 例外：`workflow.spec.js` 负责跑引导三步本身，故意继续用 `@playwright/test` 的原生 test。
+ *
+ * 2026-11-17（默认落地页翻成 agent-first）：产品默认已改为 code 模式，但绝大多数 e2e
+ * 写于"默认 work"时代、断言的是各自功能而非默认形态。这里显式注入 `wb_agent_uimode=work`
+ * 把前提钉在夹具里——测试声明自己的前提，而不是隐式依赖产品默认值；模式本身的默认契约
+ * 由 `tests/ui-mode.test.js` 独占守护。不这么做的后果是几十个 spec 同时换基线，
+ * 红因会被"默认变了"淹没，真正的功能回归反而看不见。
  */
 const base = require("@playwright/test");
 
 const test = base.test.extend({
   page: async ({ page }, use) => {
     await page.addInitScript(() => {
-      try { localStorage.setItem("wb_agent_onboarded", "true"); } catch (e) { /* 存储不可用时保持原行为 */ }
+      try {
+        localStorage.setItem("wb_agent_onboarded", "true");
+        localStorage.setItem("wb_agent_uimode", JSON.stringify("work"));
+      } catch (e) { /* 存储不可用时保持原行为 */ }
     });
     await use(page);
   },

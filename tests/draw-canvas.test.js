@@ -37,7 +37,10 @@ afterEach(() => {
 });
 
 function boot() {
-  return loadApp({ storage: { wb_agent_onboarded: "true" } });
+  /* 2026-11-17：产品默认已翻成 code，但本文件大量用例的切换序列写死为"work→code→design"
+     （尤其 bootDesign() 连 toggle 两次进 design）。显式声明 work 前提，保持这些用例的射程；
+     默认契约由 tests/ui-mode.test.js 独占守护。 */
+  return loadApp({ storage: { wb_agent_onboarded: "true", wb_agent_uimode: JSON.stringify("work") } });
 }
 
 describe("画布模型（DiagramDoc）", () => {

@@ -3,6 +3,17 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-17 · **默认落地页翻成 agent-first：打开即对话工作区（code 模式）**
+
+_用户「那就做？」——批五末尾我提出"唯一没动的骨架级问题：默认落地页仍是工作模式（今日页），改成对话优先会破 `ui-mode.test.js`「默认 Work」契约，你说改我就立项改"，这句就是放行。_
+
+- **产品行为（`src/render-widgets.js` `_uiMode()`）**：没有持久化偏好时默认从 `work` → **`code`**——打开就是「左会话列表 + 中工作区/对话分屏 + 右待办与能力轨」，即 Cursor / Codex desktop / Qoder 的第一形态（实测 1440×900：模式胶囊选中「代码」、`.body.code-mode`、聊天坞 416px 常驻、零横向溢出）。**不是删掉工作模式**：三态胶囊照旧可点，已显式选过 `work` / `design` 的用户保持原选择（`localStorage` 有值优先），实测预置 `wb_agent_uimode="work"` 打开仍是 work。
+  - **窄屏例外（实测抓出的盲区）**：项目既有 P2-8 规则是「<1024 不启用代码模式」（`setUIMode("code")` 会拒绝），但启动路径 `applyUIMode()` 直接读 `_uiMode()`、不经过那道拒绝——若默认一律 code，375×667 新用户一打开就是「对话占满全屏（chat 667px 全高）、工作区被挤掉」。已改为**无偏好默认值按屏宽分流：宽屏 code / 窄屏 work**；已存偏好仍一律优先（含宽屏存 code 后缩小窗口）。`tests/e2e/ui-mode-layout.spec.js` 补一条守护用例（fixture 注入 work 后再用后注册的 initScript 删掉，模拟无偏好窄屏新用户）。
+- **测试前提显式化（关键，避免几十个 spec 隐式换基线）**：`tests/e2e/_fixture.js` 统一在页面脚本执行前注入 `wb_agent_uimode="work"`，让写于「默认 work」时代的各 e2e 声明自己的前提、继续测各自功能；模式默认契约由 `tests/ui-mode.test.js` 独占守护。该文件的 `boot()` 同样显式注入 work 保持「三态循环」用例前提；测试 1 改为先断言**无偏好时默认 code**，再断言**显式 work 不被翻转**，最后保留原三态循环与持久化验证。这样真正的模式回归不会被"默认值变了"的噪音淹没。`workflow.spec.js`（引导专用，原生 test）零改。
+- **同一手法补到单测侧（`tests/draw-canvas.test.js`）**：全量首跑抓出该文件 8 条红（双击改名不弹浮层、删除按钮找不到、Design 三向循环……），单跑复现 ⇒ 不是 flake。根因是它的 `boot()` 也隐式依赖默认 work——`bootDesign()` 连 `toggleUIMode()` 两次进 design，默认翻成 code 后序列变成 code→design→work，画布模式门不放行，射程整片丢失。`boot()` 显式注入 work 后 **43/43 绿**。判据零放宽：改的是测试前提声明，不是断言或超时。
+- **验证**：定向单测 `ui-mode` + `ia-three-zones` + `empty-catch-slice4` **30/30 绿**、`draw-canvas` **43/43 绿**；e2e `ui-mode-layout` + `nav-pages-smoke` + `mobile` + `draw-responsive` + `workflow` **36/36 绿**，补窄屏守护后 `ui-mode-layout` **14/14 绿**（合计 37 用例）；`npm run lint` rc=0（12 warnings 为历史存量、0 errors）；真浏览器双开验证「无偏好宽屏 → code / 存 work → work / 无偏好窄屏 → work」。全量单测 **243 文件过 / 3 红文件**＝2 个本机缺 `express` 的预存环境红（`prod-startup-guard` / `server-sms-providers`，与前两批相同）+ 1 个负载超时（`confirm-migration-batch5`「点取消」，全量 9 分钟高负载下超时，**单跑 9/9 绿**，判据零放宽）。
+- **高共写面声明**：`src/render-widgets.js`、`tests/ui-mode.test.js`、`tests/e2e/_fixture.js`、`tests/e2e/ui-mode-layout.spec.js`、`tests/draw-canvas.test.js`、`CHANGELOG.md`、`docs/agent-board.md`；workflow / 两份 `package-lock` / node_modules / server / electron 零改动。
+
 ### 2026-11-17 · **UI 主流 Agent 化批五：左栏骨架级重排——会话为主体，导航压成底部 5×2 图标格**
 
 _用户「大刀阔斧地改：codex desktop / cursor / qoder 风格都差不多；导航栏在左侧边栏只占一小部分」。这是批三「左栏会话优先」的骨架级续做——上次只是顶部加了个 4 条的快捷区，这次把信息架构真正翻转。_
