@@ -1516,8 +1516,16 @@ function setupSideToggle(){
       }catch(_e2){}
     }
   });
-  /* 读失败按「未持久化」处理（保持展开），是预期降级，不登记诊断。 */
-  try{ if(localStorage.getItem(PREFIX+"sideCollapsed")==="1") applyFold(true); }catch(_){}
+  /* 读失败按「未持久化」处理（保持展开）是可接受降级，但**不能静默**：
+     隐私模式/配额异常下用户每次进来都丢失折叠偏好，必须留一条 warn 供排查（与写失败同源）。 */
+  try{ if(localStorage.getItem(PREFIX+"sideCollapsed")==="1") applyFold(true); }catch(_){
+    try{
+      if(!_sideFoldWarned && typeof pushDiag === "function"){
+        _sideFoldWarned = true;
+        pushDiag("warn", "sideCollapsed read failed: "+((_&&_.message)||_), {where:"setupSideToggle"});
+      }
+    }catch(_e2){}
+  }
 }
 
 /* v1.15：应用独立页面——日历/天气/闹钟/萌宠/指针特效 五个应用卡片入口
