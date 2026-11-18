@@ -211,13 +211,16 @@ describe("④ 计数锁：全仓 P0 26 → 24（本片 −2）", () => {
     expect(n, "P0 回涨说明有人新增静默吞错，或把本片留痕删了").toBeLessThanOrEqual(24);
   });
 
-  it("ui-drawer 剩 4 处、render-widgets 剩 3 处、data-links 为 0（计划里那条已不成立，见下）", () => {
+  it("ui-drawer 剩 4 处、render-widgets 剩 2 处、data-links 为 0（计划里那条已不成立，见下）", () => {
     /* data-links 原排期写「2 处值得动」，实测为 0：WorkBuddy 的 B11 结案（save() 不吞错、
        调用方留痕是死代码但保留）之后，该文件已无可消解的 P0。此处把「0」钉住，
        免得后人照旧排期又去找那两条不存在的条目。 */
+    /* 批九（2026-11-18）：`setupSideToggle` 读取 sideCollapsed 的 catch 由空吞改为 pushDiag 留痕，
+       render-widgets 的 P0 从 3 降为 2。这是**尺子随代码更新**，不是放宽判据：
+       新代码仍被全仓 ≤24 的总锁与 lint:empty-catch 门禁同时守着。 */
     const cnt = (f) => scanSource(readSrc(f), f).filter((i) => i.level === "P0").length;
     expect(cnt("ui-drawer.js")).toBe(4);
-    expect(cnt("render-widgets.js")).toBe(3);
+    expect(cnt("render-widgets.js")).toBe(2);
     expect(cnt("data-links.js")).toBe(0);
   });
 });
