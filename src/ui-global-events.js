@@ -1590,6 +1590,14 @@ $("#btnHelp").onclick = renderHelp;
 /* 顶栏下载按钮：复用 doExport（导出 JSON 备份） */
 const _btnDownload = $("#btnDownload"); if(_btnDownload) _btnDownload.onclick = doExport;
 $("#btnRecover").onclick = recoverAutoBackup;
+/* 批九：回收站从桌面导航收起后，设置「数据管理」卡保留直达入口（先退出设置抽屉页再切页）。 */
+const _btnOpenRecycle = $("#btnOpenRecycle");
+if(_btnOpenRecycle) _btnOpenRecycle.onclick = function(){
+  try{ AppBridge._moveDrawerHome(); }catch(_e){ /* 抽屉复位失败仍尝试切页，不阻断 */ }
+  const _dw = $("#drawer"); if(_dw){ _dw.classList.remove("drawer-page"); _dw.classList.remove("open"); }
+  setActive("recycle"); render();
+};
+
 
 /* ---------- v1.9.7 侧栏「工具」组：专注工具浮层（v1.15 更多菜单已移除，此处仅剩 pomo/tracker 浮层） ---------- */
 /* v2.3.1：浮层锚定按钮选择器——v2.1.0 两级菜单后按钮为 data-menu="plug-pomo/plug-tracker"，

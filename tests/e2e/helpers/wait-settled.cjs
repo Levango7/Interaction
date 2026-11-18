@@ -26,12 +26,13 @@ const TIMEOUT = 15_000;
 /**
  * 侧栏导航项注入完成。
  * @param {import("playwright").Page} page
- * @param {number} [min] 最少项数；默认 10（刀 2 后桌面四组导航的稳态条数：
- *        今日 3 + 工作台 1 + 助手 1 + 更多 5，见 tests/ia-three-zones.test.js；
- *        调用方要等旧 17 项口径必须显式传 17，别把默认值当历史真值）
+ * @param {number} [min] 最少项数；默认 5（批九桌面导航收敛为 5 项：
+ *        主页 / 任务 / 工作台 / 商店 / AI；10 项数据树只供移动端底栏与抽屉，
+ *        `#side .nav-item` 在桌面只剩 5 个。调用方要等别的口径必须显式传值，
+ *        别把默认值当历史真值）
  */
 async function waitSideNav(page, min) {
-  const n = typeof min === "number" ? min : 10;
+  const n = typeof min === "number" ? min : 5;
   await page.waitForFunction(
     (m) => {
       try {

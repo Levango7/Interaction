@@ -122,4 +122,37 @@ describe("右栏分节", () => {
     target.click();
     expect(win.getActiveSession()).toBe(s2.id);
   });
+
+  it("无工作区会话（sc=空串）只换会话、不把当前渲染场景清空（批九渲染异常回归）", () => {
+    /* 变异自证：把 switchSession 改回 `setActive(it.sc)` ⇒ 本条第一条断言立刻红，
+       且真机切回 work 模式会抛 SCENARIOS[""].record。sc 仍保留空串供左栏分组。 */
+    const win = boot();
+    const ws = win.createSession("office", "工作区会话");
+    const free = win.createSession("", "无工作区会话");
+    win.switchSession(free.id);
+    expect(win.getActive()).toBe("office");
+    expect(win.getActiveSession()).toBe(free.id);
+    expect(win.getSessions().find((s) => s.id === free.id).sc).toBe("");
+    expect(() => win.render()).not.toThrow();
+    win.switchSession(ws.id);
+    expect(win.getActive()).toBe("office");
+    expect(win.getActiveSession()).toBe(ws.id);
+  });
+
+  it("启动 active 只收敛空值：非空页面键（tasks）不得被当脏值重置（全量 e2e ics 真回归）", () => {
+    /* 变异自证：把启动判据改回 `!SCENARIOS[active]` ⇒ 第一条断言立刻红；
+       全量 e2e `ics-import-render` 预置 wb_agent_active="tasks" 后会被重置回 office，
+       连红两次（不是 flake）。active 同时承载场景键与页面键，不能用 SCENARIOS 当合法集。 */
+    const page = loadApp({ storage: { wb_agent_onboarded: "true",
+      "wb_agent_active": JSON.stringify("tasks") } });
+    windows.push(page);
+    expect(page.getActive(), "预置 tasks 页面键应原样启动").toBe("tasks");
+    expect(() => page.render(), "tasks 页应能正常渲染").not.toThrow();
+
+    const empty = loadApp({ storage: { wb_agent_onboarded: "true",
+      "wb_agent_active": JSON.stringify("") } });
+    windows.push(empty);
+    expect(empty.getActive(), "空 active 仍应收敛回 office").toBe("office");
+    expect(JSON.parse(empty.localStorage.getItem("wb_agent_active")), "脏值应回写").toBe("office");
+  });
 });

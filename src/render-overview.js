@@ -792,7 +792,7 @@ function _tasksHeadHtml(){
   return `<div class="card page-head-card"><header class="page-head sc-page-head">
     <span class="ph-ic" aria-hidden="true">${SIDE_MENU_ICONS.tasks||""}</span>
     <div class="ph-tx"><h2>${t("tasksPage.title", "任务")}</h2><p class="sub">${t("tasksPage.sub", "跨场景任务中心——所有场景的任务在这里统一管理")}</p></div>
-    <div class="ph-actions"><button type="button" class="addbtn sm" id="btnBackHome" data-sc="muted">${t("tasksPage.backHome", "← 主页")}</button></div>
+    <div class="ph-actions"><button type="button" class="addbtn sm" id="tasksTimelineBtn" data-sc="muted">${t("side.menu.timeline", "时间轴")}</button><button type="button" class="addbtn sm" id="btnBackHome" data-sc="muted">${t("tasksPage.backHome", "← 主页")}</button></div>
   </header></div>
   <nav class="set-nav tasks-view-tabs" aria-label="${t("tasksPage.aria", "任务视图切换")}">${tabs.map(([k,l])=>
     `<button type="button" class="set-nav-btn tasks-tab${_tasksView===k?" active":""}" data-tasks-view="${k}">${l}</button>`).join("")}</nav>`;
@@ -803,6 +803,9 @@ function _bindTasksTabs(){
   });
   const backHome = $("#btnBackHome");
   if(backHome) backHome.onclick = function(){ setActive("overview"); render(); }; // v3.1.2：内联 onclick 被 sanitizeHtml 剥离导致死按钮，改 id+绑定
+  /* 批九：时间轴从桌面导航收起后，任务页头保留直达入口（不删功能、不靠猜路径）。 */
+  const timelineBtn = $("#tasksTimelineBtn");
+  if(timelineBtn) timelineBtn.onclick = function(){ setActive("timeline"); render(); };
 }
 
 /* ---------- 工具箱（19 工具 + 插件小件 + 功能入口，分类 + 搜索） ---------- */
@@ -913,6 +916,11 @@ function renderToolboxPage(){
    v2.4.0：内置插件随启动自动注册（enabled=false），商店按「未注册/已装未启用/启用中」
    三态渲染统一卡片列表；自定义导入插件走同一列表。 */
 let _storeCat = "全部"; // v3.1：商店页分类筛选：全部/效率/功能/场景/其他
+/* 批九（用户「商店里面有插件、技能、连接器等等」）：商店升为能力中枢四视图。
+   默认仍落「插件」，既有分类筛选与安装/启停/卸载路径零改；其余三视图只读真数据：
+   技能 = listEnabledSkills()（真注入提示词），连接器 = mcpServers()（已启用且 URL 合法），
+   工具 = TOOLBOX_EXTRAS（与工具箱同一份 run 闭包，不复制行为）。 */
+let _storeView = "plugins";
 const PLUGIN_CATEGORIES = { // v3.1：内置插件分类映射
   "pomodoro":"效率", "habit-tracker":"效率", "focus-timer":"效率",
   "reading":"场景", "finance":"场景",
@@ -960,15 +968,68 @@ function renderStorePage(){
   const storeCatKeyMap = {"全部":"all","效率":"efficiency","功能":"func","场景":"scene","其他":"other"};
   const storeNav = `<nav class="set-nav store-cat-nav" aria-label="${t("storePage.aria", "商店分类筛选")}">` +
     storeCats.map(c=>`<button type="button" class="set-nav-btn${_storeCat===c?" active":""}" data-store-cat="${c}">${t("store.cat."+storeCatKeyMap[c], c)}</button>`).join("") + `</nav>`;
+  /* 批九：四视图（插件 / 技能 / 连接器 / 工具）——把原先散在侧栏的「工具箱」与「技能/MCP」
+     收进商店，导航才能从 10 收到 5。技能与连接器只读真实数据，不造占位列表。 */
+  const viewDefs = [
+    ["plugins", t("store.view.plugins", "插件")],
+    ["skills", t("store.view.skills", "技能")],
+    ["connectors", t("store.view.connectors", "连接器")],
+    ["tools", t("store.view.tools", "工具")],
+  ];
+  const viewNav = `<nav class="set-nav store-view-nav" aria-label="${t("store.view.aria", "商店能力分类")}">` +
+    viewDefs.map(([k,l])=>`<button type="button" class="set-nav-btn${_storeView===k?" active":""}" data-store-view="${k}">${l}</button>`).join("") + `</nav>`;
+  let contentHtml = "";
+  if(_storeView === "plugins"){
+    contentHtml = storeNav
+      + `<div class="store-list">${filteredRows.map(pCard).join("") || '<div class="empty">' + t("storePage.empty", "暂无可用的插件") + '</div>'}</div>`;
+  } else if(_storeView === "skills"){
+    let skills = [];
+    try{ skills = (typeof listEnabledSkills === "function") ? listEnabledSkills() : []; }catch(_e){ skills = []; }
+    contentHtml = `<div class="store-list">` + (skills.length ? skills.map(sk=>`
+      <div class="card app-card store-card" role="group" aria-label="${esc(sk.name)}">
+        <div class="app-card-tx u-flex-1 u-min-w-0">
+          <div class="app-card-name">${esc(sk.name)} <span class="sub u-m-0 u-inline">${t("store.skill.enabled", "已启用")}</span></div>
+          <div class="app-card-desc">${esc(sk.desc || t("store.skill.noDesc", "无描述"))}</div>
+          ${sk.trigger && sk.trigger.length ? `<div class="app-card-desc u-text-faint">${t("store.skill.triggers", "触发词：")}${esc(sk.trigger.slice(0,6).join("、"))}</div>` : ""}
+        </div>
+      </div>`).join("") : `<div class="empty">${t("store.skill.empty", "还没有启用技能。技能会随 AI 提示词注入，可在 AI 页管理。")}</div>`) + `</div>`;
+  } else if(_storeView === "connectors"){
+    let mcp = [];
+    try{ mcp = (typeof mcpServers === "function") ? mcpServers() : []; }catch(_e){ mcp = []; }
+    contentHtml = `<div class="store-list">` + (mcp.length ? mcp.map(m=>{
+      let host = m.url;
+      try{ host = new URL(m.url).host; }
+      catch(_e){ host = String(m.url || "").replace(/^[a-z][\w+.-]*:\/\//i, "").split("/")[0]; }
+      const auth = m.authType === "none" ? t("store.mcp.noAuth", "无需认证") : (m.authType === "bearer" ? "Bearer" : t("store.mcp.customHeader", "自定义头"));
+      return `<div class="card app-card store-card" role="group" aria-label="${esc(m.name)}">
+        <div class="app-card-tx u-flex-1 u-min-w-0">
+          <div class="app-card-name">${esc(m.name)} <span class="sub u-m-0 u-inline">${esc(auth)}</span></div>
+          <div class="app-card-desc">${esc(host)}</div>
+          <div class="app-card-desc u-text-faint">${t("store.mcp.tools", "可用工具：")}${m.allow.length}</div>
+        </div>
+      </div>`;
+    }).join("") : `<div class="empty">${t("store.mcp.empty", "还没有连接器。MCP 服务器在 AI 页配置，启用且 URL 合法后显示在这里。")}</div>`) + `</div>`;
+  } else {
+    const tools = TOOLBOX_EXTRAS.slice(0, 8);
+    contentHtml = `<div class="store-list">` + tools.map(x=>`
+      <div class="card app-card store-card" role="group" aria-label="${esc(x.name)}">
+        <div class="app-card-tx u-flex-1 u-min-w-0">
+          <div class="app-card-name">${esc(x.name)}</div>
+          <div class="app-card-desc">${esc(x.desc || "")}</div>
+        </div>
+        <div class="store-ops"><button type="button" class="addbtn sm" data-sc="accent" data-store-tool="${esc(x.id)}">${t("store.tool.open", "打开")}</button></div>
+      </div>`).join("") + `</div>
+      <div class="store-tools-more"><button type="button" class="addbtn sm" data-sc="muted" id="storeOpenToolbox">${t("store.tool.all", "打开完整工具箱")}</button></div>`;
+  }
   $("#main").innerHTML = sanitizeHtml(
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.shop}</span>
-      <div class="ph-tx"><h2>${t("storePage.title", "商店")}</h2><p class="sub">${t("storePage.sub", "插件与应用市场——安装后按类型自动挂载到对应位置")}</p></div>
-      <button type="button" class="addbtn sm" id="storeImportBtn" data-sc="accent">${t("storePage.importBtn", "导入插件 JSON")}</button>
+      <div class="ph-tx"><h2>${t("storePage.title", "商店")}</h2><p class="sub">${t("storePage.sub2", "插件 / 技能 / 连接器 / 工具——能力都从这里装和管")}</p></div>
+      ${_storeView === "plugins" ? `<button type="button" class="addbtn sm" id="storeImportBtn" data-sc="accent">${t("storePage.importBtn", "导入插件 JSON")}</button>` : ""}
       <button type="button" class="addbtn sm" id="btnBackHome" data-sc="muted">${t("storePage.backHome", "← 主页")}</button>
     </header></div>
-    ${storeNav}
-    <div class="store-list">${filteredRows.map(pCard).join("") || '<div class="empty">' + t("storePage.empty", "暂无可用的插件") + '</div>'}</div>`);
+    ${viewNav}
+    ${contentHtml}`);
   const backHome = $("#btnBackHome");
   if(backHome) backHome.onclick = function(){ setActive("overview"); render(); }; // v3.1.2：内联 onclick 被 sanitizeHtml 剥离导致死按钮，改 id+绑定
   $$("#main [data-store-install]").forEach(b=>{
@@ -1003,6 +1064,21 @@ function renderStorePage(){
   $$("#main .store-cat-nav .set-nav-btn").forEach(b=>{
     b.onclick = ()=>{ _storeCat = b.getAttribute("data-store-cat")||"全部"; renderStorePage(); };
   });
+  // 批九：四视图切换（插件 / 技能 / 连接器 / 工具）
+  $$("#main [data-store-view]").forEach(b=>{
+    b.onclick = ()=>{ _storeView = b.getAttribute("data-store-view")||"plugins"; renderStorePage(); };
+  });
+  // 工具视图：直接复用 TOOLBOX_EXTRAS 的 run 闭包，不复制行为；无 run 的回到完整工具箱
+  $$("#main [data-store-tool]").forEach(b=>{
+    b.onclick = ()=>{
+      const id = b.getAttribute("data-store-tool");
+      const it = TOOLBOX_EXTRAS.filter(x=>x.id===id)[0];
+      if(it && typeof it.run === "function"){ it.run(); return; }
+      setActive("toolbox"); render();
+    };
+  });
+  const openToolbox = $("#storeOpenToolbox");
+  if(openToolbox) openToolbox.onclick = ()=>{ setActive("toolbox"); render(); };
   appendFoot();
 }
 

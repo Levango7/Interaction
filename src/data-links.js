@@ -434,7 +434,19 @@ function resetCustomLinks(){
   _sharedSafeLSRemove(CUSTOM_LINKS_KEY);
 }
 
-let active = load(PREFIX+"active","office");
+/* 批九：无工作区会话的 sc 为空串，但它只是「会话分组」用的元数据，不是可渲染场景。
+   历史脏值/旧版切会话留下的**空** active 会让 SCENARIOS[active].record 等场景渲染崩溃，
+   启动时只把空值收敛回 office；会话自身的 sc="" 原样保留，分组判据不受影响。
+   ⚠️ active 同时是「场景键」和「页面键」（tasks / store / timeline / toolbox / recycle …），
+      不能用 `SCENARIOS[active]` 做合法性判据——曾因此把预置的 tasks 重置回 office，
+      全量 e2e ics-import-render 连红两次才抓出来（真回归，非 flake）。 */
+const _storedActive = load(PREFIX+"active", null);
+let active = (_storedActive === null || _storedActive === undefined) ? "office" : _storedActive;
+if(!active){
+  active = "office";
+  /* 有脏值才回写；首次启动（键不存在）保持不落盘，免得破坏「active 未写过」的既有契约。 */
+  if(_storedActive !== null && _storedActive !== undefined) save(PREFIX+"active", active);
+}
 // v1.9.3g：当前视图状态机——"main"（场景/总览/统计/回收站）| "settings"（设置页）| "help"（指南页）。
 // 侧栏高亮据此渲染（renderSide 弃 DOM 嗅探），由 openDrawer / renderHelp / render 显式赋值。
 let uiView = "main";
@@ -564,10 +576,16 @@ function switchSession(sid){
   getSessions();
   const it = _sessions.find(function(s){ return s.id === sid; });
   if(!it) return null;
-  if(active !== it.sc) setActive(it.sc);
+  /* 批九：`sc=""` 表示「无工作区会话」（只用于左栏分组），不是可渲染场景。
+     旧写法把它直接 setActive("") → SCENARIOS[""] undefined → 切回工作模式整页渲染异常。
+     这里把「会话归属」与「当前渲染场景」解耦：空 sc 沿用当前合法场景承载聊天，
+     session.sc 仍是空串，左栏分组照旧；返回值保持 it.sc，调用方 null 判据不变。 */
+  const fallback = (typeof SCENARIOS !== "undefined" && SCENARIOS[active]) ? active : "office";
+  const renderSc = it.sc || fallback;
+  if(active !== renderSc) setActive(renderSc);
   setActiveSession(sid);
-  chats[it.sc] = _chatTag((it.msgs || []).slice(-50), it.sc);
-  save(PREFIX + "chat_" + it.sc, chats[it.sc]);
+  chats[renderSc] = _chatTag((it.msgs || []).slice(-50), renderSc);
+  save(PREFIX + "chat_" + renderSc, chats[renderSc]);
   return it.sc;
 }
 function getActiveSessionObj(){
@@ -582,7 +600,9 @@ function getActiveSessionObj(){
  */
 function createSession(sc, title){
   getSessions();
-  const target = sc || (typeof active !== "undefined" ? active : "office");
+  /* 批九：`sc === ""` 是**无工作区会话**（用户要求 sessions 区可按「工作区 / 无工作区」分组）。
+     只有 undefined / null 才回落到当前场景；空串必须保留，否则新建的独立会话会被悄悄绑回场景。 */
+  const target = (sc === undefined || sc === null) ? (typeof active !== "undefined" ? active : "office") : String(sc);
   const id = _genSid();
   const item = { id: id, sc: target, title: title || t("sess.new", "新会话"), createdAt: _nowIso(), updatedAt: _nowIso(), msgs: [] };
   _sessions.unshift(item);

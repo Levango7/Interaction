@@ -42,15 +42,15 @@ function skipIfNarrow(page) {
 
 /** 取侧栏清单（运行时，不写死） */
 async function sideMenuItems(page) {
-  return page.evaluate(() => {
-    const out = [];
-    _buildSideMenu().forEach((g) =>
-      (g.nodes || []).forEach((n) => {
-        if (n && n.id) out.push({ id: n.id, label: n.label, sc: n.sc || "" });
-      })
-    );
-    return out;
-  });
+  /* 批九：桌面导航 10→5（主页/任务/工作台/商店/AI）。这里读**实际渲染**的 5 个 nav-item，
+     不再读 _buildSideMenu() 全量数据（那份仍 10 项，移动端底栏要用）。 */
+  return page.evaluate(() =>
+    Array.from(document.querySelectorAll("#side .nav-item")).map((el) => ({
+      id: el.getAttribute("data-menu") || el.getAttribute("data-sc") || "",
+      label: (el.textContent || "").trim(),
+      sc: el.getAttribute("data-sc") || "",
+    }))
+  );
 }
 
 /** 每项的点击选择器：有 sc 用 data-sc；AI / 设置 / 说明 没有 sc，用 data-menu */
@@ -89,7 +89,7 @@ const PROBE_FN = (artifacts) => {
   };
 };
 
-test.describe("侧栏 10 入口 + 工作台 8 tile 冒烟", () => {
+test.describe("桌面侧栏 5 入口 + 工作台 8 tile 冒烟", () => {
   test.beforeAll(() => {
     test.skip(!process.env.E2E, "set E2E=1 to run");
   });
@@ -104,13 +104,13 @@ test.describe("侧栏 10 入口 + 工作台 8 tile 冒烟", () => {
     });
 
     await page.goto(APP_URL);
-    await waitSideNav(page, 10);
+    await waitSideNav(page, 5);
 
     const items = await sideMenuItems(page);
     /* 覆盖面守门员：清单为空说明取数方式坏了，此时"全绿"毫无意义。
-       刀 2 后侧栏 10 入口；8 个场景/联动目的地由下面的 tile 循环接着覆盖，不缩水。 */
-    expect(items.length, "边栏应能枚举出 10 项菜单（今日 3 + 工作台 1 + 助手 1 + 更多 5）")
-      .toBeGreaterThanOrEqual(10);
+       批九后桌面侧栏 5 入口；8 个场景/联动目的地由下面的 tile 循环接着覆盖。 */
+    expect(items.length, "桌面边栏应渲染 5 项导航（主页/任务/工作台/商店/AI）")
+      .toBe(5);
 
     const problems = [];
     for (const it of items) {
@@ -145,7 +145,7 @@ test.describe("侧栏 10 入口 + 工作台 8 tile 冒烟", () => {
       if (errors.length) problems.push(`${it.label}: 打开时报错 ${errors[0]}`);
     }
 
-    /* 刀 2：场景从侧栏移到工作台 tiles，逐 tile 走同一组不变量，覆盖面 10 + 8 = 18 */
+    /* 刀 2：场景从侧栏移到工作台 tiles，逐 tile 走同一组不变量，覆盖面 5 + 8 = 13 */
     const tiles = await workbenchTiles(page);
     expect(tiles.length, "工作台应有 7 场景 + 场景联动 = 8 个 tile").toBeGreaterThanOrEqual(8);
     for (const tile of tiles) {
@@ -175,14 +175,14 @@ test.describe("侧栏 10 入口 + 工作台 8 tile 冒烟", () => {
     expect(problems, "侧栏 + 工作台页面冒烟问题：\n" + problems.join("\n")).toEqual([]);
   });
 
-  test("18 个目的地连切不残留、不报错", async ({ page }) => {
+  test("13 个目的地连切不残留、不报错", async ({ page }) => {
     skipIfNarrow(page);
 
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message.split("\n")[0].slice(0, 140)));
 
     await page.goto(APP_URL);
-    await waitSideNav(page, 10);
+    await waitSideNav(page, 5);
 
     const sels = (await sideMenuItems(page)).map(selOf);
     let clicked = 0;
@@ -198,8 +198,8 @@ test.describe("侧栏 10 入口 + 工作台 8 tile 冒烟", () => {
       await openWorkbenchTile(page, tile.id);
       clicked++;
     }
-    /* 防空转：一条都没点上时，"无报错"毫无意义；刀 2 前 17，现 10 + 8 = 18 */
-    expect(clicked, "应至少点到 18 个目的地（10 侧栏 + 8 tile）").toBeGreaterThanOrEqual(18);
+    /* 防空转：一条都没点上时，"无报错"毫无意义；批九后 5 侧栏 + 8 tile = 13 */
+    expect(clicked, "应至少点到 13 个目的地（5 侧栏 + 8 tile）").toBeGreaterThanOrEqual(13);
     await page.waitForTimeout(300);
 
     expect(errors, "连续切换 18 个目的地出现报错：" + errors.join(" | ")).toEqual([]);
@@ -211,15 +211,15 @@ test.describe("侧栏 10 入口 + 工作台 8 tile 冒烟", () => {
      其窄屏表现由 viewport.spec.js 的触控目标不变量覆盖（如实说明，不假装全覆盖）。 */
   test("有 sc 的页面在 375px 下不产生横向溢出", async ({ page }) => {
     await page.goto(APP_URL);
-    await waitSideNav(page, 10);
+    await waitSideNav(page, 5);
     /* tile 清单必须在桌面视口取（375 下侧栏不可见，点不到工作台入口） */
     const tileSc = (await workbenchTiles(page)).map((t) => t.id).filter(Boolean);
     await page.setViewportSize({ width: 375, height: 667 });
 
     const sideSc = (await sideMenuItems(page)).filter((it) => it.sc && it.sc !== "").map((it) => it.sc);
     const scs = Array.from(new Set(sideSc.concat(tileSc)));
-    expect(scs.length, "应至少取到 14 个 sc 驱动的页面（7 侧栏 + 8 tile，去重后 15）")
-      .toBeGreaterThanOrEqual(14);
+    expect(scs.length, "应至少取到 9 个 sc 驱动的页面（4 侧栏 sc + 8 tile，去重后）")
+      .toBeGreaterThanOrEqual(9);
 
     const overflow = [];
     for (const sc of scs) {

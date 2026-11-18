@@ -1100,7 +1100,16 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* 批八：模式胶囊从 tabbar 迁入左栏顶部——三段等分、占满 200px 侧栏宽度，
    标签保留（用户点名「工作/代码/设计」三模式切换放左栏）。胶囊 id/class 不变，JS 绑定与
    #uiModePill 选择器全部复用；窄屏 .side 整体隐藏，模式入口走折叠栏既有 toggleUIMode 路径。 */
-.side .mode-pill{display:flex;width:100%;margin-bottom:var(--space-2)}
+/* 批九：左栏顶部一行 = 模式胶囊 + 折叠键（用户「左侧边栏可以折叠」；折叠键不再沉在导航下面，
+   与胶囊同一行更易发现，也避免和 sessions 区抢空间）。 */
+.side-head{display:flex;align-items:center;gap:2px;flex-shrink:0;margin-bottom:var(--space-2)}
+.side-head .mode-pill{display:flex;flex:1;width:auto;min-width:0;margin:0}
+.side-head .side-toggle{flex:none;width:26px;height:26px;padding:0;margin:0;align-self:center;
+  display:inline-flex;align-items:center;justify-content:center;background:transparent;border:0;
+  border-radius:var(--radius-sm);color:var(--text-faint);cursor:pointer}
+.side-head .side-toggle:hover{background:var(--surface-hover);color:var(--text)}
+.side-head .side-toggle .lbl{display:none}
+.side-head .side-toggle svg{width:13px;height:13px}
 .side .mode-pill-item{flex:1;min-width:0;justify-content:center;gap:3px;padding:3px 4px;
   font-size:var(--fs-2xs)}
 .side-nav{flex-shrink:0;border-top:1px solid color-mix(in srgb,var(--line) 45%,transparent);
@@ -1121,22 +1130,54 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .side-nav .nav-item[data-need-cfg]{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,transparent)}
 .side-nav .nav-item[data-need-cfg] .cnt{width:6px;height:6px;padding:0;font-size:0;
   border-radius:50%;background:var(--accent);top:4px;right:6px}
-/* 折叠态：模式胶囊收窄为纯图标（.lbl 在 ≤1023/≤767 档已隐藏），导航回单列图标 */
+/* 批九 sessions 区：导航下方、可独立滚动；两组（工作区 / 无工作区）各自带计数与「＋」。
+   组标题用 --fs-2xs 字距 + 计数胶囊，与右栏节标题同一克制口径，不新增色值。 */
+.side-sess{order:3;flex:1;min-height:0;display:flex;flex-direction:column;
+  margin-top:var(--space-2);border-top:1px solid color-mix(in srgb,var(--line) 45%,transparent)}
+.side-sess-head{display:flex;align-items:center;justify-content:space-between;
+  padding:var(--space-1) var(--space-2) 0;flex-shrink:0}
+.side-sess-t{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.06em}
+.side-sess-all{width:auto;padding:1px 5px;border:0;background:transparent;color:var(--text-faint);
+  font-size:var(--fs-2xs);cursor:pointer;border-radius:var(--radius-sm)}
+.side-sess-all:hover{background:var(--accent-soft);color:var(--accent-text,var(--accent))}
+.side-sess-group{display:flex;flex-direction:column;min-height:0;padding-top:var(--space-1)}
+.side-sess-group:first-of-type{flex:0 1 auto}
+.side-sess-group:last-of-type{flex:1 1 auto}
+.side-sess-gh{display:flex;align-items:center;gap:var(--space-1);padding:1px var(--space-2);flex-shrink:0}
+.side-sess-gt{font-size:var(--fs-2xs);color:var(--text-dim-2);font-weight:600;letter-spacing:.03em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-sess-gc{font-size:var(--fs-2xs);line-height:1.3;padding:0 5px;border-radius:var(--radius-full);
+  background:var(--panel2);color:var(--muted);flex:none;font-variant-numeric:tabular-nums}
+.side-sess-new{margin-left:auto;width:22px;height:22px;padding:0;border:0;background:transparent;
+  color:var(--muted);font-size:var(--fs-sm);line-height:1;cursor:pointer;border-radius:var(--radius-sm);
+  display:inline-flex;align-items:center;justify-content:center;flex:none}
+.side-sess-new:hover{background:var(--accent-soft);color:var(--accent-text,var(--accent))}
+.side-sess-list{min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;
+  gap:1px;padding:1px var(--space-1) var(--space-1)}
+.side-sess-group:first-of-type .side-sess-list{max-height:32vh}
+.side-sess-item{display:flex;flex-direction:column;gap:0;width:100%;text-align:left;
+  padding:4px var(--space-2);border:0;border-radius:var(--radius-sm);background:transparent;
+  color:var(--text-dim);font-size:var(--fs-xs);cursor:pointer;flex-shrink:0;overflow:hidden}
+.side-sess-item:hover{background:var(--surface-hover);color:var(--text)}
+.side-sess-item.is-active{background:color-mix(in srgb,var(--accent) 12%,transparent);
+  color:var(--accent-text,var(--accent))}
+.side-sess-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-sess-meta{display:block;font-size:var(--fs-2xs);color:var(--text-faint);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-sess-item.is-active .side-sess-meta{color:var(--accent-text,var(--accent));opacity:.75}
+.side-sess-empty{padding:2px var(--space-2);font-size:var(--fs-2xs);color:var(--text-faint)}
+/* 折叠态：胶囊竖向图标、导航单列；sessions 区让位（折叠栏只保留高频入口）。 */
+.side.collapsed .side-head{flex-direction:column;gap:var(--space-1)}
 .side.collapsed .mode-pill{flex-direction:column;width:auto}
 .side.collapsed .mode-pill-item{flex:none}
 .side.collapsed .side-nav{flex:1;min-height:0;overflow-y:auto;border-top:0;margin-top:0;padding-top:var(--space-1)}
 .side.collapsed .side-nav-t{display:none}
 .side.collapsed .side-nav-grid{grid-template-columns:1fr}
-/* 折叠键：透明底、小字，紧随导航之后；用户/设置用 margin-top:auto 钉到左栏最下方。 */
-.side .mode-pill{order:1}
+.side.collapsed .side-sess{display:none}
+/* 用户/设置用 margin-top:auto 钉到左栏最下方（sessions 占满剩余空间后被推到底）。 */
+.side .side-head{order:1}
 .side .side-nav{order:2}
-.side .side-toggle{order:3;width:auto;margin:0;align-self:flex-end;
-  padding:3px var(--space-2);min-height:22px;background:transparent;border:0;
-  color:var(--text-faint);font-size:var(--fs-2xs);font-weight:500;gap:2px}
-.side .side-toggle:hover{background:var(--surface-hover);color:var(--text)}
-.side .side-toggle svg{width:11px;height:11px}
-/* 主流 Agent 化批六·刀1：左栏最底部「用户 + 设置」同行（用户「登录放在左下角/用户、设置同一行」）。
-   两根等高按钮各占一半，透明底、hover 才显形——与折叠键同一克制口径。数据侧走 data-foot 委托。 */
+.side .side-sess{order:3}
 .side .side-foot{order:4;flex-shrink:0;display:flex;gap:2px;
   padding:var(--space-1) var(--space-2) var(--space-2);
   border-top:1px solid color-mix(in srgb,var(--line) 45%,transparent);margin-top:auto}
@@ -2441,6 +2482,9 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .app-card-tx{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center}
 /* v2.4.2：商店双列网格 */
 .store-list{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin-top:var(--space-4)}
+/* 批九：商店四视图（插件/技能/连接器/工具）——视图切换条与插件分类条同构，只多一条上间距 */
+.store-view-nav{margin-top:var(--space-2)}
+.store-tools-more{display:flex;justify-content:center;margin:var(--space-3) 0 var(--card-gap)}
 .store-card{flex-direction:column;align-items:stretch;padding:var(--space-3)}
 .store-card .app-card-tx{flex-direction:column;align-items:center}
 .store-card .store-ops{display:flex;gap:var(--space-2);justify-content:center;margin-top:var(--space-2)}
@@ -5540,10 +5584,33 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   .task-rail{width:280px;flex:0 0 280px}
   .task-rail-toggle{display:none!important}
   .task-rail-backdrop{display:none!important}
-  /* 折叠 = 整栏收起，顶栏出现「今日」按钮可再展开 */
-  .body.rail-collapsed .task-rail{display:none}
+  /* 批九（用户「右侧边栏也可以折叠」）：折叠 = 整栏收起，右缘留一枚常驻把手再展开。
+     旧实现把 #btnTaskRail 显示回顶栏，但它在宽屏被批六 CSS 隐藏、且位置远离右栏，
+     用户找不到；这里改成**右缘中部的竖向把手**（fixed），折叠/展开都是同一枚按钮。 */
+  .body.rail-collapsed .task-rail,
+  .body.rail-collapsed .agent-dock{display:none}
+  /* 批九真机补正：code/design 各自的 `.body.xxx-mode .agent-dock{display:flex}` 写在后面且
+     同为 0-3-0 特异度，会把上面的隐藏覆盖掉——实测折叠后 agent-dock 仍以 216px 留在右下角。
+     这里按模式加一枚类，特异度 0-4-0，两种模式都要盖；不靠 !important。 */
+  .body.code-mode.rail-collapsed .agent-dock,
+  .body.design-mode.rail-collapsed .agent-dock{display:none}
+  .body.code-mode.rail-collapsed,
+  .body.design-mode.rail-collapsed{grid-template-columns:240px minmax(0,1fr)}
+  /* 批九：左栏折叠在 grid 模式下必须改列宽（子元素 .collapsed 只改内部布局，不改列宽）。 */
+  .body.code-mode.side-collapsed,
+  .body.design-mode.side-collapsed{grid-template-columns:56px minmax(0,1fr) 300px}
+  .body.code-mode.side-collapsed.rail-collapsed,
+  .body.design-mode.side-collapsed.rail-collapsed{grid-template-columns:56px minmax(0,1fr)}
   .body.rail-collapsed .task-rail-toggle,
-  .app.rail-collapsed .task-rail-toggle{display:inline-flex!important}
+  .app.rail-collapsed .task-rail-toggle{display:inline-flex!important;
+    position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:var(--z-popover);
+    width:26px;height:72px;min-height:0;padding:0;margin:0;border-radius:var(--radius-md) 0 0 var(--radius-md);
+    border:1px solid var(--line);border-right:0;background:var(--panel);color:var(--muted);
+    flex-direction:column;gap:2px;justify-content:center}
+  .body.rail-collapsed .task-rail-toggle:hover,
+  .app.rail-collapsed .task-rail-toggle:hover{background:var(--accent-soft);color:var(--accent-text,var(--accent))}
+  .body.rail-collapsed .task-rail-toggle .lbl,
+  .app.rail-collapsed .task-rail-toggle .lbl{display:none}
 }
 @media(max-width:1023px){
   /* P2-7（2026-11-02）：原 z=var(--z-popover) 与窄屏 chat 抽屉（≤767，2368 行）同层，
@@ -6492,6 +6559,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       </div>
     </div>
     <p class="set-tip" data-i18n="dataMgmt.recycleTip">每次启动生效，超期软删任务将被永久删除（含多类型回收：配置/文件/插件同样适用）。</p>
+    <button type="button" class="addbtn u-w-full" id="btnOpenRecycle" data-sc="muted" data-i18n="dataMgmt.openRecycle">打开回收站</button>
     <div class="set-subhead" data-i18n="dataMgmt.autoBackup">自动备份</div>
     <button type="button" class="addbtn u-w-full" id="btnRecover" data-sc="accent" data-i18n="dataMgmt.recoverBtn">从自动备份恢复</button>
     <!-- v3.1.2 B-档：显示上次快照时间 + 快照大小（此前用户不知道备份是否生效、何时生效） -->

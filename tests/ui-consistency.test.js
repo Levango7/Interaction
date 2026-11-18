@@ -114,13 +114,16 @@ describe("UI 一致性 · 侧栏高亮状态机（uiView）", () => {
     const side = win.document.querySelector("#side");
     const navItems = [...side.querySelectorAll(".nav-item")];
     const isActive = (el) => el.classList.contains("active");
-    const gear = navItems.find((b) => b.dataset.gear);
+    /* 批九：桌面导航收敛 5 项后 #btnGear / #sideBtnHelp 不再出现；
+       设置的等价可见入口是左栏底部 `[data-foot="settings"]`，同样用 `.active` 承载高亮。 */
+    const gear = navItems.find((b) => b.dataset.gear) || side.querySelector('[data-foot="settings"]');
     const help = navItems.find((b) => b.dataset.help);
     const scMap = {};
     for (const sc of __test.ORDER) {
       scMap[sc] = navItems.some((b) => b.dataset.sc === sc && isActive(b));
     }
-    const activeCount = navItems.filter(isActive).length;
+    const activeCount = navItems.filter(isActive).length
+      + (side.querySelector('[data-foot="settings"].active') ? 1 : 0);
     return {
       gear: gear ? isActive(gear) : false,
       help: help ? isActive(help) : false,
@@ -129,22 +132,22 @@ describe("UI 一致性 · 侧栏高亮状态机（uiView）", () => {
     };
   }
 
-  it("openDrawer() 后仅 #btnGear 高亮，其余 nav-item 均不高亮", () => {
+  it("openDrawer() 后左栏底部设置入口高亮，其余 nav-item 均不高亮", () => {
     __test.openDrawer();
     const h = highlightState();
-    expect(win.document.getElementById("btnGear").classList.contains("active")).toBe(true);
+    expect(h.gear, "设置高亮应迁移到左栏底部入口").toBe(true);
     expect(h.help).toBe(false);
     expect(Object.values(h.sc).every((v) => v === false)).toBe(true);
     expect(h.activeCount).toBe(1);
   });
 
-  it("renderHelp() 后仅 #sideBtnHelp 高亮，gear 与场景均不高亮", () => {
+  it("renderHelp() 后桌面 5 项导航无高亮（说明已不在 5 项内，gear 与场景均不高亮）", () => {
     __test.renderHelp();
     const h = highlightState();
-    expect(win.document.getElementById("sideBtnHelp").classList.contains("active")).toBe(true);
+    expect(h.help).toBe(false);
     expect(h.gear).toBe(false);
     expect(Object.values(h.sc).every((v) => v === false)).toBe(true);
-    expect(h.activeCount).toBe(1);
+    expect(h.activeCount).toBe(0);
   });
 
   it("指南页点击工作台按钮 → gear/help 均不高亮，且工作台入口高亮", () => {
@@ -167,8 +170,9 @@ describe("UI 一致性 · 侧栏高亮状态机（uiView）", () => {
     expect(highlightState().gear).toBe(true);
     __test.renderHelp();
     const h1 = highlightState();
-    expect(h1.help).toBe(true);
+    expect(h1.help, "说明已退出桌面 5 项导航，不再有可见高亮").toBe(false);
     expect(h1.gear).toBe(false);
+    expect(h1.activeCount).toBe(0);
     __test.setActive("workbench");
     __test.render();
     const h2 = highlightState();

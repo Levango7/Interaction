@@ -2168,7 +2168,9 @@ function _updateRecVScroll(viewport, sc){
     buffer: VIRTUAL_SCROLL_BUFFER
   });
   const recs = getRec(sc);
-  const rec = SCENARIOS[sc].record;
+  /* 批九防御：无工作区会话用 sc="" 分组，渲染场景已收敛回合法场景；
+     但历史脏 localStorage 仍可能把空 sc 带到这里，别让虚拟滚动再炸整页。 */
+  const rec = (SCENARIOS[sc] && SCENARIOS[sc].record) || { fields: [] };
   const items = viewport.querySelector(".vscroll-items");
   if(!items) return;
   const html = recs.slice(range.start, range.end).map(r => _renderRecItem(r, rec)).join("");

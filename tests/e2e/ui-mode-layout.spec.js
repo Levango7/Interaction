@@ -144,7 +144,11 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
       const side = q("#side");
       return {
         sessionExists: !!q("#mbSessionName"),
-        quickCount: document.querySelectorAll(".side-quick-item, .side-sess-item").length,
+        quickCount: document.querySelectorAll(".side-quick-item").length,
+        navCount: document.querySelectorAll("#side .nav-item").length,
+        sessGroups: Array.from(document.querySelectorAll("#side .side-sess-group"))
+          .map((e) => e.getAttribute("data-sess-group")),
+        sessItems: document.querySelectorAll("#side .side-sess-item").length,
         pill: rect("#uiModePill"),
         side: side ? rect("#side") : null,
         nav: rect("#side .side-nav"),
@@ -160,7 +164,10 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
     });
 
     expect(g.sessionExists, "顶栏中部 Session 名应彻底删除").toBe(false);
-    expect(g.quickCount, "左栏快捷格与会话列表应彻底删除").toBe(0);
+    expect(g.quickCount, "左栏快捷格应彻底删除").toBe(0);
+    expect(g.navCount, "桌面导航应收敛为 5 项").toBe(5);
+    expect(g.sessGroups, "sessions 区应按工作区 / 无工作区分两组").toEqual(["workspace", "free"]);
+    expect(g.sessItems, "默认工作区会话应至少 1 条").toBeGreaterThanOrEqual(1);
     expect(g.pill && g.pill.display, "模式胶囊应显示").not.toBe("none");
     expect(g.pill.x, "胶囊应落在左栏内").toBeGreaterThanOrEqual(g.side.x - 1);
     expect(g.pill.x + g.pill.w, "胶囊右缘不得越出左栏").toBeLessThanOrEqual(g.side.x + g.side.w + 1);
@@ -174,6 +181,91 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
       .toEqual(["today", "files", "sessions", "usage", "agent"]);
     expect(g.usagePane, "大模型用量 pane 应在位").toBe(true);
     expect(g.scrollW, `1440 宽屏零横向溢出（实测 ${g.scrollW}）`).toBeLessThanOrEqual(g.vw);
+  });
+
+  test("批九：code 模式点左栏页面入口先回 work，AI 固定页真打开抽屉", async ({ page }) => {
+    await page.goto(APP_URL);
+    await page.waitForSelector("#side .nav-item", { timeout: 15_000 });
+    await waitMainRendered(page);
+    await page.evaluate(() => window.setUIMode("code"));
+    await waitMainRendered(page);
+
+    /* 场景入口走 data-sc；AI 是固定页 data-aipage。两条过去只修了一条，都会因 #main 隐藏而"点了没反应"。 */
+    await page.click('#side [data-sc="store"]');
+    await waitMainRendered(page);
+    const afterStore = await page.evaluate(() => ({
+      code: document.querySelector(".body").classList.contains("code-mode"),
+      mainDisplay: getComputedStyle(document.getElementById("main")).display,
+      store: !!document.querySelector("#main [data-store-view]")
+    }));
+    expect(afterStore.code, "点商店后应已回 work 模式").toBe(false);
+    expect(afterStore.mainDisplay).not.toBe("none");
+    expect(afterStore.store, "商店页应真渲染出来").toBe(true);
+
+    await page.evaluate(() => window.setUIMode("code"));
+    await waitMainRendered(page);
+    await page.click("#sideBtnAi");
+    await waitMainRendered(page);
+    const afterAi = await page.evaluate(() => {
+      const d = document.getElementById("drawer");
+      return {
+        code: document.querySelector(".body").classList.contains("code-mode"),
+        open: d.classList.contains("open"),
+        page: d.getAttribute("data-page")
+      };
+    });
+    expect(afterAi.code, "点 AI 后应已回 work 模式").toBe(false);
+    /* AI 配置历史上就是设置抽屉的独立页（_showDrawerPage("ai") 会刻意隐藏 #main），
+       所以这里钉抽屉真打开且落在 ai 页，不钉 #main 可见。 */
+    expect(afterAi.open, "AI 页应真打开抽屉").toBe(true);
+    expect(afterAi.page, "抽屉应落在 AI 页").toBe("ai");
+  });
+
+  test("批九：左右栏折叠是真收起（含 agent-dock 残留回归），把手能再展开", async ({ page }) => {
+    await page.goto(APP_URL);
+    await page.waitForSelector("#side .nav-item", { timeout: 15_000 });
+    await waitMainRendered(page);
+    await page.evaluate(() => window.setUIMode("code"));
+    await waitMainRendered(page);
+
+    const measure = () => page.evaluate(() => {
+      const q = (s) => document.querySelector(s);
+      const info = (s) => { const e = q(s); if (!e) return null; const r = e.getBoundingClientRect();
+        return { display: getComputedStyle(e).display, x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }; };
+      return {
+        collapsed: document.querySelector(".body").classList.contains("rail-collapsed"),
+        rail: info("#taskRail"), dock: info("#agentDock"),
+        handle: info(".task-rail-toggle"), side: info("#side"),
+        scrollW: document.documentElement.scrollWidth, vw: innerWidth,
+      };
+    });
+
+    const open = await measure();
+    expect(open.rail.display, "展开时右栏应显示").not.toBe("none");
+    expect(open.dock.display, "展开时 agent-dock 应显示").not.toBe("none");
+
+    await page.evaluate(() => document.querySelector("#taskRailCollapse").click());
+    const railed = await measure();
+    expect(railed.collapsed, "点收起后 body 应带 rail-collapsed").toBe(true);
+    expect(railed.rail.display, "右栏整栏应隐藏").toBe("none");
+    /* 回归：code 模式后面那条 `.body.code-mode .agent-dock{display:flex}` 同特异度覆盖隐藏，
+       实测折叠后仍有 216px 面板赖在右下角；这里必须钉 display:none，不是只看 class。 */
+    expect(railed.dock.display, "折叠后 agent-dock 不得残留（真机 216px 回归）").toBe("none");
+    expect(railed.handle.display, "右缘应出现常驻展开把手").not.toBe("none");
+    expect(railed.handle.x + railed.handle.w, "把手应贴视口右缘").toBeLessThanOrEqual(railed.vw + 1);
+
+    await page.evaluate(() => document.querySelector(".task-rail-toggle").click());
+    const reOpened = await measure();
+    expect(reOpened.collapsed, "点把手应恢复展开").toBe(false);
+    expect(reOpened.rail.display, "恢复后右栏应重新显示").not.toBe("none");
+    expect(reOpened.dock.display, "恢复后 agent-dock 应重新显示").not.toBe("none");
+
+    await page.evaluate(() => document.querySelector("#sideToggle").click());
+    const sided = await measure();
+    expect(sided.side.w, "grid 模式下左栏折叠必须改列宽（不是只改子元素）").toBeLessThanOrEqual(60);
+    expect(sided.scrollW, "折叠后不得引入横向溢出").toBeLessThanOrEqual(sided.vw);
+    await page.evaluate(() => document.querySelector("#sideToggle").click());
+    expect((await measure()).side.w, "再点应恢复左栏宽度").toBeGreaterThan(200);
   });
 
   test("模式胶囊真实点击路径：三段齐、当前段高亮、点段切换且高亮跟随（P2-3）", async ({ page }) => {

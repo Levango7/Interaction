@@ -210,29 +210,92 @@ function renderSide(){
   };
 
   const groups = _buildSideMenu();
-  /* 底部导航：10 入口收成 5×2 图标格，组头不再渲染（2 行天然按组断行：
-     今日3 + 工作台1 + 助手1 占首行，更多 5 占次行）。
-     仍用 nodeHtml 包 .nav-node，子项（若有）走 .nav-sub 的既有展开逻辑，不破坏 click 委托。 */
+  /* 批九（用户「导航区差不多五个就行，现有的很多会不会都多余」）：
+     桌面导航只渲染 5 个高频目的地：主页 / 任务 / 工作台 / 商店 / AI。
+     `_buildSideMenu()` 的数据树仍是 10 项——移动端 4 组底栏与抽屉要用全量，
+     所以这里只做**渲染筛选**，不删数据、不改点击路径。
+     被收起的页面仍有真入口：时间轴→任务页头按钮；工具箱→商店「工具」视图；
+     回收站→设置「数据管理」卡；设置/说明→左栏底部既有入口。 */
+  const DESKTOP_NAV_IDS = ["home", "tasks", "feat-workbench", "feat-store", "feat-ai"];
+  const allNodes = groups.reduce(function(acc, g){ return acc.concat(g.nodes || []); }, []);
+  const navNodes = DESKTOP_NAV_IDS.map(function(id){
+    return allNodes.filter(function(n){ return n.id === id; })[0];
+  }).filter(Boolean);
   const navHtml = '<div class="side-nav">'
     + '<div class="side-nav-t">' + esc(t("side.nav.title", "导航")) + "</div>"
-    + '<div class="side-nav-grid">' + groups.map((g)=>g.nodes.map(nodeHtml).join("")).join("") + "</div>"
+    + '<div class="side-nav-grid">' + navNodes.map(nodeHtml).join("") + "</div>"
+    + "</div>";
+
+  /* 批九（用户「导航区下面的 sessions 区呢？应该可以分工作区的、无工作区任务的」）：
+     恢复左栏会话区，但按会话是否绑定场景（sc）分两组：
+       · 工作区：sc 非空（办公/数据/设计… 场景会话）；
+       · 无工作区：sc 为空（独立对话，createSession("") 创建）。
+     两组各自最多 20 条、独立滚动；组头各有一个「＋」直达对应类型，避免把两种会话混在
+     一个「新建」按钮里猜。点击仍走既有 switchSession（恢复工作缓冲 + 重渲染）。 */
+  let sessAll = [], sessAct = "";
+  try{ sessAll = getSessions() || []; }catch(_e){ sessAll = []; }
+  try{ sessAct = getActiveSession() || ""; }catch(_e){ sessAct = ""; }
+  const sessItem = function(s2){
+    const title = s2.title || t("sess.new", "新会话");
+    let meta = "";
+    try{
+      const scName = s2.sc
+        ? ((typeof SCENARIOS !== "undefined" && SCENARIOS[s2.sc]) ? SCENARIOS[s2.sc].name : s2.sc)
+        : t("side.sess.free", "无工作区");
+      let when = "";
+      const d = new Date(s2.updatedAt || s2.createdAt || "");
+      if(!isNaN(d.getTime())) when = (d.getMonth() + 1) + "-" + d.getDate();
+      meta = [scName, when].filter(Boolean).join(" · ");
+    }catch(_e){ meta = ""; }
+    return '<button type="button" class="side-sess-item' + (s2.id === sessAct ? " is-active" : "")
+      + '" data-sess-id="' + esc(s2.id) + '" title="' + esc(title) + '">'
+      + '<span class="side-sess-name">' + esc(title) + "</span>"
+      + (meta ? '<span class="side-sess-meta">' + esc(meta) + "</span>" : "")
+      + "</button>";
+  };
+  const wsSess = sessAll.filter(function(s2){ return !!(s2 && s2.sc); });
+  const freeSess = sessAll.filter(function(s2){ return !(s2 && s2.sc); });
+  const sessGroup = function(kind, list, label, emptyLabel, newTitle){
+    const shown = list.slice(0, 20).map(sessItem).join("");
+    return '<div class="side-sess-group" data-sess-group="' + kind + '">'
+      + '<div class="side-sess-gh"><span class="side-sess-gt">' + esc(label) + '</span>'
+      + '<span class="side-sess-gc">' + list.length + "</span>"
+      + '<button type="button" class="side-sess-new" data-sess-new="' + kind + '" title="' + esc(newTitle)
+      + '" aria-label="' + esc(newTitle) + '">＋</button></div>'
+      + '<div class="side-sess-list">'
+      + (shown || '<div class="side-sess-empty">' + esc(emptyLabel) + "</div>")
+      + "</div></div>";
+  };
+  const sessionsHtml = '<div class="side-sess" role="region" aria-label="' + esc(t("side.sess.title", "会话")) + '">'
+    + '<div class="side-sess-head"><span class="side-sess-t">' + esc(t("side.sess.title", "会话")) + "</span>"
+    + '<button type="button" class="side-sess-all" data-sess-all="1" title="' + esc(t("side.sess.all", "全部会话"))
+    + '" aria-label="' + esc(t("side.sess.all", "全部会话")) + '">' + esc(t("side.sess.allShort", "全部")) + "</button></div>"
+    + sessGroup("workspace", wsSess, t("side.sess.workspace", "工作区"),
+        t("side.sess.emptyWs", "暂无工作区会话"), t("side.sess.newWs", "新建工作区会话"))
+    + sessGroup("free", freeSess, t("side.sess.free", "无工作区"),
+        t("side.sess.emptyFree", "暂无独立会话"), t("side.sess.newFree", "新建无工作区会话"))
     + "</div>";
   /* 主流 Agent 化批六·刀1（2026-11-17，用户「登录放在左下角 / 用户、设置在同一行」）：
      左栏最底部加一行「用户 + 设置」。不重复 id（#btnUser / #btnGear 各只有一份），
      用独立 data-foot 属性走 setupSideMenu 委托：用户转发 #btnUser.click()（保留其登录态
      渲染与 onclick），设置走 AppBridge.openDrawer()（与侧栏 data-gear 同路）。顶栏宽屏
      隐藏 #btnUser 后，这里是登录入口的唯一替代；窄屏顶栏 #btnUser 仍在，两处并存不冲突。 */
+  /* 批九：设置从桌面导航移到底部 foot 后，高亮状态机也要跟着迁移——
+     uiView=settings 时给底部按钮加与 nav-item 同名的 `.active`，不再依赖已不在 DOM 的 #btnGear。 */
+  const footSettingsActive = uiView === "settings" ? " active" : "";
   const footHtml = '<div class="side-foot">'
     + '<button type="button" class="side-foot-btn" data-foot="user" title="' + esc(t("api.login", "登录"))
     + '" aria-label="' + esc(t("api.login", "登录")) + '">'
     + '<span class="side-foot-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>'
     + '<span class="side-foot-lbl">' + esc(t("api.login", "登录")) + "</span></button>"
-    + '<button type="button" class="side-foot-btn" data-foot="settings" title="' + esc(t("side.menu.settings", "设置"))
+    + '<button type="button" class="side-foot-btn' + footSettingsActive + '" data-foot="settings" title="' + esc(t("side.menu.settings", "设置"))
     + '" aria-label="' + esc(t("side.menu.settings", "设置")) + '">'
     + '<span class="side-foot-ic" aria-hidden="true">' + UI_ICONS.gear.replace("<svg", '<svg aria-hidden="true"') + "</span>"
     + '<span class="side-foot-lbl">' + esc(t("side.menu.settings", "设置")) + "</span></button>"
     + "</div>";
-  if(sideEl) sideEl.innerHTML = sanitizeHtml(pillHtml + SIDE_TOGGLE_HTML + navHtml + footHtml);
+  if(sideEl) sideEl.innerHTML = sanitizeHtml(
+    '<div class="side-head">' + pillHtml + SIDE_TOGGLE_HTML + "</div>"
+    + navHtml + sessionsHtml + footHtml);
 
   /* 激活子项的父分支自动展开（一次性同步，不触发额外存储写） */
   if(_sideActive){
@@ -651,8 +714,41 @@ function setupSideMenu(){
   if(!side || side._menuBound) return;
   side._menuBound = true;
   side.addEventListener("click", (e)=>{
-    /* 批八：左栏会话列表与快捷格已删，对应 data-sess-* / data-quick 委托一并退役；
-       会话管理只在右栏 sessions 区，新建会话走顶栏 #chatSessionBtn / 命令面板既有路径。 */
+    /* 批九：sessions 区恢复（按工作区 / 无工作区分组）。点击项→恢复该会话工作缓冲并重渲染；
+       组头「＋」按 kind 建对应类型：workspace = 绑当前场景，free = sc 空串（无工作区）。 */
+    const sessItem = e.target && e.target.closest ? e.target.closest(".side-sess-item") : null;
+    if(sessItem){
+      const sid = sessItem.getAttribute("data-sess-id");
+      if(sid && typeof switchSession === "function"){
+        const ok = switchSession(sid);
+        if(ok !== false){
+          if(typeof renderChat === "function"){
+            const _c = (typeof getCfg === "function") ? getCfg() : null;
+            if(_c && !_c.enabled && typeof renderChatDisabled === "function") renderChatDisabled();
+            else renderChat();
+          }
+          if(typeof render === "function") render();
+        }
+      }
+      return;
+    }
+    const sessNew = e.target && e.target.closest ? e.target.closest("[data-sess-new]") : null;
+    if(sessNew){
+      const kind = sessNew.getAttribute("data-sess-new") === "free" ? "free" : "workspace";
+      try{
+        let sc = "";
+        if(kind === "workspace"){
+          sc = "office";
+          try{ const cur = getActiveSessionObj(); sc = (cur && cur.sc) || (typeof getActive === "function" ? getActive() : "office"); }catch(_e){ sc = "office"; }
+        }
+        const title = kind === "free" ? t("side.sess.freeTitle", "无工作区会话") : t("sess.new", "新会话");
+        const ns = createSession(kind === "free" ? "" : sc, title);
+        if(ns && ns.id){ switchSession(ns.id); if(typeof render === "function") render(); }
+      }catch(_e3){ /* 新建失败不阻塞侧栏（非诊断兜底，沿用既有 _e3 命名约定） */ }
+      return;
+    }
+    const sessAllBtn = e.target && e.target.closest ? e.target.closest("[data-sess-all]") : null;
+    if(sessAllBtn){ if(typeof openSessionModal === "function") openSessionModal(); return; }
     /* 主流 Agent 化批六·刀1：左栏底部「用户 / 设置」同行（不重复 id，转发既有入口） */
     const foot = e.target && e.target.closest ? e.target.closest("[data-foot]") : null;
     if(foot){
@@ -674,16 +770,25 @@ function setupSideMenu(){
       if(nodeId) _toggleSideNode(nodeId);
       return;
     }
-    /* 场景父项：切场景（子菜单是工具，与场景切换解耦） */
+    /* 场景父项：切场景（子菜单是工具，与场景切换解耦）。
+       批九：code 模式中栏是纯聊天、#main 让位——用户点导航去「任务/商店/工作台」时必须
+       先回到 work 模式，否则点了没反应（批八只删了工作区入口，忘了导航本身也走 #main）。 */
+    /* 批九：code 模式中栏是纯聊天、#main 让位——任何「跳 #main 页面」的导航都要先回 work。
+       统一的本地小函数，避免 data-sc 与 AI 页两条入口一边修一边漏。 */
+    const leaveCodeForMain = function(){
+      const _b = document.querySelector(".body");
+      if(_b && _b.classList.contains("code-mode") && typeof setUIMode === "function") setUIMode("work");
+    };
     if(btn.hasAttribute("data-sc")){
       _sideActive = null;
+      leaveCodeForMain();
       setActive(btn.getAttribute("data-sc")); render();
       return;
     }
     /* 顶级固定入口（保留旧 data 属性语义） */
     if(btn.dataset.gear){ _sideActive = null; AppBridge.openDrawer(); return; }
     if(btn.dataset.help){ _sideActive = null; AppBridge.renderHelp(); return; }
-    if(btn.dataset.aipage){ _sideActive = null; if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage(); return; }
+    if(btn.dataset.aipage){ _sideActive = null; leaveCodeForMain(); if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage(); return; }
     /* 子项：执行注册动作 */
     const menuId = btn.getAttribute("data-menu");
     if(menuId){
@@ -1388,9 +1493,19 @@ let _sideFoldWarned = false;
 function setupSideToggle(){
   const side = $("#side");
   if(!side) return;
+  /* 批九：code/design 模式是 grid，`.side` 宽度由 grid 列决定——只给子元素加 `.collapsed`
+     不会让 240px 列变窄（实测 width 仍 240）。因此在 body/app 上同步 `.side-collapsed`，
+     由 CSS 改 grid 列宽；work 模式仍走 `.side{width:52px}` 原规则。 */
+  const body = document.querySelector(".body");
+  const app = document.querySelector(".app");
+  const applyFold = function(on){
+    side.classList.toggle("collapsed", on);
+    if(body) body.classList.toggle("side-collapsed", on);
+    if(app) app.classList.toggle("side-collapsed", on);
+  };
   side.addEventListener("click", (e)=>{
     if(!e.target || !e.target.closest || !e.target.closest("#sideToggle")) return;
-    side.classList.toggle("collapsed");
+    applyFold(!side.classList.contains("collapsed"));
     try{ localStorage.setItem(PREFIX+"sideCollapsed", side.classList.contains("collapsed")?"1":"0"); }catch(_){
       /* v3.7.102：写不进去的后果只是下次进来恢复展开，属可接受降级，但要留痕供排查。 */
       try{
@@ -1402,7 +1517,7 @@ function setupSideToggle(){
     }
   });
   /* 读失败按「未持久化」处理（保持展开），是预期降级，不登记诊断。 */
-  try{ if(localStorage.getItem(PREFIX+"sideCollapsed")==="1") side.classList.add("collapsed"); }catch(_){}
+  try{ if(localStorage.getItem(PREFIX+"sideCollapsed")==="1") applyFold(true); }catch(_){}
 }
 
 /* v1.15：应用独立页面——日历/天气/闹钟/萌宠/指针特效 五个应用卡片入口

@@ -77,7 +77,10 @@ describe("P1-c 可访问性", () => {
   });
 
   it("工具栏图标按钮均有 aria-label，且内联 SVG 标记为装饰(aria-hidden)", () => {
-    for (const id of ["btnCmd", "btnTheme", "btnGear", "btnExport", "btnImport", "btnClear"]) {
+    /* 批九产品裁决：桌面导航收敛为 5 项后，#btnGear 不再出现在左栏导航 DOM；
+       设置入口改由左栏底部 `[data-foot="settings"]` 承担（走同一个 AppBridge.openDrawer）。
+       判据随裁决更新但不放宽：仍逐按钮钉非空 aria-label 与 SVG aria-hidden。 */
+    for (const id of ["btnCmd", "btnTheme", "btnExport", "btnImport", "btnClear"]) {
       const b = doc.getElementById(id);
       expect(b, `#${id} 应存在`).toBeTruthy();
       expect(b.hasAttribute("aria-label") && b.getAttribute("aria-label").length > 0, `#${id} 应有非空 aria-label`).toBe(true);
@@ -86,6 +89,11 @@ describe("P1-c 可访问性", () => {
       // 仅对含 SVG 的图标按钮断言 SVG 已装饰化(aria-hidden="true")。
       expect(!svg || svg.getAttribute("aria-hidden") === "true", `#${id} 内 SVG 应 aria-hidden`).toBe(true);
     }
+    const gear = doc.querySelector('#side [data-foot="settings"]');
+    expect(gear, "左栏底部设置入口应存在").toBeTruthy();
+    expect(gear.getAttribute("aria-label") && gear.getAttribute("aria-label").length > 0, "设置入口应有非空 aria-label").toBe(true);
+    const gearSvg = gear.querySelector("svg");
+    expect(!gearSvg || gearSvg.getAttribute("aria-hidden") === "true", "设置入口 SVG 应 aria-hidden").toBe(true);
   });
 
   it("抽屉关闭按钮有 aria-label", () => {

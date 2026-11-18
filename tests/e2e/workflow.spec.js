@@ -182,7 +182,9 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
 
     // ---------- 7. 打开设置 ----------
     await test.step("打开设置抽屉", async () => {
-      await page.click("#btnGear");
+      /* 批九：设置已退出桌面 5 项导航，真实入口固定在左栏底部 `[data-foot="settings"]`
+         （桌面与 768 平板都可见；窄屏 390 不在本 spec 项目内）。 */
+      await page.click('#side [data-foot="settings"]');
       // 抽屉加 .open class
       await page.waitForSelector("#drawer.open", { timeout: 10_000 });
       await expect(page.locator("#drawer")).toHaveClass(/open/);
@@ -300,8 +302,8 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
 
     // ---------- 10. 导出数据 ----------
     await test.step("导出 JSON 触发下载", async () => {
-      // 重新打开设置抽屉（上一步保存后已关闭）
-      await page.click("#btnGear");
+      // 重新打开设置抽屉（上一步保存后已关闭）——批九后入口在左栏底部
+      await page.click('#side [data-foot="settings"]');
       await page.waitForSelector("#drawer.open", { timeout: 10_000 });
       // 抽屉是标签式：导出按钮在「数据」分区（set-data），需先切标签（本机实测映射）
       await page.click('[data-set-tab="set-data"]');
@@ -330,7 +332,8 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
     /* 刀 2（2026-11-16）：场景退出侧栏，改由工作台 tile 承载；侧栏契约改钉 10 入口，
        四个场景的可见性改到工作台页断言（走真实点击，不直接读 _buildSideMenu）。 */
     const navCount = await page.locator("#side .nav-item").count();
-    expect(navCount, "刀 2 后侧栏稳态 10 入口").toBeGreaterThanOrEqual(10);
+    /* 批九：桌面导航 10→5（主页/任务/工作台/商店/AI）；10 项数据树只供移动端底栏与抽屉。 */
+    expect(navCount, "批九后桌面侧栏稳态 5 入口").toBeGreaterThanOrEqual(5);
     await page.click('#side .nav-item[data-sc="workbench"]');
     await page.waitForSelector("#main .wb-tile", { timeout: 10_000 });
     for (const sc of ["office", "code", "study", "life"]) {

@@ -50,7 +50,7 @@ async function openApp(page, { apiBase, appBase, fakeLogin = false } = {}) {
      侧栏入口 17→10（见 tests/ia-three-zones.test.js 的 10 入口断言）；等待阈值同步到 10。 */
   await page.waitForFunction(
     () => {
-      try { return document.querySelectorAll("#side .nav-item").length >= 10; } catch (e) { return false; }
+      try { return document.querySelectorAll("#side .nav-item").length >= 5; } catch (e) { return false; }
     },
     null,
     { timeout: 15_000 }
