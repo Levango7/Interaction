@@ -1100,7 +1100,16 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 /* 批八：模式胶囊从 tabbar 迁入左栏顶部——三段等分、占满 200px 侧栏宽度，
    标签保留（用户点名「工作/代码/设计」三模式切换放左栏）。胶囊 id/class 不变，JS 绑定与
    #uiModePill 选择器全部复用；窄屏 .side 整体隐藏，模式入口走折叠栏既有 toggleUIMode 路径。 */
-.side .mode-pill{display:flex;width:100%;margin-bottom:var(--space-2)}
+/* 批九：左栏顶部一行 = 模式胶囊 + 折叠键（用户「左侧边栏可以折叠」；折叠键不再沉在导航下面，
+   与胶囊同一行更易发现，也避免和 sessions 区抢空间）。 */
+.side-head{display:flex;align-items:center;gap:2px;flex-shrink:0;margin-bottom:var(--space-2)}
+.side-head .mode-pill{display:flex;flex:1;width:auto;min-width:0;margin:0}
+.side-head .side-toggle{flex:none;width:26px;height:26px;padding:0;margin:0;align-self:center;
+  display:inline-flex;align-items:center;justify-content:center;background:transparent;border:0;
+  border-radius:var(--radius-sm);color:var(--text-faint);cursor:pointer}
+.side-head .side-toggle:hover{background:var(--surface-hover);color:var(--text)}
+.side-head .side-toggle .lbl{display:none}
+.side-head .side-toggle svg{width:13px;height:13px}
 .side .mode-pill-item{flex:1;min-width:0;justify-content:center;gap:3px;padding:3px 4px;
   font-size:var(--fs-2xs)}
 .side-nav{flex-shrink:0;border-top:1px solid color-mix(in srgb,var(--line) 45%,transparent);
@@ -1121,22 +1130,54 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .side-nav .nav-item[data-need-cfg]{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 40%,transparent)}
 .side-nav .nav-item[data-need-cfg] .cnt{width:6px;height:6px;padding:0;font-size:0;
   border-radius:50%;background:var(--accent);top:4px;right:6px}
-/* 折叠态：模式胶囊收窄为纯图标（.lbl 在 ≤1023/≤767 档已隐藏），导航回单列图标 */
+/* 批九 sessions 区：导航下方、可独立滚动；两组（工作区 / 无工作区）各自带计数与「＋」。
+   组标题用 --fs-2xs 字距 + 计数胶囊，与右栏节标题同一克制口径，不新增色值。 */
+.side-sess{order:3;flex:1;min-height:0;display:flex;flex-direction:column;
+  margin-top:var(--space-2);border-top:1px solid color-mix(in srgb,var(--line) 45%,transparent)}
+.side-sess-head{display:flex;align-items:center;justify-content:space-between;
+  padding:var(--space-1) var(--space-2) 0;flex-shrink:0}
+.side-sess-t{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.06em}
+.side-sess-all{width:auto;padding:1px 5px;border:0;background:transparent;color:var(--text-faint);
+  font-size:var(--fs-2xs);cursor:pointer;border-radius:var(--radius-sm)}
+.side-sess-all:hover{background:var(--accent-soft);color:var(--accent-text,var(--accent))}
+.side-sess-group{display:flex;flex-direction:column;min-height:0;padding-top:var(--space-1)}
+.side-sess-group:first-of-type{flex:0 1 auto}
+.side-sess-group:last-of-type{flex:1 1 auto}
+.side-sess-gh{display:flex;align-items:center;gap:var(--space-1);padding:1px var(--space-2);flex-shrink:0}
+.side-sess-gt{font-size:var(--fs-2xs);color:var(--text-dim-2);font-weight:600;letter-spacing:.03em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-sess-gc{font-size:var(--fs-2xs);line-height:1.3;padding:0 5px;border-radius:var(--radius-full);
+  background:var(--panel2);color:var(--muted);flex:none;font-variant-numeric:tabular-nums}
+.side-sess-new{margin-left:auto;width:22px;height:22px;padding:0;border:0;background:transparent;
+  color:var(--muted);font-size:var(--fs-sm);line-height:1;cursor:pointer;border-radius:var(--radius-sm);
+  display:inline-flex;align-items:center;justify-content:center;flex:none}
+.side-sess-new:hover{background:var(--accent-soft);color:var(--accent-text,var(--accent))}
+.side-sess-list{min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;
+  gap:1px;padding:1px var(--space-1) var(--space-1)}
+.side-sess-group:first-of-type .side-sess-list{max-height:32vh}
+.side-sess-item{display:flex;flex-direction:column;gap:0;width:100%;text-align:left;
+  padding:4px var(--space-2);border:0;border-radius:var(--radius-sm);background:transparent;
+  color:var(--text-dim);font-size:var(--fs-xs);cursor:pointer;flex-shrink:0;overflow:hidden}
+.side-sess-item:hover{background:var(--surface-hover);color:var(--text)}
+.side-sess-item.is-active{background:color-mix(in srgb,var(--accent) 12%,transparent);
+  color:var(--accent-text,var(--accent))}
+.side-sess-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-sess-meta{display:block;font-size:var(--fs-2xs);color:var(--text-faint);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side-sess-item.is-active .side-sess-meta{color:var(--accent-text,var(--accent));opacity:.75}
+.side-sess-empty{padding:2px var(--space-2);font-size:var(--fs-2xs);color:var(--text-faint)}
+/* 折叠态：胶囊竖向图标、导航单列；sessions 区让位（折叠栏只保留高频入口）。 */
+.side.collapsed .side-head{flex-direction:column;gap:var(--space-1)}
 .side.collapsed .mode-pill{flex-direction:column;width:auto}
 .side.collapsed .mode-pill-item{flex:none}
 .side.collapsed .side-nav{flex:1;min-height:0;overflow-y:auto;border-top:0;margin-top:0;padding-top:var(--space-1)}
 .side.collapsed .side-nav-t{display:none}
 .side.collapsed .side-nav-grid{grid-template-columns:1fr}
-/* 折叠键：透明底、小字，紧随导航之后；用户/设置用 margin-top:auto 钉到左栏最下方。 */
-.side .mode-pill{order:1}
+.side.collapsed .side-sess{display:none}
+/* 用户/设置用 margin-top:auto 钉到左栏最下方（sessions 占满剩余空间后被推到底）。 */
+.side .side-head{order:1}
 .side .side-nav{order:2}
-.side .side-toggle{order:3;width:auto;margin:0;align-self:flex-end;
-  padding:3px var(--space-2);min-height:22px;background:transparent;border:0;
-  color:var(--text-faint);font-size:var(--fs-2xs);font-weight:500;gap:2px}
-.side .side-toggle:hover{background:var(--surface-hover);color:var(--text)}
-.side .side-toggle svg{width:11px;height:11px}
-/* 主流 Agent 化批六·刀1：左栏最底部「用户 + 设置」同行（用户「登录放在左下角/用户、设置同一行」）。
-   两根等高按钮各占一半，透明底、hover 才显形——与折叠键同一克制口径。数据侧走 data-foot 委托。 */
+.side .side-sess{order:3}
 .side .side-foot{order:4;flex-shrink:0;display:flex;gap:2px;
   padding:var(--space-1) var(--space-2) var(--space-2);
   border-top:1px solid color-mix(in srgb,var(--line) 45%,transparent);margin-top:auto}
@@ -2441,6 +2482,9 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .app-card-tx{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center}
 /* v2.4.2：商店双列网格 */
 .store-list{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin-top:var(--space-4)}
+/* 批九：商店四视图（插件/技能/连接器/工具）——视图切换条与插件分类条同构，只多一条上间距 */
+.store-view-nav{margin-top:var(--space-2)}
+.store-tools-more{display:flex;justify-content:center;margin:var(--space-3) 0 var(--card-gap)}
 .store-card{flex-direction:column;align-items:stretch;padding:var(--space-3)}
 .store-card .app-card-tx{flex-direction:column;align-items:center}
 .store-card .store-ops{display:flex;gap:var(--space-2);justify-content:center;margin-top:var(--space-2)}
@@ -5540,10 +5584,33 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   .task-rail{width:280px;flex:0 0 280px}
   .task-rail-toggle{display:none!important}
   .task-rail-backdrop{display:none!important}
-  /* 折叠 = 整栏收起，顶栏出现「今日」按钮可再展开 */
-  .body.rail-collapsed .task-rail{display:none}
+  /* 批九（用户「右侧边栏也可以折叠」）：折叠 = 整栏收起，右缘留一枚常驻把手再展开。
+     旧实现把 #btnTaskRail 显示回顶栏，但它在宽屏被批六 CSS 隐藏、且位置远离右栏，
+     用户找不到；这里改成**右缘中部的竖向把手**（fixed），折叠/展开都是同一枚按钮。 */
+  .body.rail-collapsed .task-rail,
+  .body.rail-collapsed .agent-dock{display:none}
+  /* 批九真机补正：code/design 各自的 `.body.xxx-mode .agent-dock{display:flex}` 写在后面且
+     同为 0-3-0 特异度，会把上面的隐藏覆盖掉——实测折叠后 agent-dock 仍以 216px 留在右下角。
+     这里按模式加一枚类，特异度 0-4-0，两种模式都要盖；不靠 !important。 */
+  .body.code-mode.rail-collapsed .agent-dock,
+  .body.design-mode.rail-collapsed .agent-dock{display:none}
+  .body.code-mode.rail-collapsed,
+  .body.design-mode.rail-collapsed{grid-template-columns:240px minmax(0,1fr)}
+  /* 批九：左栏折叠在 grid 模式下必须改列宽（子元素 .collapsed 只改内部布局，不改列宽）。 */
+  .body.code-mode.side-collapsed,
+  .body.design-mode.side-collapsed{grid-template-columns:56px minmax(0,1fr) 300px}
+  .body.code-mode.side-collapsed.rail-collapsed,
+  .body.design-mode.side-collapsed.rail-collapsed{grid-template-columns:56px minmax(0,1fr)}
   .body.rail-collapsed .task-rail-toggle,
-  .app.rail-collapsed .task-rail-toggle{display:inline-flex!important}
+  .app.rail-collapsed .task-rail-toggle{display:inline-flex!important;
+    position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:var(--z-popover);
+    width:26px;height:72px;min-height:0;padding:0;margin:0;border-radius:var(--radius-md) 0 0 var(--radius-md);
+    border:1px solid var(--line);border-right:0;background:var(--panel);color:var(--muted);
+    flex-direction:column;gap:2px;justify-content:center}
+  .body.rail-collapsed .task-rail-toggle:hover,
+  .app.rail-collapsed .task-rail-toggle:hover{background:var(--accent-soft);color:var(--accent-text,var(--accent))}
+  .body.rail-collapsed .task-rail-toggle .lbl,
+  .app.rail-collapsed .task-rail-toggle .lbl{display:none}
 }
 @media(max-width:1023px){
   /* P2-7（2026-11-02）：原 z=var(--z-popover) 与窄屏 chat 抽屉（≤767，2368 行）同层，
@@ -6492,6 +6559,7 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       </div>
     </div>
     <p class="set-tip" data-i18n="dataMgmt.recycleTip">每次启动生效，超期软删任务将被永久删除（含多类型回收：配置/文件/插件同样适用）。</p>
+    <button type="button" class="addbtn u-w-full" id="btnOpenRecycle" data-sc="muted" data-i18n="dataMgmt.openRecycle">打开回收站</button>
     <div class="set-subhead" data-i18n="dataMgmt.autoBackup">自动备份</div>
     <button type="button" class="addbtn u-w-full" id="btnRecover" data-sc="accent" data-i18n="dataMgmt.recoverBtn">从自动备份恢复</button>
     <!-- v3.1.2 B-档：显示上次快照时间 + 快照大小（此前用户不知道备份是否生效、何时生效） -->
@@ -8605,6 +8673,7 @@ const MESSAGES = {
     "dataMgmt.storageEstimateRef": "参考：应用总存储（含 IndexedDB）",
     "dataMgmt.recycleOff": "关闭",
     "dataMgmt.recycleTip": "每次启动生效，超期软删任务将被永久删除（含多类型回收：配置/文件/插件同样适用）。",
+    "dataMgmt.openRecycle": "打开回收站",
     "dataMgmt.recycle7": "7 天后",
     "dataMgmt.recycle30": "30 天后",
     "dataMgmt.recycle90": "90 天后",
@@ -9083,7 +9152,7 @@ const MESSAGES = {
     "rail.files.empty": "还没有导入文件。知识库支持 PDF/DOCX/文本。",
     "rail.files.open": "打开知识库",
     "taskRail.add": "新建任务",
-    "taskRail.collapse": "收起任务栏",
+    "taskRail.collapse": "收起右栏",
     "taskRail.more": "全部任务",
     "taskRail.open": "今日任务",
     "taskRail.empty": "今天没有待办。点 + 记一件事。",
@@ -9682,7 +9751,22 @@ const MESSAGES = {
     "storePage.scenarios": "提供场景：",
     "storePage.aria": "商店分类筛选",
     "storePage.title": "商店",
-    "storePage.sub": "插件与应用市场——安装后按类型自动挂载到对应位置",
+    "storePage.sub2": "插件 / 技能 / 连接器 / 工具——能力都从这里装和管",
+    "store.view.aria": "商店能力分类",
+    "store.view.plugins": "插件",
+    "store.view.skills": "技能",
+    "store.view.connectors": "连接器",
+    "store.view.tools": "工具",
+    "store.skill.enabled": "已启用",
+    "store.skill.noDesc": "无描述",
+    "store.skill.triggers": "触发词：",
+    "store.skill.empty": "还没有启用技能。技能会随 AI 提示词注入，可在 AI 页管理。",
+    "store.mcp.noAuth": "无需认证",
+    "store.mcp.customHeader": "自定义头",
+    "store.mcp.tools": "可用工具：",
+    "store.mcp.empty": "还没有连接器。MCP 服务器在 AI 页配置，启用且 URL 合法后显示在这里。",
+    "store.tool.open": "打开",
+    "store.tool.all": "打开完整工具箱",
     "storePage.importBtn": "导入插件 JSON",
     "storePage.backHome": "← 主页",
     "storePage.empty": "暂无可用的插件",
@@ -10157,6 +10241,16 @@ const MESSAGES = {
     "chat.emptyGuide.item3": "把一段需求画成架构图 / 流程图",
     "chat.emptyGuide.item4": "检索知识库文件并带出处引用",
     "side.nav.title": "导航",
+    "side.sess.title": "会话",
+    "side.sess.all": "全部会话",
+    "side.sess.allShort": "全部",
+    "side.sess.workspace": "工作区",
+    "side.sess.free": "无工作区",
+    "side.sess.emptyWs": "暂无工作区会话",
+    "side.sess.emptyFree": "暂无独立会话",
+    "side.sess.newWs": "新建工作区会话",
+    "side.sess.newFree": "新建无工作区会话",
+    "side.sess.freeTitle": "无工作区会话",
     "side.ai.needCfg": "待配置",
     "p3.html.batchChk": "<input type=\"checkbox\" class=\"batch-chk\" aria-label=\"选择此任务\">",
     "p3.html.chartEmpty": "<div class=\"mini-chart-empty\">暂无可视化数据 · 在「数据点」中填入 JSON 数组，如 [{\"label\":\"Q1\",\"value\":30}]</div>",
@@ -12827,6 +12921,7 @@ const MESSAGES = {
     "dataMgmt.storageEstimateRef": "Ref: total app storage (incl. IndexedDB)",
     "dataMgmt.recycleOff": "Off",
     "dataMgmt.recycleTip": "Takes effect on each launch; soft-deleted tasks past the retention window are permanently removed (applies to multi-type recycle: config/files/plugins too).",
+    "dataMgmt.openRecycle": "Open recycle bin",
     "dataMgmt.recycle7": "After 7 days",
     "dataMgmt.recycle30": "After 30 days",
     "dataMgmt.recycle90": "After 90 days",
@@ -13304,7 +13399,7 @@ const MESSAGES = {
     "rail.files.empty": "No files yet. Knowledge base supports PDF/DOCX/text.",
     "rail.files.open": "Open knowledge base",
     "taskRail.add": "New task",
-    "taskRail.collapse": "Collapse task rail",
+    "taskRail.collapse": "Collapse right rail",
     "taskRail.more": "All tasks",
     "taskRail.open": "Today's tasks",
     "taskRail.empty": "Nothing due today. Tap + to capture one.",
@@ -13903,7 +13998,22 @@ const MESSAGES = {
     "storePage.scenarios": "Scenarios: ",
     "storePage.aria": "Store Category Filter",
     "storePage.title": "Store",
-    "storePage.sub": "Plugin & app marketplace — auto-mount after install",
+    "storePage.sub2": "Plugins / skills / connectors / tools — install and manage capabilities here",
+    "store.view.aria": "Store capability categories",
+    "store.view.plugins": "Plugins",
+    "store.view.skills": "Skills",
+    "store.view.connectors": "Connectors",
+    "store.view.tools": "Tools",
+    "store.skill.enabled": "Enabled",
+    "store.skill.noDesc": "No description",
+    "store.skill.triggers": "Triggers: ",
+    "store.skill.empty": "No enabled skills yet. Skills are injected into the AI prompt and managed on the AI page.",
+    "store.mcp.noAuth": "No auth",
+    "store.mcp.customHeader": "Custom header",
+    "store.mcp.tools": "Tools: ",
+    "store.mcp.empty": "No connectors yet. Configure MCP servers on the AI page; enabled servers with a valid URL appear here.",
+    "store.tool.open": "Open",
+    "store.tool.all": "Open full toolbox",
     "storePage.importBtn": "Import Plugin JSON",
     "storePage.backHome": "← Home",
     "storePage.empty": "No plugins available",
@@ -14377,6 +14487,16 @@ const MESSAGES = {
     "chat.emptyGuide.item3": "Turn a requirement into an architecture / flow diagram",
     "chat.emptyGuide.item4": "Retrieve knowledge-base files with source citations",
     "side.nav.title": "Nav",
+    "side.sess.title": "Sessions",
+    "side.sess.all": "All sessions",
+    "side.sess.allShort": "All",
+    "side.sess.workspace": "Workspaces",
+    "side.sess.free": "No workspace",
+    "side.sess.emptyWs": "No workspace sessions yet",
+    "side.sess.emptyFree": "No standalone sessions yet",
+    "side.sess.newWs": "New workspace session",
+    "side.sess.newFree": "New standalone session",
+    "side.sess.freeTitle": "Standalone session",
     "side.ai.needCfg": "Setup needed",
     "p3.html.batchChk": "<input type=\"checkbox\" class=\"batch-chk\" aria-label=\"Select this task\">",
     "p3.html.chartEmpty": "<div class=\"mini-chart-empty\">No chart data · enter a JSON array in the Data points field, e.g. [{\"label\":\"Q1\",\"value\":30}]</div>",
@@ -19125,7 +19245,19 @@ function resetCustomLinks(){
   _sharedSafeLSRemove(CUSTOM_LINKS_KEY);
 }
 
-let active = load(PREFIX+"active","office");
+/* 批九：无工作区会话的 sc 为空串，但它只是「会话分组」用的元数据，不是可渲染场景。
+   历史脏值/旧版切会话留下的**空** active 会让 SCENARIOS[active].record 等场景渲染崩溃，
+   启动时只把空值收敛回 office；会话自身的 sc="" 原样保留，分组判据不受影响。
+   ⚠️ active 同时是「场景键」和「页面键」（tasks / store / timeline / toolbox / recycle …），
+      不能用 `SCENARIOS[active]` 做合法性判据——曾因此把预置的 tasks 重置回 office，
+      全量 e2e ics-import-render 连红两次才抓出来（真回归，非 flake）。 */
+const _storedActive = load(PREFIX+"active", null);
+let active = (_storedActive === null || _storedActive === undefined) ? "office" : _storedActive;
+if(!active){
+  active = "office";
+  /* 有脏值才回写；首次启动（键不存在）保持不落盘，免得破坏「active 未写过」的既有契约。 */
+  if(_storedActive !== null && _storedActive !== undefined) save(PREFIX+"active", active);
+}
 // v1.9.3g：当前视图状态机——"main"（场景/总览/统计/回收站）| "settings"（设置页）| "help"（指南页）。
 // 侧栏高亮据此渲染（renderSide 弃 DOM 嗅探），由 openDrawer / renderHelp / render 显式赋值。
 let uiView = "main";
@@ -19255,10 +19387,16 @@ function switchSession(sid){
   getSessions();
   const it = _sessions.find(function(s){ return s.id === sid; });
   if(!it) return null;
-  if(active !== it.sc) setActive(it.sc);
+  /* 批九：`sc=""` 表示「无工作区会话」（只用于左栏分组），不是可渲染场景。
+     旧写法把它直接 setActive("") → SCENARIOS[""] undefined → 切回工作模式整页渲染异常。
+     这里把「会话归属」与「当前渲染场景」解耦：空 sc 沿用当前合法场景承载聊天，
+     session.sc 仍是空串，左栏分组照旧；返回值保持 it.sc，调用方 null 判据不变。 */
+  const fallback = (typeof SCENARIOS !== "undefined" && SCENARIOS[active]) ? active : "office";
+  const renderSc = it.sc || fallback;
+  if(active !== renderSc) setActive(renderSc);
   setActiveSession(sid);
-  chats[it.sc] = _chatTag((it.msgs || []).slice(-50), it.sc);
-  save(PREFIX + "chat_" + it.sc, chats[it.sc]);
+  chats[renderSc] = _chatTag((it.msgs || []).slice(-50), renderSc);
+  save(PREFIX + "chat_" + renderSc, chats[renderSc]);
   return it.sc;
 }
 function getActiveSessionObj(){
@@ -19273,7 +19411,9 @@ function getActiveSessionObj(){
  */
 function createSession(sc, title){
   getSessions();
-  const target = sc || (typeof active !== "undefined" ? active : "office");
+  /* 批九：`sc === ""` 是**无工作区会话**（用户要求 sessions 区可按「工作区 / 无工作区」分组）。
+     只有 undefined / null 才回落到当前场景；空串必须保留，否则新建的独立会话会被悄悄绑回场景。 */
+  const target = (sc === undefined || sc === null) ? (typeof active !== "undefined" ? active : "office") : String(sc);
   const id = _genSid();
   const item = { id: id, sc: target, title: title || t("sess.new", "新会话"), createdAt: _nowIso(), updatedAt: _nowIso(), msgs: [] };
   _sessions.unshift(item);
@@ -25955,29 +26095,92 @@ function renderSide(){
   };
 
   const groups = _buildSideMenu();
-  /* 底部导航：10 入口收成 5×2 图标格，组头不再渲染（2 行天然按组断行：
-     今日3 + 工作台1 + 助手1 占首行，更多 5 占次行）。
-     仍用 nodeHtml 包 .nav-node，子项（若有）走 .nav-sub 的既有展开逻辑，不破坏 click 委托。 */
+  /* 批九（用户「导航区差不多五个就行，现有的很多会不会都多余」）：
+     桌面导航只渲染 5 个高频目的地：主页 / 任务 / 工作台 / 商店 / AI。
+     `_buildSideMenu()` 的数据树仍是 10 项——移动端 4 组底栏与抽屉要用全量，
+     所以这里只做**渲染筛选**，不删数据、不改点击路径。
+     被收起的页面仍有真入口：时间轴→任务页头按钮；工具箱→商店「工具」视图；
+     回收站→设置「数据管理」卡；设置/说明→左栏底部既有入口。 */
+  const DESKTOP_NAV_IDS = ["home", "tasks", "feat-workbench", "feat-store", "feat-ai"];
+  const allNodes = groups.reduce(function(acc, g){ return acc.concat(g.nodes || []); }, []);
+  const navNodes = DESKTOP_NAV_IDS.map(function(id){
+    return allNodes.filter(function(n){ return n.id === id; })[0];
+  }).filter(Boolean);
   const navHtml = '<div class="side-nav">'
     + '<div class="side-nav-t">' + esc(t("side.nav.title", "导航")) + "</div>"
-    + '<div class="side-nav-grid">' + groups.map((g)=>g.nodes.map(nodeHtml).join("")).join("") + "</div>"
+    + '<div class="side-nav-grid">' + navNodes.map(nodeHtml).join("") + "</div>"
+    + "</div>";
+
+  /* 批九（用户「导航区下面的 sessions 区呢？应该可以分工作区的、无工作区任务的」）：
+     恢复左栏会话区，但按会话是否绑定场景（sc）分两组：
+       · 工作区：sc 非空（办公/数据/设计… 场景会话）；
+       · 无工作区：sc 为空（独立对话，createSession("") 创建）。
+     两组各自最多 20 条、独立滚动；组头各有一个「＋」直达对应类型，避免把两种会话混在
+     一个「新建」按钮里猜。点击仍走既有 switchSession（恢复工作缓冲 + 重渲染）。 */
+  let sessAll = [], sessAct = "";
+  try{ sessAll = getSessions() || []; }catch(_e){ sessAll = []; }
+  try{ sessAct = getActiveSession() || ""; }catch(_e){ sessAct = ""; }
+  const sessItem = function(s2){
+    const title = s2.title || t("sess.new", "新会话");
+    let meta = "";
+    try{
+      const scName = s2.sc
+        ? ((typeof SCENARIOS !== "undefined" && SCENARIOS[s2.sc]) ? SCENARIOS[s2.sc].name : s2.sc)
+        : t("side.sess.free", "无工作区");
+      let when = "";
+      const d = new Date(s2.updatedAt || s2.createdAt || "");
+      if(!isNaN(d.getTime())) when = (d.getMonth() + 1) + "-" + d.getDate();
+      meta = [scName, when].filter(Boolean).join(" · ");
+    }catch(_e){ meta = ""; }
+    return '<button type="button" class="side-sess-item' + (s2.id === sessAct ? " is-active" : "")
+      + '" data-sess-id="' + esc(s2.id) + '" title="' + esc(title) + '">'
+      + '<span class="side-sess-name">' + esc(title) + "</span>"
+      + (meta ? '<span class="side-sess-meta">' + esc(meta) + "</span>" : "")
+      + "</button>";
+  };
+  const wsSess = sessAll.filter(function(s2){ return !!(s2 && s2.sc); });
+  const freeSess = sessAll.filter(function(s2){ return !(s2 && s2.sc); });
+  const sessGroup = function(kind, list, label, emptyLabel, newTitle){
+    const shown = list.slice(0, 20).map(sessItem).join("");
+    return '<div class="side-sess-group" data-sess-group="' + kind + '">'
+      + '<div class="side-sess-gh"><span class="side-sess-gt">' + esc(label) + '</span>'
+      + '<span class="side-sess-gc">' + list.length + "</span>"
+      + '<button type="button" class="side-sess-new" data-sess-new="' + kind + '" title="' + esc(newTitle)
+      + '" aria-label="' + esc(newTitle) + '">＋</button></div>'
+      + '<div class="side-sess-list">'
+      + (shown || '<div class="side-sess-empty">' + esc(emptyLabel) + "</div>")
+      + "</div></div>";
+  };
+  const sessionsHtml = '<div class="side-sess" role="region" aria-label="' + esc(t("side.sess.title", "会话")) + '">'
+    + '<div class="side-sess-head"><span class="side-sess-t">' + esc(t("side.sess.title", "会话")) + "</span>"
+    + '<button type="button" class="side-sess-all" data-sess-all="1" title="' + esc(t("side.sess.all", "全部会话"))
+    + '" aria-label="' + esc(t("side.sess.all", "全部会话")) + '">' + esc(t("side.sess.allShort", "全部")) + "</button></div>"
+    + sessGroup("workspace", wsSess, t("side.sess.workspace", "工作区"),
+        t("side.sess.emptyWs", "暂无工作区会话"), t("side.sess.newWs", "新建工作区会话"))
+    + sessGroup("free", freeSess, t("side.sess.free", "无工作区"),
+        t("side.sess.emptyFree", "暂无独立会话"), t("side.sess.newFree", "新建无工作区会话"))
     + "</div>";
   /* 主流 Agent 化批六·刀1（2026-11-17，用户「登录放在左下角 / 用户、设置在同一行」）：
      左栏最底部加一行「用户 + 设置」。不重复 id（#btnUser / #btnGear 各只有一份），
      用独立 data-foot 属性走 setupSideMenu 委托：用户转发 #btnUser.click()（保留其登录态
      渲染与 onclick），设置走 AppBridge.openDrawer()（与侧栏 data-gear 同路）。顶栏宽屏
      隐藏 #btnUser 后，这里是登录入口的唯一替代；窄屏顶栏 #btnUser 仍在，两处并存不冲突。 */
+  /* 批九：设置从桌面导航移到底部 foot 后，高亮状态机也要跟着迁移——
+     uiView=settings 时给底部按钮加与 nav-item 同名的 `.active`，不再依赖已不在 DOM 的 #btnGear。 */
+  const footSettingsActive = uiView === "settings" ? " active" : "";
   const footHtml = '<div class="side-foot">'
     + '<button type="button" class="side-foot-btn" data-foot="user" title="' + esc(t("api.login", "登录"))
     + '" aria-label="' + esc(t("api.login", "登录")) + '">'
     + '<span class="side-foot-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>'
     + '<span class="side-foot-lbl">' + esc(t("api.login", "登录")) + "</span></button>"
-    + '<button type="button" class="side-foot-btn" data-foot="settings" title="' + esc(t("side.menu.settings", "设置"))
+    + '<button type="button" class="side-foot-btn' + footSettingsActive + '" data-foot="settings" title="' + esc(t("side.menu.settings", "设置"))
     + '" aria-label="' + esc(t("side.menu.settings", "设置")) + '">'
     + '<span class="side-foot-ic" aria-hidden="true">' + UI_ICONS.gear.replace("<svg", '<svg aria-hidden="true"') + "</span>"
     + '<span class="side-foot-lbl">' + esc(t("side.menu.settings", "设置")) + "</span></button>"
     + "</div>";
-  if(sideEl) sideEl.innerHTML = sanitizeHtml(pillHtml + SIDE_TOGGLE_HTML + navHtml + footHtml);
+  if(sideEl) sideEl.innerHTML = sanitizeHtml(
+    '<div class="side-head">' + pillHtml + SIDE_TOGGLE_HTML + "</div>"
+    + navHtml + sessionsHtml + footHtml);
 
   /* 激活子项的父分支自动展开（一次性同步，不触发额外存储写） */
   if(_sideActive){
@@ -26396,8 +26599,41 @@ function setupSideMenu(){
   if(!side || side._menuBound) return;
   side._menuBound = true;
   side.addEventListener("click", (e)=>{
-    /* 批八：左栏会话列表与快捷格已删，对应 data-sess-* / data-quick 委托一并退役；
-       会话管理只在右栏 sessions 区，新建会话走顶栏 #chatSessionBtn / 命令面板既有路径。 */
+    /* 批九：sessions 区恢复（按工作区 / 无工作区分组）。点击项→恢复该会话工作缓冲并重渲染；
+       组头「＋」按 kind 建对应类型：workspace = 绑当前场景，free = sc 空串（无工作区）。 */
+    const sessItem = e.target && e.target.closest ? e.target.closest(".side-sess-item") : null;
+    if(sessItem){
+      const sid = sessItem.getAttribute("data-sess-id");
+      if(sid && typeof switchSession === "function"){
+        const ok = switchSession(sid);
+        if(ok !== false){
+          if(typeof renderChat === "function"){
+            const _c = (typeof getCfg === "function") ? getCfg() : null;
+            if(_c && !_c.enabled && typeof renderChatDisabled === "function") renderChatDisabled();
+            else renderChat();
+          }
+          if(typeof render === "function") render();
+        }
+      }
+      return;
+    }
+    const sessNew = e.target && e.target.closest ? e.target.closest("[data-sess-new]") : null;
+    if(sessNew){
+      const kind = sessNew.getAttribute("data-sess-new") === "free" ? "free" : "workspace";
+      try{
+        let sc = "";
+        if(kind === "workspace"){
+          sc = "office";
+          try{ const cur = getActiveSessionObj(); sc = (cur && cur.sc) || (typeof getActive === "function" ? getActive() : "office"); }catch(_e){ sc = "office"; }
+        }
+        const title = kind === "free" ? t("side.sess.freeTitle", "无工作区会话") : t("sess.new", "新会话");
+        const ns = createSession(kind === "free" ? "" : sc, title);
+        if(ns && ns.id){ switchSession(ns.id); if(typeof render === "function") render(); }
+      }catch(_e3){ /* 新建失败不阻塞侧栏（非诊断兜底，沿用既有 _e3 命名约定） */ }
+      return;
+    }
+    const sessAllBtn = e.target && e.target.closest ? e.target.closest("[data-sess-all]") : null;
+    if(sessAllBtn){ if(typeof openSessionModal === "function") openSessionModal(); return; }
     /* 主流 Agent 化批六·刀1：左栏底部「用户 / 设置」同行（不重复 id，转发既有入口） */
     const foot = e.target && e.target.closest ? e.target.closest("[data-foot]") : null;
     if(foot){
@@ -26419,16 +26655,25 @@ function setupSideMenu(){
       if(nodeId) _toggleSideNode(nodeId);
       return;
     }
-    /* 场景父项：切场景（子菜单是工具，与场景切换解耦） */
+    /* 场景父项：切场景（子菜单是工具，与场景切换解耦）。
+       批九：code 模式中栏是纯聊天、#main 让位——用户点导航去「任务/商店/工作台」时必须
+       先回到 work 模式，否则点了没反应（批八只删了工作区入口，忘了导航本身也走 #main）。 */
+    /* 批九：code 模式中栏是纯聊天、#main 让位——任何「跳 #main 页面」的导航都要先回 work。
+       统一的本地小函数，避免 data-sc 与 AI 页两条入口一边修一边漏。 */
+    const leaveCodeForMain = function(){
+      const _b = document.querySelector(".body");
+      if(_b && _b.classList.contains("code-mode") && typeof setUIMode === "function") setUIMode("work");
+    };
     if(btn.hasAttribute("data-sc")){
       _sideActive = null;
+      leaveCodeForMain();
       setActive(btn.getAttribute("data-sc")); render();
       return;
     }
     /* 顶级固定入口（保留旧 data 属性语义） */
     if(btn.dataset.gear){ _sideActive = null; AppBridge.openDrawer(); return; }
     if(btn.dataset.help){ _sideActive = null; AppBridge.renderHelp(); return; }
-    if(btn.dataset.aipage){ _sideActive = null; if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage(); return; }
+    if(btn.dataset.aipage){ _sideActive = null; leaveCodeForMain(); if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage(); return; }
     /* 子项：执行注册动作 */
     const menuId = btn.getAttribute("data-menu");
     if(menuId){
@@ -27133,9 +27378,19 @@ let _sideFoldWarned = false;
 function setupSideToggle(){
   const side = $("#side");
   if(!side) return;
+  /* 批九：code/design 模式是 grid，`.side` 宽度由 grid 列决定——只给子元素加 `.collapsed`
+     不会让 240px 列变窄（实测 width 仍 240）。因此在 body/app 上同步 `.side-collapsed`，
+     由 CSS 改 grid 列宽；work 模式仍走 `.side{width:52px}` 原规则。 */
+  const body = document.querySelector(".body");
+  const app = document.querySelector(".app");
+  const applyFold = function(on){
+    side.classList.toggle("collapsed", on);
+    if(body) body.classList.toggle("side-collapsed", on);
+    if(app) app.classList.toggle("side-collapsed", on);
+  };
   side.addEventListener("click", (e)=>{
     if(!e.target || !e.target.closest || !e.target.closest("#sideToggle")) return;
-    side.classList.toggle("collapsed");
+    applyFold(!side.classList.contains("collapsed"));
     try{ localStorage.setItem(PREFIX+"sideCollapsed", side.classList.contains("collapsed")?"1":"0"); }catch(_){
       /* v3.7.102：写不进去的后果只是下次进来恢复展开，属可接受降级，但要留痕供排查。 */
       try{
@@ -27146,8 +27401,16 @@ function setupSideToggle(){
       }catch(_e2){}
     }
   });
-  /* 读失败按「未持久化」处理（保持展开），是预期降级，不登记诊断。 */
-  try{ if(localStorage.getItem(PREFIX+"sideCollapsed")==="1") side.classList.add("collapsed"); }catch(_){}
+  /* 读失败按「未持久化」处理（保持展开）是可接受降级，但**不能静默**：
+     隐私模式/配额异常下用户每次进来都丢失折叠偏好，必须留一条 warn 供排查（与写失败同源）。 */
+  try{ if(localStorage.getItem(PREFIX+"sideCollapsed")==="1") applyFold(true); }catch(_){
+    try{
+      if(!_sideFoldWarned && typeof pushDiag === "function"){
+        _sideFoldWarned = true;
+        pushDiag("warn", "sideCollapsed read failed: "+((_&&_.message)||_), {where:"setupSideToggle"});
+      }
+    }catch(_e2){}
+  }
 }
 
 /* v1.15：应用独立页面——日历/天气/闹钟/萌宠/指针特效 五个应用卡片入口
@@ -31459,7 +31722,7 @@ function _tasksHeadHtml(){
   return `<div class="card page-head-card"><header class="page-head sc-page-head">
     <span class="ph-ic" aria-hidden="true">${SIDE_MENU_ICONS.tasks||""}</span>
     <div class="ph-tx"><h2>${t("tasksPage.title", "任务")}</h2><p class="sub">${t("tasksPage.sub", "跨场景任务中心——所有场景的任务在这里统一管理")}</p></div>
-    <div class="ph-actions"><button type="button" class="addbtn sm" id="btnBackHome" data-sc="muted">${t("tasksPage.backHome", "← 主页")}</button></div>
+    <div class="ph-actions"><button type="button" class="addbtn sm" id="tasksTimelineBtn" data-sc="muted">${t("side.menu.timeline", "时间轴")}</button><button type="button" class="addbtn sm" id="btnBackHome" data-sc="muted">${t("tasksPage.backHome", "← 主页")}</button></div>
   </header></div>
   <nav class="set-nav tasks-view-tabs" aria-label="${t("tasksPage.aria", "任务视图切换")}">${tabs.map(([k,l])=>
     `<button type="button" class="set-nav-btn tasks-tab${_tasksView===k?" active":""}" data-tasks-view="${k}">${l}</button>`).join("")}</nav>`;
@@ -31470,6 +31733,9 @@ function _bindTasksTabs(){
   });
   const backHome = $("#btnBackHome");
   if(backHome) backHome.onclick = function(){ setActive("overview"); render(); }; // v3.1.2：内联 onclick 被 sanitizeHtml 剥离导致死按钮，改 id+绑定
+  /* 批九：时间轴从桌面导航收起后，任务页头保留直达入口（不删功能、不靠猜路径）。 */
+  const timelineBtn = $("#tasksTimelineBtn");
+  if(timelineBtn) timelineBtn.onclick = function(){ setActive("timeline"); render(); };
 }
 
 /* ---------- 工具箱（19 工具 + 插件小件 + 功能入口，分类 + 搜索） ---------- */
@@ -31580,6 +31846,11 @@ function renderToolboxPage(){
    v2.4.0：内置插件随启动自动注册（enabled=false），商店按「未注册/已装未启用/启用中」
    三态渲染统一卡片列表；自定义导入插件走同一列表。 */
 let _storeCat = "全部"; // v3.1：商店页分类筛选：全部/效率/功能/场景/其他
+/* 批九（用户「商店里面有插件、技能、连接器等等」）：商店升为能力中枢四视图。
+   默认仍落「插件」，既有分类筛选与安装/启停/卸载路径零改；其余三视图只读真数据：
+   技能 = listEnabledSkills()（真注入提示词），连接器 = mcpServers()（已启用且 URL 合法），
+   工具 = TOOLBOX_EXTRAS（与工具箱同一份 run 闭包，不复制行为）。 */
+let _storeView = "plugins";
 const PLUGIN_CATEGORIES = { // v3.1：内置插件分类映射
   "pomodoro":"效率", "habit-tracker":"效率", "focus-timer":"效率",
   "reading":"场景", "finance":"场景",
@@ -31627,15 +31898,68 @@ function renderStorePage(){
   const storeCatKeyMap = {"全部":"all","效率":"efficiency","功能":"func","场景":"scene","其他":"other"};
   const storeNav = `<nav class="set-nav store-cat-nav" aria-label="${t("storePage.aria", "商店分类筛选")}">` +
     storeCats.map(c=>`<button type="button" class="set-nav-btn${_storeCat===c?" active":""}" data-store-cat="${c}">${t("store.cat."+storeCatKeyMap[c], c)}</button>`).join("") + `</nav>`;
+  /* 批九：四视图（插件 / 技能 / 连接器 / 工具）——把原先散在侧栏的「工具箱」与「技能/MCP」
+     收进商店，导航才能从 10 收到 5。技能与连接器只读真实数据，不造占位列表。 */
+  const viewDefs = [
+    ["plugins", t("store.view.plugins", "插件")],
+    ["skills", t("store.view.skills", "技能")],
+    ["connectors", t("store.view.connectors", "连接器")],
+    ["tools", t("store.view.tools", "工具")],
+  ];
+  const viewNav = `<nav class="set-nav store-view-nav" aria-label="${t("store.view.aria", "商店能力分类")}">` +
+    viewDefs.map(([k,l])=>`<button type="button" class="set-nav-btn${_storeView===k?" active":""}" data-store-view="${k}">${l}</button>`).join("") + `</nav>`;
+  let contentHtml = "";
+  if(_storeView === "plugins"){
+    contentHtml = storeNav
+      + `<div class="store-list">${filteredRows.map(pCard).join("") || '<div class="empty">' + t("storePage.empty", "暂无可用的插件") + '</div>'}</div>`;
+  } else if(_storeView === "skills"){
+    let skills = [];
+    try{ skills = (typeof listEnabledSkills === "function") ? listEnabledSkills() : []; }catch(_e){ skills = []; }
+    contentHtml = `<div class="store-list">` + (skills.length ? skills.map(sk=>`
+      <div class="card app-card store-card" role="group" aria-label="${esc(sk.name)}">
+        <div class="app-card-tx u-flex-1 u-min-w-0">
+          <div class="app-card-name">${esc(sk.name)} <span class="sub u-m-0 u-inline">${t("store.skill.enabled", "已启用")}</span></div>
+          <div class="app-card-desc">${esc(sk.desc || t("store.skill.noDesc", "无描述"))}</div>
+          ${sk.trigger && sk.trigger.length ? `<div class="app-card-desc u-text-faint">${t("store.skill.triggers", "触发词：")}${esc(sk.trigger.slice(0,6).join("、"))}</div>` : ""}
+        </div>
+      </div>`).join("") : `<div class="empty">${t("store.skill.empty", "还没有启用技能。技能会随 AI 提示词注入，可在 AI 页管理。")}</div>`) + `</div>`;
+  } else if(_storeView === "connectors"){
+    let mcp = [];
+    try{ mcp = (typeof mcpServers === "function") ? mcpServers() : []; }catch(_e){ mcp = []; }
+    contentHtml = `<div class="store-list">` + (mcp.length ? mcp.map(m=>{
+      let host = m.url;
+      try{ host = new URL(m.url).host; }
+      catch(_e){ host = String(m.url || "").replace(/^[a-z][\w+.-]*:\/\//i, "").split("/")[0]; }
+      const auth = m.authType === "none" ? t("store.mcp.noAuth", "无需认证") : (m.authType === "bearer" ? "Bearer" : t("store.mcp.customHeader", "自定义头"));
+      return `<div class="card app-card store-card" role="group" aria-label="${esc(m.name)}">
+        <div class="app-card-tx u-flex-1 u-min-w-0">
+          <div class="app-card-name">${esc(m.name)} <span class="sub u-m-0 u-inline">${esc(auth)}</span></div>
+          <div class="app-card-desc">${esc(host)}</div>
+          <div class="app-card-desc u-text-faint">${t("store.mcp.tools", "可用工具：")}${m.allow.length}</div>
+        </div>
+      </div>`;
+    }).join("") : `<div class="empty">${t("store.mcp.empty", "还没有连接器。MCP 服务器在 AI 页配置，启用且 URL 合法后显示在这里。")}</div>`) + `</div>`;
+  } else {
+    const tools = TOOLBOX_EXTRAS.slice(0, 8);
+    contentHtml = `<div class="store-list">` + tools.map(x=>`
+      <div class="card app-card store-card" role="group" aria-label="${esc(x.name)}">
+        <div class="app-card-tx u-flex-1 u-min-w-0">
+          <div class="app-card-name">${esc(x.name)}</div>
+          <div class="app-card-desc">${esc(x.desc || "")}</div>
+        </div>
+        <div class="store-ops"><button type="button" class="addbtn sm" data-sc="accent" data-store-tool="${esc(x.id)}">${t("store.tool.open", "打开")}</button></div>
+      </div>`).join("") + `</div>
+      <div class="store-tools-more"><button type="button" class="addbtn sm" data-sc="muted" id="storeOpenToolbox">${t("store.tool.all", "打开完整工具箱")}</button></div>`;
+  }
   $("#main").innerHTML = sanitizeHtml(
     `<div class="card page-head-card"><header class="page-head sc-page-head">
       <span class="ph-ic" aria-hidden="true">${UI_ICONS.shop}</span>
-      <div class="ph-tx"><h2>${t("storePage.title", "商店")}</h2><p class="sub">${t("storePage.sub", "插件与应用市场——安装后按类型自动挂载到对应位置")}</p></div>
-      <button type="button" class="addbtn sm" id="storeImportBtn" data-sc="accent">${t("storePage.importBtn", "导入插件 JSON")}</button>
+      <div class="ph-tx"><h2>${t("storePage.title", "商店")}</h2><p class="sub">${t("storePage.sub2", "插件 / 技能 / 连接器 / 工具——能力都从这里装和管")}</p></div>
+      ${_storeView === "plugins" ? `<button type="button" class="addbtn sm" id="storeImportBtn" data-sc="accent">${t("storePage.importBtn", "导入插件 JSON")}</button>` : ""}
       <button type="button" class="addbtn sm" id="btnBackHome" data-sc="muted">${t("storePage.backHome", "← 主页")}</button>
     </header></div>
-    ${storeNav}
-    <div class="store-list">${filteredRows.map(pCard).join("") || '<div class="empty">' + t("storePage.empty", "暂无可用的插件") + '</div>'}</div>`);
+    ${viewNav}
+    ${contentHtml}`);
   const backHome = $("#btnBackHome");
   if(backHome) backHome.onclick = function(){ setActive("overview"); render(); }; // v3.1.2：内联 onclick 被 sanitizeHtml 剥离导致死按钮，改 id+绑定
   $$("#main [data-store-install]").forEach(b=>{
@@ -31670,6 +31994,21 @@ function renderStorePage(){
   $$("#main .store-cat-nav .set-nav-btn").forEach(b=>{
     b.onclick = ()=>{ _storeCat = b.getAttribute("data-store-cat")||"全部"; renderStorePage(); };
   });
+  // 批九：四视图切换（插件 / 技能 / 连接器 / 工具）
+  $$("#main [data-store-view]").forEach(b=>{
+    b.onclick = ()=>{ _storeView = b.getAttribute("data-store-view")||"plugins"; renderStorePage(); };
+  });
+  // 工具视图：直接复用 TOOLBOX_EXTRAS 的 run 闭包，不复制行为；无 run 的回到完整工具箱
+  $$("#main [data-store-tool]").forEach(b=>{
+    b.onclick = ()=>{
+      const id = b.getAttribute("data-store-tool");
+      const it = TOOLBOX_EXTRAS.filter(x=>x.id===id)[0];
+      if(it && typeof it.run === "function"){ it.run(); return; }
+      setActive("toolbox"); render();
+    };
+  });
+  const openToolbox = $("#storeOpenToolbox");
+  if(openToolbox) openToolbox.onclick = ()=>{ setActive("toolbox"); render(); };
   appendFoot();
 }
 
@@ -36307,7 +36646,9 @@ function _updateRecVScroll(viewport, sc){
     buffer: VIRTUAL_SCROLL_BUFFER
   });
   const recs = getRec(sc);
-  const rec = SCENARIOS[sc].record;
+  /* 批九防御：无工作区会话用 sc="" 分组，渲染场景已收敛回合法场景；
+     但历史脏 localStorage 仍可能把空 sc 带到这里，别让虚拟滚动再炸整页。 */
+  const rec = (SCENARIOS[sc] && SCENARIOS[sc].record) || { fields: [] };
   const items = viewport.querySelector(".vscroll-items");
   if(!items) return;
   const html = recs.slice(range.start, range.end).map(r => _renderRecItem(r, rec)).join("");
@@ -47971,6 +48312,14 @@ $("#btnHelp").onclick = renderHelp;
 /* 顶栏下载按钮：复用 doExport（导出 JSON 备份） */
 const _btnDownload = $("#btnDownload"); if(_btnDownload) _btnDownload.onclick = doExport;
 $("#btnRecover").onclick = recoverAutoBackup;
+/* 批九：回收站从桌面导航收起后，设置「数据管理」卡保留直达入口（先退出设置抽屉页再切页）。 */
+const _btnOpenRecycle = $("#btnOpenRecycle");
+if(_btnOpenRecycle) _btnOpenRecycle.onclick = function(){
+  try{ AppBridge._moveDrawerHome(); }catch(_e){ /* 抽屉复位失败仍尝试切页，不阻断 */ }
+  const _dw = $("#drawer"); if(_dw){ _dw.classList.remove("drawer-page"); _dw.classList.remove("open"); }
+  setActive("recycle"); render();
+};
+
 
 /* ---------- v1.9.7 侧栏「工具」组：专注工具浮层（v1.15 更多菜单已移除，此处仅剩 pomo/tracker 浮层） ---------- */
 /* v2.3.1：浮层锚定按钮选择器——v2.1.0 两级菜单后按钮为 data-menu="plug-pomo/plug-tracker"，
