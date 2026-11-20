@@ -75,6 +75,30 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
      直接常驻聊天」明确覆盖 11-02「主客颠倒」、11-16「分屏」与批六「顶部标签页往返」）。
      新判据钉死：chat 占满中栏主体、#main 无入口可达、tabbar/tab 节点彻底不存在。
      产品裁决反转而非放宽——旧判据里的往返路径本身被用户删除，不能留作「功能没删」的挡箭牌。 */
+  test("批十：无 active 偏好时默认落聊天首页，点页面/对话可往返", async ({ page }) => {
+    /* 这是产品默认形态的唯一守护：公共 fixture 会注入 overview（页面前提），
+       这里显式删掉，模拟真实新用户打开。 */
+    await page.addInitScript(() => { try { localStorage.removeItem("wb_agent_active"); } catch (e) { /* ignore */ } });
+    await page.goto(APP_URL);
+    await page.waitForFunction(() => document.querySelector(".body").classList.contains("chat-home"), null, { timeout: 15_000 });
+    const home = await page.evaluate(() => ({
+      main: getComputedStyle(document.getElementById("main")).display,
+      chatH: Math.round(document.getElementById("chat").getBoundingClientRect().height),
+      form: getComputedStyle(document.getElementById("chatForm")).display,
+    }));
+    expect(home.main, "默认聊天首页 #main 应让位").toBe("none");
+    expect(home.chatH, "聊天气泡区应占中栏").toBeGreaterThan(300);
+    expect(home.form, "输入行应可见").not.toBe("none");
+
+    await page.click('#side .nav-item[data-sc="tasks"]');
+    await page.waitForFunction(() => !document.querySelector(".body").classList.contains("chat-home"));
+    expect(await page.evaluate(() => getComputedStyle(document.getElementById("main")).display), "点任务应回页面视图").not.toBe("none");
+
+    await page.click('#side .nav-item[data-chat="1"]');
+    await page.waitForFunction(() => document.querySelector(".body").classList.contains("chat-home"));
+    expect(await page.evaluate(() => getComputedStyle(document.getElementById("main")).display), "点对话应回聊天首页").toBe("none");
+  });
+
   test("常驻纯聊天：chat 占满中栏、tabbar 与工作区入口整条退役（产品裁决反转）", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#main", { timeout: 15_000 });
@@ -176,14 +200,14 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
     expect(g.foot.y, "用户/设置应在导航区下方（左栏最底部）").toBeGreaterThanOrEqual(g.nav.y);
     expect(g.side.y + g.side.h - (g.foot.y + g.foot.h), "用户/设置应贴左栏底缘（留白 ≤20px）").toBeLessThanOrEqual(20);
     expect(g.foot.y + g.foot.h, "用户/设置不得溢出视口底").toBeLessThanOrEqual(g.vh + 1);
-    expect(g.footLabels, "同一行应为用户 + 设置").toEqual(["登录", "设置"]);
+    expect(g.footLabels, "同一行应为用户 + 帮助 + 设置（批十帮助从顶栏移入）").toEqual(["登录", "帮助", "设置"]);
     expect(g.railSecs, "右栏五区顺序＝todo/文件/会话/大模型用量/运行与能力")
       .toEqual(["today", "files", "sessions", "usage", "agent"]);
     expect(g.usagePane, "大模型用量 pane 应在位").toBe(true);
     expect(g.scrollW, `1440 宽屏零横向溢出（实测 ${g.scrollW}）`).toBeLessThanOrEqual(g.vw);
   });
 
-  test("批九：code 模式点左栏页面入口先回 work，AI 固定页真打开抽屉", async ({ page }) => {
+  test("批九/批十：code 模式点页面入口先回 work，点「对话」回聊天首页", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#side .nav-item", { timeout: 15_000 });
     await waitMainRendered(page);
@@ -204,21 +228,26 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
 
     await page.evaluate(() => window.setUIMode("code"));
     await waitMainRendered(page);
-    await page.click("#sideBtnAi");
-    await waitMainRendered(page);
-    const afterAi = await page.evaluate(() => {
-      const d = document.getElementById("drawer");
+    await page.click('#side [data-chat="1"]');
+    await page.waitForFunction(() => document.querySelector(".body").classList.contains("chat-home"));
+    const afterChat = await page.evaluate(() => {
+      const main = document.getElementById("main");
+      const chat = document.getElementById("chat");
       return {
         code: document.querySelector(".body").classList.contains("code-mode"),
-        open: d.classList.contains("open"),
-        page: d.getAttribute("data-page")
+        chatHome: document.querySelector(".body").classList.contains("chat-home"),
+        mainDisplay: getComputedStyle(main).display,
+        chatDisplay: getComputedStyle(chat).display,
+        chatH: Math.round(chat.getBoundingClientRect().height),
+        formDisplay: getComputedStyle(document.getElementById("chatForm")).display
       };
     });
-    expect(afterAi.code, "点 AI 后应已回 work 模式").toBe(false);
-    /* AI 配置历史上就是设置抽屉的独立页（_showDrawerPage("ai") 会刻意隐藏 #main），
-       所以这里钉抽屉真打开且落在 ai 页，不钉 #main 可见。 */
-    expect(afterAi.open, "AI 页应真打开抽屉").toBe(true);
-    expect(afterAi.page, "抽屉应落在 AI 页").toBe("ai");
+    expect(afterChat.code, "点「对话」后应回 work 形态").toBe(false);
+    expect(afterChat.chatHome, "应进入聊天首页").toBe(true);
+    expect(afterChat.mainDisplay, "聊天首页 #main 应让位").toBe("none");
+    expect(afterChat.chatDisplay, "聊天气泡区应常驻").toBe("flex");
+    expect(afterChat.chatH, "聊天气泡区应有实质高度").toBeGreaterThan(200);
+    expect(afterChat.formDisplay, "输入行应可见").not.toBe("none");
   });
 
   test("批九：左右栏折叠是真收起（含 agent-dock 残留回归），把手能再展开", async ({ page }) => {

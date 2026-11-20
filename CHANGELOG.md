@@ -3,6 +3,19 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-19 · **主流 Agent 化批十：中间默认聊天区 + AI 助手折叠只留标题栏 + 帮助迁左栏底部（用户标注图三问裁定）**
+
+_用户标注截图三处：中间主区（「这里应该是空白的，如果不是空白，那么聊天气泡怎么显示？？」）、底部 AI 助手折叠键（折叠后仍留输入区、实测 168px 遮正文）、顶栏「帮助」。裁定：① 中间默认就是聊天区；② 折叠只留一条标题栏；③ 帮助移左栏底部与设置并列。_
+
+- **中间默认聊天区（`src/data-links.js` + `src/render-entry.js` + `agent-workbench.html`）**：新增 `chatHome` 状态——不是第二套状态机，`active` 仍是唯一事实源，它只回答「中栏显示气泡还是页面」。页面键（`overview/stats/tasks/toolbox/store/chainpage/timeline/workbench/auth*`）一律落页面；场景键默认落聊天（聊天内容仍按该场景会话读取）。`setActive()`＝显式页面导航，自动退出聊天；`showChatHome()` 是唯一回聊天的入口；`switchSession` 选中会话＝回到对话（不走 `setActive`，避免把自己的状态机翻掉）。启动判定：无偏好/场景键 → 聊天，页面键 → 页面（`ics-import-render` 预置 `tasks` 的刷新恢复不受影响）。CSS 侧 `.body.chat-home` 与 code 模式同一套几何（`#main` 让位、`#chatPanel` 占满中栏、折叠键隐藏、输入行贴底），但只在 work 形态生效且 ≥768px（窄屏保持抽屉形态）。
+- **导航 AI→对话（`src/render-widgets.js` + `src/core-i18n.js`）**：桌面 5 项变为「对话 / 主页 / 任务 / 工作台 / 商店」。AI 固定页不再占一个导航目的地——AI 配置的真实入口是聊天输入区模型选择器（未配置任何 profile 时点它直达 AI 配置页，`openAiPage` 链路原样保留）与设置 AI 页。`_buildSideMenu` 数据树仍 10 项（移动端底栏/抽屉用全量），`side.menu.chat` / `side.group.chat` 新增 zh/en；「待配置」角标随对话入口走。
+- **AI 助手折叠只留标题栏（`agent-workbench.html`）**：`.chat-panel.collapsed .chat-input-area{display:none}`——折叠后高度从 168px 降到约 46px，历史/工具条/输入区全收起，唯一展开按钮在标题栏（藏了就打不开的旧契约不变）。聊天首页不受影响（`chat-home` 规则把输入区显式放回）。
+- **帮助迁左栏底部（`src/render-widgets.js` + `agent-workbench.html`）**：`.side-foot` 变三键「登录 / 帮助 / 设置」，帮助复用顶栏同一枚 `#btnHelpMenu` 触发器（异步开——本次点击还会冒泡到 document 委托，同步开会被同一轮 `_helpMenuClose()` 当场关掉，实测菜单不出现）；桌面端顶栏入口隐藏、菜单 `position:fixed` 贴左下弹出，窄屏保留顶栏入口（左栏是抽屉）。
+- **分层契约（lint:layers 抓出并当场修）**：`showChatHome` 首版在数据层直接调 `setUIMode`（data-links→render-widgets 逆层 1 条，基线外新增 → 失败）。已把模式切换上移到导航委托（渲染层），数据层只管状态与 `render()`（data-links→render-entry 为基线既有边）。顺手修掉一次 Edit 锚点过短造成的函数截断（双定义 SyntaxError 风险），以完整锚点重建。
+- **判据随裁决更新（非放宽）**：`tests/e2e/_fixture.js` 缺省注入 `wb_agent_active="overview"`——绝大多数 e2e 写于「打开就是页面」时代，产品默认聊天由 `ui-mode-layout` 专门用例独占守护（与 uimode 注入同手法，只缺省注入、不覆盖 spec 预置值）；`layout-v2` 折叠断言改「输入区随历史收起 + 折叠键必须可见」；`ui-mode-layout` AI 固定页用例改钉「code→点对话→聊天首页」往返 + 新增默认落地用例；`workflow` 设置入口不变、AI 配置步改走「对话→模型选择器→配置页」真路径；`nav-pages-smoke` 侧栏清单加 `data-chat` 分支（对话不是页面，落聊天首页不套页面探针）；`ia-three-zones` 目的地契约 AI→对话；`ui-consistency` / `p1c-a11y` / `form-a-menu` / `rail-sections` 判据零改动复跑通过（底部高亮查询本就锚定 `[data-foot="settings"]`，新增帮助键不影响）。
+- **全量单测抓出的两处收尾（本批引入，均已修）**：① `i18n-dead-keys` 报 `side.group.assistant` 成死键——导航组名本批由「助手」改「对话」，`src/core-i18n.js` 里 `side.group.chat` 已新增，但旧键 zh/en 两处忘删；删除旧键（无其它消费处，非豁免动态拼接）。② `onboarding` 4 例 boot 级断言 `expected false to be true`（`waitFor(#taskForm)` 超时 / `_finishOnboarding` 后主界面信号为 null）——**真回归，不是测试前提问题**：`render()` 的 chatHome 分流首版漏排 code/design 模式，而单测 `loadApp()` 默认 `uimode=code`（宽屏默认，见 `_uiMode()`），CSS 的 `.body.chat-home:not(.code-mode):not(.design-mode)` 本就在 code/design 不接管中栏，JS 却提前 `renderChatHome(); return`，导致 code 模式下场景 DOM（`#taskForm`）根本不渲染、CSS 又没隐藏 `#main` ⇒ 空白中栏。（曾误判为「默认聊天态下 #taskForm 本就不该渲染」，加 `loadPageApp()` 注入 overview 试修——探针实测 overview 页同样无 `#taskForm`，证伪后**回退测试改动**，改为在产品代码修分流。）修法：`render-entry.js` 加 `_modeBlocks` 排除 code/design，`chatHome` 几何只在 work 形态生效，与 CSS 规则对齐。测试判据零改动、不放宽。
+- **验证**：`npm run lint` + `lint:breakpoints/layers/tokens/empty-catch/icons` 全 rc=0；`git diff --check` rc=0；`check-source-state` 源码态（40/40）；`claim-check` 15 路径 rc=0；定向单测 79/79；全量单测 5 红文件中 **2 个文件为本批引入且已修**（`i18n-dead-keys` / `onboarding`），另 3 个文件＝验证副本本机环境红（`server-sms-providers` 缺 `bcryptjs`、`prod-startup-guard` ×3 缺 `express`、`claim-check-ci` ×2 因副本无 git 历史——CI 对应腿全绿，判据零放宽）；真机 jsdom 探针确认 work 形态默认 chat-home（`#main` 让位、气泡占满），code 形态 `#taskForm` 恢复；e2e 本机受沙箱批量删除守卫与多会话 CPU 饥饿干扰，正式 e2e 判据交 CI。
+
 ### 2026-11-18 · **主流 Agent 化批九：左右栏可折叠 + 桌面导航 10→5 + 商店四视图 + 左栏 sessions 分组（用户四问）**
 
 _用户四问：①「左侧边栏、右侧边栏都可以折叠」；②「导航区差不多五个就行，现有的很多会不会都多余了」；③「商店里面有插件、技能、连接器等等」；④「导航区下面的 sessions 区呢？而且 session 区里面应该可以分工作区的、无工作区任务的」。本批覆盖批三「左栏最近会话」与批八「会话只在右栏管理」的旧裁决。_

@@ -706,6 +706,13 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .help-menu{position:absolute;top:calc(var(--mb-h) - 2px);right:var(--space-2);z-index:var(--z-popover);
   display:flex;flex-direction:column;min-width:180px;padding:var(--space-1);
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-2)}
+/* 批十（用户「帮助放左下角，与设置并列」）：桌面隐藏顶栏入口，菜单贴左栏底部弹出；
+   窄屏仍保留顶栏入口（左栏是抽屉，底部 foot 不可见）。 */
+@media(min-width:768px){
+  #btnHelpMenu{display:none!important}
+  .help-menu{position:fixed;left:var(--space-2);right:auto;top:auto;
+    bottom:calc(56px + env(safe-area-inset-bottom,0px))}
+}
 .help-menu[hidden]{display:none}
 .help-item{min-height:28px;padding:0 var(--space-2);border:0;background:transparent;color:var(--text);
   font-size:var(--fs-xs);text-align:left;border-radius:var(--radius-sm);cursor:pointer}
@@ -5481,6 +5488,24 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   .chat-panel.collapsed{width:auto;max-height:none;overflow:visible;transform:none}
   .chat-panel.collapsed .chat,
   .chat-panel.collapsed .chat-toolbar{display:none}
+  /* 批十（用户「折叠只留一条标题栏」）：输入区也收起。此前折叠后仍留 168px，
+     在 1080 高下会压住正文底部；展开仍由标题栏同一枚按钮负责。 */
+  .chat-panel.collapsed .chat-input-area{display:none}
+  /* 批十（用户「中间默认就是聊天区」）：中栏 = 气泡 + 输入行，#main 让位；
+     与 code 模式同一套几何，但只在 work 形态生效（code/design 已有各自规则）。 */
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.toolbar-row{display:none}
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.main{display:none}
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel{
+    position:static;flex:1 1 auto;max-height:none;min-height:0;overflow:hidden;border-top:none}
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel .chat,
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel.collapsed .chat{
+    display:flex;flex:1 1 auto;max-height:none;min-height:0;overflow-y:auto}
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel .chat-toolbar,
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel.collapsed .chat-toolbar{display:flex}
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel .chat-input-area,
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel.collapsed .chat-input-area{
+    display:block;max-height:none}
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel #chatPanelCollapse{display:none}
   .chat-panel-rail{display:none!important}
   .main{flex:1 0 auto}
   /* 坞头：标题占满，动作靠右；折叠键在坞里用「上/下」表达展开/收起（原左右箭头是侧栏语义） */

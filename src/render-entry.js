@@ -56,6 +56,20 @@ function renderMetricsStrip(){
 /* v3.7.15（解耦 S2b）：把渲染调度器注册到桥接，供低层受控调用（见 docs/decoupling-plan.md） */
 AppBridge.render = render;
 
+/* 批十：聊天首页（中栏只有气泡 + 输入行）。不新开渲染器——复用 renderChat /
+   renderChatDisabled 这唯一数据源；右栏 sessions 同步刷新，避免切会话后列表滞后。 */
+function renderChatHome(){
+  appendFoot(); // 状态栏版本/待办/AI 状态与页面视图同源，聊天首页也必须有
+  try{
+    const cfg = getCfg();
+    if(cfg.enabled) renderChat();
+    else renderChatDisabled();
+  }catch(e){
+    try{ if(typeof pushDiag === "function") pushDiag("error", "chatHome render: "+((e&&e.message)||e), {where:"renderChatHome"}); }catch(_e){}
+  }
+  try{ if(typeof renderTaskRail === "function") renderTaskRail(); }catch(_e){ /* 右栏刷新失败不阻断聊天 */ }
+}
+
 function render(){
   try{
     // v1.9.4：切出回收站页面时移除铺满类（openRecycle 会重新添加）
@@ -71,6 +85,17 @@ function render(){
     const _help = $("#helpPage"); if(_help) _help.remove();
     uiView = "main"; // v1.9.3g：回到主视图，侧栏高亮据此渲染（场景/总览/统计/回收站）
     AppBridge.renderSide();
+    /* 批十（用户「中间默认就是聊天区」）：chatHome 时中栏只放聊天气泡，#main 让位。
+       窄屏仍走原页面/聊天抽屉：聊天区是桌面三栏形态，390 下强切会变成空壳。
+       ⚠️ 必须排除 code/design：CSS 的 `.body.chat-home:not(.code-mode):not(.design-mode)`
+       只在 work 形态接管中栏；code 模式自身已是纯聊天（批九裁定），design 模式是画布。
+       若 JS 在这里不分模式就 return，code/design 下的场景 DOM（#taskForm 等）根本不渲染，
+       而 CSS 又没隐藏它 → 空白中栏。批十首版漏了这层，onboarding boot 级用例全红抓出。 */
+    const _bodyEl = document.querySelector(".body");
+    const _modeBlocks = !!(_bodyEl && (_bodyEl.classList.contains("code-mode") || _bodyEl.classList.contains("design-mode")));
+    const _chatHomeNow = !!chatHome && !_modeBlocks && (window.innerWidth || 0) >= 768;
+    if(_bodyEl) _bodyEl.classList.toggle("chat-home", _chatHomeNow);
+    if(_chatHomeNow){ renderChatHome(); return; }
     /* 批八：tab 条已删，视图注册表只在工作台 tile / 数据层 API 中使用，render 不再重绘 UI tab。 */
     /* 首次渲染后武装通用撤销：此前（seed/迁移）的快照清掉，也不弹「可撤销」提示 */
     if(typeof armUndo === "function") armUndo();

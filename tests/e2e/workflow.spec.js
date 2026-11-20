@@ -71,7 +71,11 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
        `#main .wb-tile` 永远等不到（CI 6 次 timeout）。这里显式声明 work 前提——与其它 spec 的
        公共 fixture 同手法，只在缺省时注入、不覆盖用例自己预置的值。零改任何断言，是前提显式化。 */
     await page.addInitScript(() => {
-      try { if (localStorage.getItem("wb_agent_uimode") === null) localStorage.setItem("wb_agent_uimode", JSON.stringify("work")); } catch (e) { /* ignore */ }
+      try {
+        if (localStorage.getItem("wb_agent_uimode") === null) localStorage.setItem("wb_agent_uimode", JSON.stringify("work"));
+        /* 批十：本 spec 是页面级长流程，显式从主页起步；产品默认聊天首页由 ui-mode-layout 守护。 */
+        if (localStorage.getItem("wb_agent_active") === null) localStorage.setItem("wb_agent_active", JSON.stringify("overview"));
+      } catch (e) { /* ignore */ }
     });
     page.on("dialog", async (d) => {
       try { await d.accept(); } catch (e) { /* ignore */ }
@@ -89,8 +93,8 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       // 侧边栏 #side 是静态 HTML，启动时立即可用；但主区 render() 是异步（startup IIFE）
       // 等待侧边栏出现 nav-item（renderSide 执行后的标志）
       await page.waitForSelector("#side .nav-item", { timeout: 15_000 });
-      // 等待 onboarding modal 或主区看板出现（二者必居其一）
-      await page.waitForSelector("#onboardModal, #taskForm", { timeout: 10_000 });
+      // 等待 onboarding modal / 聊天面板 / 场景看板出现（批十默认落聊天区；页面视图下 #chat 隐藏是常态，等面板本体）
+      await page.waitForSelector("#onboardModal, #taskForm, #chatPanel", { timeout: 10_000 });
     });
 
     // ---------- 2. onboarding 跳过 ----------
@@ -101,8 +105,8 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       // v3.7.68：「跳过」直接结束引导（旧语义是翻到下一步，要连点三次才脱身），所以只点一次
       await page.locator("#onboardSkip").click();
       await expect(page.locator(".onboard-modal"), "跳过后不应再弹下一步").toHaveCount(0);
-      // 引导完成后主区渲染，等待任务表单出现
-      await page.waitForSelector("#taskForm", { timeout: 10_000 });
+      // 引导完成后默认落聊天首页；后面 switchScene 会切到工作台 office tile 再等 #taskForm
+      await page.waitForSelector("#chat, #taskForm", { timeout: 10_000 });
     });
 
     // ---------- 3. 创建任务 ----------
@@ -213,9 +217,12 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
 
     // ---------- 9. AI 对话（mock） ----------
     await test.step("启用 AI 并进行 mock 对话", async () => {
-      /* AI 配置自 v1.15 起是**独立页**（不在设置抽屉里）：入口是侧栏「AI」项 [data-menu="feat-ai"]。
-         本机 file:// 实测：点该入口后 #cfgEnabled/#cfgName/#cfgBase/#cfgKey/#cfgModel/#cfgSave 全部可见。 */
-      await page.click('#side .nav-item[data-menu="feat-ai"]');
+      /* 批十：AI 固定页不再占导航（导航第 1 项是「对话」）。AI 配置的真实入口是
+         聊天输入区的模型选择器：未配置任何 profile 时点它直达 AI 配置页。 */
+      await page.click('#side [data-chat="1"]');
+      await page.waitForFunction(() => document.querySelector(".body").classList.contains("chat-home"));
+      await page.waitForSelector("#chatModelSelect", { state: "visible", timeout: 10_000 });
+      await page.click("#chatModelSelect");
       await page.waitForSelector("#cfgEnabled", { state: "visible", timeout: 10_000 });
       await page.check("#cfgEnabled");
       // 填写 profile 表单
@@ -290,6 +297,11 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
         })
       );
 
+      /* 批十：页面视图下折叠坞只留标题栏，输入行随历史一起收起；
+         真实用户路径是点左栏「对话」回聊天首页再输入。 */
+      await page.click('#side [data-chat="1"]');
+      await page.waitForFunction(() => document.querySelector(".body").classList.contains("chat-home"));
+      await page.waitForSelector("#chatForm", { state: "visible", timeout: 10_000 });
       // 输入消息并发送（输入框为 textarea，兼容选择器）
       await page.fill('#chatForm [name="msg"]', "你好");
       await page.click('#chatForm button[type="submit"]');

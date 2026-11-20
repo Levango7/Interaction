@@ -5,8 +5,8 @@
  * 这类 IA 改动的风险不是"少渲染一个按钮"，而是**某个入口被悄悄丢掉**（用户以为功能没了）。
  * 所以这里钉三件事：
  *   ① 组 id 恰好是 today/work/assistant/more（桌面侧栏与移动底栏共用同一份菜单树）；
- *   ② 17 个入口一个不少（含 7 个场景 + 主页/任务/时间轴/联动/AI/工具箱/商店/回收站/设置/说明）；
- *   ③ 每个节点都有"能去哪"的表达（sc / menuId / data-aipage|data-gear|data-help 之一），
+ *   ② 10 个入口一个不少（含 7 个场景 + 主页/任务/时间轴/联动/对话/工具箱/商店/回收站/设置/说明）；
+ *   ③ 每个节点都有"能去哪"的表达（sc / menuId / data-chat|data-aipage|data-gear|data-help 之一），
  *      防止新增节点忘了接线、只在菜单里占位。
  * 移动端底栏的元素数量与 gid 也在这里对一遍（jsdom 能渲染 #mobBar）。
  */
@@ -35,7 +35,7 @@ describe("三区导航契约", () => {
     expect(nodes.length, "10 个入口一个都不能丢（17 - 7 场景 - 联动 + 1 工作台）").toBe(10);
 
     const hasDest = (n) =>
-      !!(n.sc || n.menuId || /data-(aipage|gear|help)/.test(n.extraAttrs || ""));
+      !!(n.sc || n.menuId || /data-(chat|aipage|gear|help)/.test(n.extraAttrs || ""));
     const missing = nodes.filter((n) => !hasDest(n)).map((n) => n.id);
     expect(missing, "以下节点没有任何目的地（占位死项）：" + missing.join(",")).toEqual([]);
 
@@ -50,17 +50,18 @@ describe("三区导航契约", () => {
     for (const sc of ["overview", "tasks", "timeline", "toolbox", "store", "recycle"]) {
       expect(scs.includes(sc), `入口 ${sc} 必须仍在菜单里`).toBe(true);
     }
-    expect(nodes.some((n) => n.menuId === "feat-ai"), "AI 入口必须在").toBe(true);
+    expect(nodes.some((n) => n.menuId === "chat"), "对话入口必须在").toBe(true);
+    expect(nodes.some((n) => n.extraAttrs && n.extraAttrs.includes("data-chat")), "对话入口必须接线").toBe(true);
     expect(nodes.some((n) => n.extraAttrs && n.extraAttrs.includes("data-gear")), "设置入口必须在").toBe(true);
     expect(nodes.some((n) => n.extraAttrs && n.extraAttrs.includes("data-help")), "说明入口必须在").toBe(true);
   });
 
-  it("分组归属：工作台单入口在工作台组，AI 在助手，工具箱/商店/回收站/设置/说明在更多", async () => {
+  it("分组归属：工作台单入口在工作台组，对话在助手组，工具箱/商店/回收站/设置/说明在更多", async () => {
     const win = await startApp();
     const g = Object.fromEntries(win._buildSideMenu().map((x) => [x.gid, x.nodes]));
     expect(g.work.map((n) => n.id)).toEqual(["feat-workbench"]);
     expect(g.work[0].sc).toBe("workbench");
-    expect(g.assistant.some((n) => n.menuId === "feat-ai")).toBe(true);
+    expect(g.assistant.some((n) => n.menuId === "chat")).toBe(true);
     const moreSc = g.more.map((n) => n.sc).filter(Boolean);
     for (const sc of ["toolbox", "store", "recycle"]) expect(moreSc).toContain(sc);
     expect(g.today.map((n) => n.sc).filter(Boolean)).toEqual(

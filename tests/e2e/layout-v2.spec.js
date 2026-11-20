@@ -73,7 +73,7 @@ test.describe("桌面 1440", () => {
     expect((await geom(page)).wrap.width).toBe(before);
   });
 
-  test("对话折叠 = 只留输入行，历史收起；再点恢复", async ({ page }) => {
+  test("对话折叠 = 只留一条标题栏，历史与输入区都收起；再点恢复", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#main");
     await waitMainRendered(page);
@@ -83,7 +83,9 @@ test.describe("桌面 1440", () => {
     await page.waitForFunction(() => document.getElementById("chatPanel").classList.contains("collapsed"));
     const after = await geom(page);
     expect(after.chat.height, "折叠后坞应变矮").toBeLessThan(before.chat.height);
-    expect(await page.isVisible("#chatForm"), "输入行必须还在").toBe(true);
+    /* 批十（用户「折叠只留一条标题栏」）：输入区随历史一起收起；展开仍由标题栏同一枚按钮负责。 */
+    expect(await page.isVisible("#chatForm"), "折叠后输入区应隐藏").toBe(false);
+    expect(await page.isVisible("#chatPanelCollapse"), "折叠键必须在标题栏里可见，否则打不开").toBe(true);
     expect(await page.isVisible("#chat"), "历史区应隐藏").toBe(false);
     await page.click("#chatPanelCollapse");
     await page.waitForFunction(() => !document.getElementById("chatPanel").classList.contains("collapsed"));
@@ -162,6 +164,9 @@ test.describe("手机 375（聊天保持右抽屉）", () => {
 
   test("聊天抽屉：从场景头打开可见，点遮罩关闭（R-31/R-32）", async ({ page }) => {
     await page.addInitScript(() => {
+      /* 本用例走场景头 #phAiAskBtn（只有场景页有）——显式声明 office 前提，
+         不依赖夹具缺省注入的 overview（批十后 overview 不是场景页、无此按钮）。 */
+      localStorage.setItem("wb_agent_active", JSON.stringify("office"));
       localStorage.setItem("wb_agent_cfg", JSON.stringify({
         enabled: true, activeId: "p",
         profiles: [{ id: "p", name: "默认", base: "https://example.invalid/v1", key: "k", model: "" }],

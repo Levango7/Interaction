@@ -115,11 +115,14 @@ function _buildSideMenu(){
      不删任何入口、不改结构（避免动 nav-pages-smoke 直接 click 子项的路径）。 */
   let _aiNeedCfg = false;
   try{ _aiNeedCfg = (typeof aiReadyProfile === "function") ? !aiReadyProfile() : false; }catch(_e){ _aiNeedCfg = false; }
-  const aiNode = {
-    id:"feat-ai", label:t("page.ai.title", "AI"), icon:(SIDE_MENU_ICONS.ai||"").replace("<svg","<svg aria-hidden=\"true\""), color:"var(--accent)",
-    cnt: _aiNeedCfg ? t("side.ai.needCfg", "待配置") : "", menuId:"feat-ai",
-    extraAttrs:' id="sideBtnAi" data-aipage="1"' + (_aiNeedCfg ? ' data-need-cfg="1"' : ""),
-    active: !_sideActive && uiView==="ai"
+  /* 批十（用户「中间默认就是聊天区」）：原 AI 固定页入口改为「对话」——
+     AI 配置不再占一个导航目的地（输入区「未配置」与设置 AI 页仍有真入口），
+     省下的位置由对话承接，导航仍是 5 项。 */
+  const chatNode = {
+    id:"chat", label:t("side.menu.chat", "对话"), icon:UI_ICONS.chat.replace("<svg","<svg aria-hidden=\"true\""), color:"var(--accent)",
+    cnt: _aiNeedCfg ? t("side.ai.needCfg", "待配置") : "", menuId:"chat",
+    extraAttrs:' id="sideBtnChat" data-chat="1"' + (_aiNeedCfg ? ' data-need-cfg="1"' : ""),
+    active: !_sideActive && uiView==="main" && !!chatHome
   };
   const toolboxNode = {
     id:"feat-toolbox", label:t("side.menu.toolbox", "工具箱"), icon:(SIDE_MENU_ICONS.toolbox||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#8b5cf6",
@@ -155,7 +158,7 @@ function _buildSideMenu(){
        不再出现在菜单里，移动端底栏与抽屉随 gid 自动变成 4 组。 */
     {gid:"today", name:t("side.group.today", "今日"), nodes:[overviewNode, tasksNode, timelineNode]},
     {gid:"work", name:t("side.group.work", "工作台"), nodes:[workbenchNode]},
-    {gid:"assistant", name:t("side.group.assistant", "助手"), nodes:[aiNode]},
+    {gid:"assistant", name:t("side.group.chat", "对话"), nodes:[chatNode]},
     {gid:"more", name:t("side.group.more", "更多"), nodes:[toolboxNode, storeNode, recycleNode, gearNode, helpNode]}
   ];
 }
@@ -216,7 +219,7 @@ function renderSide(){
      所以这里只做**渲染筛选**，不删数据、不改点击路径。
      被收起的页面仍有真入口：时间轴→任务页头按钮；工具箱→商店「工具」视图；
      回收站→设置「数据管理」卡；设置/说明→左栏底部既有入口。 */
-  const DESKTOP_NAV_IDS = ["home", "tasks", "feat-workbench", "feat-store", "feat-ai"];
+  const DESKTOP_NAV_IDS = ["chat", "home", "tasks", "feat-workbench", "feat-store"];
   const allNodes = groups.reduce(function(acc, g){ return acc.concat(g.nodes || []); }, []);
   const navNodes = DESKTOP_NAV_IDS.map(function(id){
     return allNodes.filter(function(n){ return n.id === id; })[0];
@@ -288,6 +291,10 @@ function renderSide(){
     + '" aria-label="' + esc(t("api.login", "登录")) + '">'
     + '<span class="side-foot-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>'
     + '<span class="side-foot-lbl">' + esc(t("api.login", "登录")) + "</span></button>"
+    + '<button type="button" class="side-foot-btn" data-foot="help" title="' + esc(t("side.foot.help", "帮助"))
+    + '" aria-label="' + esc(t("side.foot.help", "帮助")) + '">'
+    + '<span class="side-foot-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2-3 4"/><path d="M12 17h.01"/></svg></span>'
+    + '<span class="side-foot-lbl">' + esc(t("side.foot.help", "帮助")) + "</span></button>"
     + '<button type="button" class="side-foot-btn' + footSettingsActive + '" data-foot="settings" title="' + esc(t("side.menu.settings", "设置"))
     + '" aria-label="' + esc(t("side.menu.settings", "设置")) + '">'
     + '<span class="side-foot-ic" aria-hidden="true">' + UI_ICONS.gear.replace("<svg", '<svg aria-hidden="true"') + "</span>"
@@ -757,6 +764,13 @@ function setupSideMenu(){
         const ub = document.getElementById("btnUser"); if(ub && typeof ub.click === "function") ub.click();
       }else if(which === "settings"){
         if(typeof AppBridge !== "undefined" && typeof AppBridge.openDrawer === "function") AppBridge.openDrawer();
+      }else if(which === "help"){
+        /* 批十：帮助从顶栏移到底部（与设置并列）。复用顶栏同一枚菜单触发器，
+           菜单定位由 CSS 在桌面端贴左下弹出；窄屏仍用顶栏入口。 */
+        /* 必须异步开：本点击还会冒泡到 document 的帮助委托，那里对非菜单 action
+           会执行 `_helpMenuClose()`；同步点开会被同一轮冒泡当场关掉（实测菜单不出现）。 */
+        const hb = document.getElementById("btnHelpMenu");
+        if(hb && typeof hb.click === "function") setTimeout(function(){ hb.click(); }, 0);
       }
       return;
     }
@@ -786,6 +800,15 @@ function setupSideMenu(){
       return;
     }
     /* 顶级固定入口（保留旧 data 属性语义） */
+    if(btn.dataset.chat){
+      _sideActive = null;
+      /* 批十：code/design → work 的模式切换由渲染层做（数据层不调 setUIMode，分层契约）。
+         setUIMode 只切 body class 不重渲染（批九实测），showChatHome 里的 render() 负责落 chat-home。 */
+      const _b = document.querySelector(".body");
+      if(_b && (_b.classList.contains("code-mode") || _b.classList.contains("design-mode")) && typeof setUIMode === "function") setUIMode("work");
+      showChatHome();
+      return;
+    }
     if(btn.dataset.gear){ _sideActive = null; AppBridge.openDrawer(); return; }
     if(btn.dataset.help){ _sideActive = null; AppBridge.renderHelp(); return; }
     if(btn.dataset.aipage){ _sideActive = null; leaveCodeForMain(); if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage(); return; }

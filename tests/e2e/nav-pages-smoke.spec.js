@@ -42,19 +42,21 @@ function skipIfNarrow(page) {
 
 /** 取侧栏清单（运行时，不写死） */
 async function sideMenuItems(page) {
-  /* 批九：桌面导航 10→5（主页/任务/工作台/商店/AI）。这里读**实际渲染**的 5 个 nav-item，
+  /* 批十：桌面导航 5 项 = 对话/主页/任务/工作台/商店。这里读**实际渲染**的 nav-item，
      不再读 _buildSideMenu() 全量数据（那份仍 10 项，移动端底栏要用）。 */
   return page.evaluate(() =>
     Array.from(document.querySelectorAll("#side .nav-item")).map((el) => ({
       id: el.getAttribute("data-menu") || el.getAttribute("data-sc") || "",
       label: (el.textContent || "").trim(),
       sc: el.getAttribute("data-sc") || "",
+      chat: el.getAttribute("data-chat") === "1",
     }))
   );
 }
 
-/** 每项的点击选择器：有 sc 用 data-sc；AI / 设置 / 说明 没有 sc，用 data-menu */
+/** 每项的点击选择器：对话走 data-chat；有 sc 用 data-sc；其余用 data-menu */
 function selOf(it) {
+  if (it.chat) return '#side .nav-item[data-chat="1"]';
   return it.sc ? `#side .nav-item[data-sc="${it.sc}"]` : `#side .nav-item[data-menu="${it.id}"]`;
 }
 
@@ -109,7 +111,7 @@ test.describe("桌面侧栏 5 入口 + 工作台 8 tile 冒烟", () => {
     const items = await sideMenuItems(page);
     /* 覆盖面守门员：清单为空说明取数方式坏了，此时"全绿"毫无意义。
        批九后桌面侧栏 5 入口；8 个场景/联动目的地由下面的 tile 循环接着覆盖。 */
-    expect(items.length, "桌面边栏应渲染 5 项导航（主页/任务/工作台/商店/AI）")
+    expect(items.length, "桌面边栏应渲染 5 项导航（对话/主页/任务/工作台/商店）")
       .toBe(5);
 
     const problems = [];
@@ -119,6 +121,20 @@ test.describe("桌面侧栏 5 入口 + 工作台 8 tile 冒烟", () => {
       const n = await page.locator(sel).count();
       if (n !== 1) {
         problems.push(`${it.label}(${it.id}): 选择器 ${sel} 命中 ${n} 个，期望 1 个`);
+        continue;
+      }
+
+      /* 批十：「对话」不是页面，落的是聊天首页（#main 让位、#chat 占中栏）。
+         不能套页面容器探针，否则会把正常聊天误报成空壳。 */
+      if (it.chat) {
+        await page.click(sel);
+        await page.waitForFunction(() => document.querySelector(".body").classList.contains("chat-home"), null, { timeout: 5_000 }).catch(() => {});
+        const ok = await page.evaluate(() => {
+          const c = document.querySelector("#chat");
+          return !!c && getComputedStyle(c).display !== "none" && c.getBoundingClientRect().height > 80;
+        });
+        if (!ok) problems.push(`${it.label}: 聊天首页未占中栏`);
+        if (errors.length) problems.push(`${it.label}: 打开时报错 ${errors[0]}`);
         continue;
       }
 

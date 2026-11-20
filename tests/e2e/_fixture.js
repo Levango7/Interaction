@@ -32,6 +32,13 @@ const test = base.test.extend({
         if (localStorage.getItem("wb_agent_uimode") === null) {
           localStorage.setItem("wb_agent_uimode", JSON.stringify("work"));
         }
+        /* 批十（产品默认落聊天首页）：绝大多数 e2e 写于「打开就是页面」时代，断言的是
+           各自页面功能而非默认形态。仅在缺省时注入一个页面键，把前提显式钉在夹具里；
+           产品「无偏好 → 聊天首页」由 ui-mode-layout 的专门用例独占守护。
+           与 uimode 同理：只缺省注入，不覆盖 spec 自己预置的 active（如 ics 预置 tasks）。 */
+        if (localStorage.getItem("wb_agent_active") === null) {
+          localStorage.setItem("wb_agent_active", JSON.stringify("overview"));
+        }
       } catch (e) { /* 存储不可用时保持原行为 */ }
     });
     await use(page);

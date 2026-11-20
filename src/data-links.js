@@ -449,6 +449,34 @@ if(!active){
 }
 // v1.9.3g：当前视图状态机——"main"（场景/总览/统计/回收站）| "settings"（设置页）| "help"（指南页）。
 // 侧栏高亮据此渲染（renderSide 弃 DOM 嗅探），由 openDrawer / renderHelp / render 显式赋值。
+/* 批十（2026-11-18 用户标注图 + 裁定）：中间默认就是聊天区。
+   `chatHome` 不是第二个 active 状态机——active 仍是唯一事实源；它只回答
+   「当前中栏该显示聊天气泡还是页面」。页面键（tasks/store/…）一律落页面；
+   场景键（office/code/…）默认落聊天（聊天内容仍按该场景的会话读取）。
+   `setActive()` 是显式页面导航 ⇒ 自动退出聊天；`showChatHome()` 是唯一回到聊天的入口。 */
+const CHAT_PAGE_KEYS = {
+  overview:1, stats:1, recycle:1, tasks:1, toolbox:1, store:1, chainpage:1,
+  timeline:1, workbench:1, authwelcome:1, authlogin:1, authregister:1, authreset:1,
+  tool:1, app:1,
+};
+let chatHome = !CHAT_PAGE_KEYS[active];
+/** 当前会话可承载聊天的场景键（页面键不参与渲染）。 */
+function _chatSceneKey(){
+  try{
+    const s = (typeof getActiveSessionObj === "function") ? getActiveSessionObj() : null;
+    if(s && s.sc) return s.sc;
+  }catch(_e){ /* 会话未就绪时回落合法场景 */ }
+  return (typeof SCENARIOS !== "undefined" && SCENARIOS[active]) ? active : "office";
+}
+/** 回到「对话」：中栏显示聊天气泡。只管状态与重渲染；code/design 的模式切换
+    由调用方（渲染层导航委托）先做 —— 数据层不得直接调 setUIMode（分层契约 lint:layers，
+    且 setUIMode→applyUIMode 只切 body class 不调 render()，必须由调用方补一刀）。 */
+function showChatHome(){
+  chatHome = true;
+  const sc = _chatSceneKey();
+  if(active !== sc){ active = sc; save(PREFIX+"active", sc); }
+  render();
+}
 let uiView = "main";
 /* v2.1.0：场景任务视图模式——kanban（看板，默认）/ calendar（日历）/ todo（待办列表）。
    侧栏「总览 ▸ 任务」三项切换；持久化到 localStorage。 */
@@ -487,7 +515,8 @@ function getActive(){ return active; }
  * @param {string} sc - 场景键
  * @returns {void}
  */
-function setActive(sc){ active = sc; save(PREFIX+"active", sc); } // 内含持久化；render 由调用方触发
+/* 批十：显式切页面 ⇒ 退出聊天态（chatHome 只影响中栏呈现，不写第二个存储键）。 */
+function setActive(sc){ active = sc; chatHome = false; save(PREFIX+"active", sc); } // 内含持久化；render 由调用方触发
 function getChat(sc){ return chats[sc] || []; }
 /* v3.4.5 G2 修复：写路径补 slice(-50) 裁剪——与读路径（启动/导入 slice(-50)，L6765/6950）对齐。
  * 此前 appendChat 直接 concat 全量写回：读时裁过的数组一经追加即恢复超长并持续增长，
@@ -582,7 +611,10 @@ function switchSession(sid){
      session.sc 仍是空串，左栏分组照旧；返回值保持 it.sc，调用方 null 判据不变。 */
   const fallback = (typeof SCENARIOS !== "undefined" && SCENARIOS[active]) ? active : "office";
   const renderSc = it.sc || fallback;
-  if(active !== renderSc) setActive(renderSc);
+  /* 批十：选中会话 = 回到对话。这里不能走 setActive()（它是显式页面导航、会关掉 chatHome），
+     active 仍写场景键，保证聊天数据仍按场景会话读取。 */
+  chatHome = true;
+  if(active !== renderSc){ active = renderSc; save(PREFIX+"active", renderSc); }
   setActiveSession(sid);
   chats[renderSc] = _chatTag((it.msgs || []).slice(-50), renderSc);
   save(PREFIX + "chat_" + renderSc, chats[renderSc]);
