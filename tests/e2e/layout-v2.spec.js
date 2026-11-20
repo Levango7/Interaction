@@ -6,10 +6,8 @@
  *
  * 断点契约（与 DESIGN-SYSTEM 一致）：≥1024 三栏；768–1023 任务轨滑出；≤767 聊天保持右抽屉。
  */
-const { test, expect } = require("./_fixture");
+const { test, expect, gotoPageView } = require("./_fixture");
 const { waitMainRendered } = require("./helpers/wait-settled.cjs");
-
-const APP_URL = "./agent-workbench.html";
 
 const ensureExpanded = async (page) => {
   const collapsed = await page.evaluate(() => document.getElementById("chatPanel").classList.contains("collapsed"));
@@ -38,12 +36,9 @@ test.describe("桌面 1440", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
   test("对话坞在主列底部且与主列同宽；任务轨在右栏", async ({ page }) => {
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
-    /* 批十：fixture 缺省 active=office ⇒ 默认聊天首页（#main 让位、chatPanel 占满中栏，position:static）。
-       本用例量的是批九「贴底坞 + 页面视图」几何；显式切到页面键退出 chatHome 声明前提。
-       与 nav-pages-smoke 同手法，不改产品形态。 */
-    await page.evaluate(() => { if (typeof setActive === "function") { setActive("overview"); render(); } });
+    await gotoPageView(page, "overview");
+    /* 本用例量的是批九「贴底坞 + 页面视图」几何；页面视图前提已由 gotoPageView
+       在等 #main 之前声明（第五笔把 setActive 放在等待之后，顺序反了）。 */
     await waitMainRendered(page);
     /* 布局 v2 默认只留输入行（历史收起）；本用例量的是展开态几何 */
     await ensureExpanded(page);
@@ -63,10 +58,8 @@ test.describe("桌面 1440", () => {
   });
 
   test("折叠任务轨后主列变宽，顶栏按钮可再展开", async ({ page }) => {
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
-    /* 同上：显式退出聊天首页，回到页面视图量任务轨折叠几何。 */
-    await page.evaluate(() => { if (typeof setActive === "function") { setActive("overview"); render(); } });
+    await gotoPageView(page, "overview");
+    /* 同上：页面视图前提由 gotoPageView 在等 #main 之前声明。 */
     await waitMainRendered(page);
     const before = (await geom(page)).wrap.width;
     await page.click("#taskRailCollapse");
@@ -80,8 +73,7 @@ test.describe("桌面 1440", () => {
   });
 
   test("对话折叠 = 只留一条标题栏，历史与输入区都收起；再点恢复", async ({ page }) => {
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
+    await gotoPageView(page, "overview");
     await waitMainRendered(page);
     await ensureExpanded(page);
     const before = await geom(page);
@@ -99,8 +91,7 @@ test.describe("桌面 1440", () => {
   });
 
   test("反向对照：尺子能判出「没对齐」的盒子", async ({ page }) => {
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
+    await gotoPageView(page, "overview");
     const ok = await page.evaluate(() => {
       const wrap = document.querySelector(".main-wrap").getBoundingClientRect();
       const mk = (dx) => {
@@ -123,8 +114,7 @@ test.describe("平板 800（任务轨滑出）", () => {
   test.use({ viewport: { width: 800, height: 900 } });
 
   test("任务轨默认不可见；顶栏按钮滑出，Esc 关闭；无横向溢出", async ({ page }) => {
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
+    await gotoPageView(page, "overview");
     await waitMainRendered(page);
     let g = await geom(page);
     expect(g.rail.transform && g.rail.transform !== "none", "应移出视口（translate）").toBe(true);
@@ -138,8 +128,7 @@ test.describe("平板 800（任务轨滑出）", () => {
   });
 
   test("对话坞仍在主列底部（不是右栏）", async ({ page }) => {
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
+    await gotoPageView(page, "overview");
     await waitMainRendered(page);
     await ensureExpanded(page);
     const g = await geom(page);
@@ -155,8 +144,7 @@ test.describe("手机 375（聊天保持右抽屉）", () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
   test("底栏仍在、无横向溢出、任务轨可从顶栏滑出", async ({ page }) => {
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
+    await gotoPageView(page, "overview");
     await waitMainRendered(page);
     const g = await geom(page);
     expect(g.sw).toBeLessThanOrEqual(g.vw + 1);
@@ -178,8 +166,9 @@ test.describe("手机 375（聊天保持右抽屉）", () => {
         profiles: [{ id: "p", name: "默认", base: "https://example.invalid/v1", key: "k", model: "" }],
       }));
     });
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
+    /* 本用例走 #phAiAskBtn（只有 office 场景页有）：页面视图前提仍由 gotoPageView
+       声明，只是场景键用 office 而不是 overview —— 与上面的 addInitScript 一致。 */
+    await gotoPageView(page, "office");
     await waitMainRendered(page);
     await page.click("#phAiAskBtn");
     await page.waitForFunction(() => document.getElementById("chatPanel").classList.contains("show"));

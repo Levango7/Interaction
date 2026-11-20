@@ -78,7 +78,14 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
   test("批十：无 active 偏好时默认落聊天首页，点页面/对话可往返", async ({ page }) => {
     /* 这是产品默认形态的唯一守护：公共 fixture 会注入 office（场景前提），
        这里显式删掉，模拟真实新用户打开。 */
-    await page.addInitScript(() => { try { localStorage.removeItem("wb_agent_active"); } catch (e) { /* ignore */ } });
+    await page.addInitScript(() => {
+      try {
+        localStorage.removeItem("wb_agent_active");
+        /* 本例守的是产品默认聊天首页：公共夹具的「页面视图前提」必须显式让开，
+           否则刚打开就被 setActive 翻回页面视图，默认形态守护会假红。 */
+        localStorage.setItem("wb_agent_e2e_keep_chat_home", "1");
+      } catch (e) { /* ignore */ }
+    });
     await page.goto(APP_URL);
     await page.waitForFunction(() => document.querySelector(".body").classList.contains("chat-home"), null, { timeout: 15_000 });
     const home = await page.evaluate(() => ({

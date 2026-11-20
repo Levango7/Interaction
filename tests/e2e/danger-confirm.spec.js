@@ -13,9 +13,7 @@
  * 反向对照（别删）：同一趟里用旧骨架插一份，断言探测器**能**判它不合格 ——
  * 否则"全绿"可能只是尺子坏了。
  */
-const { test, expect } = require("./_fixture");
-
-const APP_URL = "./agent-workbench.html";
+const { test, expect, gotoPageView } = require("./_fixture");
 
 /** 在页面里真点一次危险确认，返回按钮几何与命中测试结果 */
 const probeConfirm = (page, message) => page.evaluate((msg) => {
@@ -63,8 +61,7 @@ test.describe("窄屏手机（375×667，有固定底部导航）", () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
   test("确认按钮在视口内且能被点中（不被底部导航压住）", async ({ page }) => {
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
+    await gotoPageView(page);
     const got = await probeConfirm(page, "删除这条任务？（将进入回收站，可恢复）");
     expect(got.position, "必须用真浮层骨架").toBe("fixed");
     expect(Number(got.zIndex)).toBeGreaterThan(40); /* 底部导航是 --z-sidebar:40 */
@@ -73,8 +70,7 @@ test.describe("窄屏手机（375×667，有固定底部导航）", () => {
   });
 
   test("反向对照：旧骨架同一条判据必须判红", async ({ page }) => {
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
+    await gotoPageView(page);
     const legacy = await probeLegacySkeleton(page);
     expect(legacy.position, "旧骨架是页面内卡片，不是浮层").toBe("static");
     expect(legacy.outsideViewport,
@@ -87,8 +83,7 @@ test.describe("桌面（1280×800）", () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
   test("遮罩铺满视口、点遮罩不关掉、Esc 关掉", async ({ page }) => {
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
+    await gotoPageView(page);
     const got = await probeConfirm(page, "确定清空全部数据？此操作不可恢复！");
     expect(got.position, "必须用真浮层骨架").toBe("fixed");
     expect(got.inViewport).toBe(true);
@@ -106,8 +101,7 @@ test.describe("桌面（1280×800）", () => {
   });
 
   test("点确认后按钮回调真的执行（不是只把节点摘掉）", async ({ page }) => {
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
+    await gotoPageView(page);
     const val = await page.evaluate(async () => {
       const p = window.dangerConfirm({ message: "吊销此 API Key？" });
       document.getElementById("dangerConfirmModalYes").click();

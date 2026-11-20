@@ -74,9 +74,13 @@ test.describe("移动端（竖屏 375×667）", () => {
     await page.click('#mobBar [data-mob-group="assistant"]');
     await page.waitForSelector("#sideSheet.open", { timeout: 10_000 });
 
-    /* 批十：导航 AI 入口改为「对话」（AI 配置走聊天输入区模型选择器），侧栏助手组只剩 data-chat。
-       旧 [data-menu="feat-ai"] 已不存在；真机实测点对话入口后 AI 配置页即可达，钉同一可达性。 */
+    /* 批十：导航 AI 入口改为「对话」，AI 配置走聊天输入区模型选择器。
+       两处真路径都要钉：① 抽屉里的「对话」必须真回聊天首页（曾因无 data-chat 分支
+       成为死入口）；② 点未配置的模型选择器才能进 AI 配置页。断言零放宽。 */
     await page.click('#sideSheetBody [data-chat="1"]');
+    /* 窄屏刻意不挂 body.chat-home（中栏是抽屉不是静态主区）——钉真实可见性 .show。 */
+    await page.waitForFunction(() => document.getElementById("chatPanel").classList.contains("show"), null, { timeout: 10_000 });
+    await page.locator("#chatModelSelect").locator('xpath=following-sibling::button[contains(@class,"ds-trigger")]').click();
     await expect(page.locator("#cfgEnabled"), "AI 配置页的启用开关应可见").toBeVisible({ timeout: 10_000 });
   });
 });

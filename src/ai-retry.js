@@ -1284,6 +1284,29 @@ function renderChatDisabled(){
 function bindChatPanel(){
   const panel=$("#chatPanel"); if(!panel || panel._bound) return false;
   panel._bound=true;
+  /* 批十复绿轮五（本地全量 e2e workflow×2 抓出的真回归）：「未配置模型 → 直达 AI 配置」
+     原绑在 #chatModelSelect 的节点级 onclick 上。从页面视图点「对话」进 chatHome 时
+     renderChat 重建了选择器节点，而 bindChatPanel 有 _bound 只绑一次 ⇒ 新节点没有
+     onclick，点可见的 .ds-trigger 只会展开自研列表（本地真机实测 drawerOpen=false）。
+     这里是一次性 document 委托：同时覆盖原生 select 与 .ds-select 包装后的 trigger/选项，
+     节点重建后依旧可达；profiles 非空时零动作，切换 profile 的 onchange 行为不变。 */
+  /* 必须用**捕获阶段**：ui-select 的 trigger 点击处理里 e.stopPropagation()，
+     冒泡阶段的 document 委托根本收不到（真机复跑证伪了冒泡版）。 */
+  document.addEventListener("click", function(e){
+    try{
+      const src = e.target && e.target.closest ? e.target : null;
+      if(!src) return;
+      const nativeSel = src.closest("#chatModelSelect");
+      const wrap = src.closest(".ds-select");
+      const modelSel = nativeSel || (wrap && wrap.querySelector("#chatModelSelect"));
+      if(!modelSel) return;
+      const c = getCfg();
+      const profiles = (c && Array.isArray(c.profiles)) ? c.profiles : [];
+      if(profiles.length === 0 && typeof AppBridge.openAiPage === "function") AppBridge.openAiPage();
+    }catch(_e){
+      if(typeof pushDiag === "function") pushDiag("warn", "chat model select click: "+((_e && _e.message)||_e), {where:"bindChatPanel"});
+    }
+  }, true);
   // v1.9.5：快捷指令 chips——点击填入输入框并聚焦（事件委托，chips 随 renderChat 重建）
   document.addEventListener("click", function(e){
     const chip = e.target && e.target.closest ? e.target.closest(".chat-suggest .chip") : null;
@@ -1355,14 +1378,8 @@ function bindChatPanel(){
       // 切换后立即重新渲染聊天（让后续请求使用新 profile）
       try{ if(typeof renderChat === "function") renderChat(); }catch(e){ /* noop */ }
     };
-    // 点击「未配置模型」时跳转到 AI 配置页（v1.15：改走 openAiPage，直达 AI 配置而非设置首页）
-    modelSelect.onclick=()=>{
-      const c = getCfg();
-      const profiles = (c && Array.isArray(c.profiles)) ? c.profiles : [];
-      if(profiles.length === 0 && typeof AppBridge.openAiPage === "function"){
-        AppBridge.openAiPage();
-      }
-    };
+    /* 「未配置 → AI 配置页」已收进 bindChatPanel 的一次性 document 委托（见该文件顶部）：
+       节点级 onclick 在 chatHome 往返重建后失效，且会和委托重复触发 openAiPage。 */
     // 暴露刷新方法供外部（如设置保存后）调用
     panel._refreshModelSelect = refreshModelSelect;
   }

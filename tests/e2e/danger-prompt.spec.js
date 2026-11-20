@@ -15,9 +15,7 @@
  * 反向对照（别删）：同一趟插一份静态卡片骨架，断言探测器**能**判它不合格 ——
  * 否则"全绿"可能只是尺子坏了。
  */
-const { test, expect } = require("./_fixture");
-
-const APP_URL = "./agent-workbench.html";
+const { test, expect, gotoPageView } = require("./_fixture");
 
 /** 在页面里真开一次输入弹层，返回几何 / 命中测试 / 预选值 / 报错节点状态 */
 const probePrompt = (page, opts) => page.evaluate((o) => {
@@ -80,8 +78,7 @@ test.describe("窄屏手机（375×667，有固定底部导航）", () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
   test("输入框与确定按钮在视口内且能被点中（不被底部导航压住）", async ({ page }) => {
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
+    await gotoPageView(page);
     const got = await probePrompt(page, { title: "重命名会话", value: "旧的会话名", maxlength: 60 });
     expect(got.position, "必须用真浮层骨架").toBe("fixed");
     expect(Number(got.zIndex), "底部导航是 --z-sidebar:40，浮层必须压过它").toBeGreaterThan(40);
@@ -91,8 +88,7 @@ test.describe("窄屏手机（375×667，有固定底部导航）", () => {
   });
 
   test("反向对照：旧骨架同一条判据必须判红", async ({ page }) => {
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
+    await gotoPageView(page);
     const legacy = await probeLegacySkeleton(page);
     expect(legacy.position, "旧骨架是页面内卡片，不是浮层").toBe("static");
     expect(legacy.outsideViewport,
@@ -105,8 +101,7 @@ test.describe("桌面（1280×800）· 交互契约", () => {
   test.use({ viewport: { width: 1280, height: 800 } });
 
   test("预选填值 + maxlength + 密码态 + 默认按钮文案", async ({ page }) => {
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
+    await gotoPageView(page);
     const got = await probePrompt(page, {
       title: "导出密码", value: "s3cret", secret: true, maxlength: 40,
       confirmText: "导出", cancelText: "再想想",
@@ -122,8 +117,7 @@ test.describe("桌面（1280×800）· 交互契约", () => {
   });
 
   test("空值 + required → 行内报错出现且弹层不关；填值后确定才 resolve", async ({ page }) => {
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
+    await gotoPageView(page);
     const got = await probePrompt(page, { title: "重命名会话" });
     expect(got.value, "无 value 时输入框应为空").toBe("");
     expect(got.title).toBe("重命名会话");
@@ -155,8 +149,7 @@ test.describe("桌面（1280×800）· 交互契约", () => {
   });
 
   test("Enter 提交、Esc 取消（resolve null）", async ({ page }) => {
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
+    await gotoPageView(page);
     const enter = await page.evaluate(async () => {
       const p = window.dangerPrompt({ title: "重命名会话", value: "abc" });
       const input = document.getElementById("dangerPromptModalInput");
@@ -175,8 +168,7 @@ test.describe("桌面（1280×800）· 交互契约", () => {
   });
 
   test("required:false 允许空串通过（清空取值是合法场景）", async ({ page }) => {
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
+    await gotoPageView(page);
     const val = await page.evaluate(async () => {
       const p = window.dangerPrompt({ title: "修改节点文字", value: "旧文字", required: false });
       const input = document.getElementById("dangerPromptModalInput");
@@ -190,8 +182,7 @@ test.describe("桌面（1280×800）· 交互契约", () => {
   });
 
   test("同一时刻最多一层：后开的弹层把前一个 resolve(null) 并接管 DOM", async ({ page }) => {
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
+    await gotoPageView(page);
     const got = await page.evaluate(async () => {
       const first = window.dangerPrompt({ title: "第一层" });
       const second = window.dangerPrompt({ title: "第二层" });
@@ -211,8 +202,7 @@ test.describe("桌面（1280×800）· 交互契约", () => {
   });
 
   test("密码态输入框仍是 text 类型可用（secret:false 默认）", async ({ page }) => {
-    await page.goto(APP_URL);
-    await page.waitForSelector("#main");
+    await gotoPageView(page);
     const got = await probePrompt(page, { title: "请输入视图名" });
     expect(got.type).toBe("text");
   });

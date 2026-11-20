@@ -20,6 +20,28 @@
  */
 const base = require("@playwright/test");
 
+const APP_URL = "./agent-workbench.html";
+
+/**
+ * gotoPageView —— 给写于「打开就是页面视图」时代的 spec 声明启动前提。
+ * 批十产品默认落聊天首页：fixture 缺省注入 office（场景键）⇒ chatHome=true ⇒
+ * `.body.chat-home .main-wrap>.main{display:none}`，于是 `waitForSelector("#main")`
+ * 会一直看到 hidden 的 #main 并超时（第五轮 CI 15 条红全是这一条）。
+ * 这里不改产品形态、不放宽任何等待：显式调用既有 `setActive(scene)`（它会把
+ * chatHome 置 false）再 `render()`，之后才进入原本的 `#main` 就绪判据。
+ * scene 默认 office（保留场景头控件）；只需页面几何的用例可传 "overview"。
+ * 与 addInitScript 的 active 注入不冲突：这是 goto 之后对同一键的显式写入。
+ */
+async function gotoPageView(page, scene = "office") {
+  await page.goto(APP_URL);
+  await page.waitForSelector(".body", { state: "attached" });
+  await page.evaluate((sc) => {
+    if (typeof setActive === "function") setActive(sc);
+    if (typeof render === "function") render();
+  }, scene);
+  await page.waitForSelector("#main");
+}
+
 const test = base.test.extend({
   page: async ({ page }, use) => {
     await page.addInitScript(() => {
@@ -43,10 +65,29 @@ const test = base.test.extend({
         if (localStorage.getItem("wb_agent_active") === null) {
           localStorage.setItem("wb_agent_active", JSON.stringify("office"));
         }
+        /* 批十复绿轮五（CI 44801250619 / Deploy 44801250613）：上面注入 office 让
+           chatHome=true、#main 让位，结果几十条写于「打开就是页面视图」时代的
+           spec 全部卡在 waitForSelector/waitMainRendered 的 #main 就绪判据
+           （第五轮 15 条红 + 本地全量续跑的 ui-agent-parity / three-state-layout 等）。
+           这里在 DOMContentLoaded 时**以当前 active 重放一次 setActive**：chatHome
+           置 false、active 原值不变（office / ics 的 tasks / draw 的 design 都不覆盖）。
+           产品默认「无偏好 → 聊天首页」不变，由 ui-mode-layout 的专门用例写
+           wb_agent_e2e_keep_chat_home=1 跳过本段后独占守护。 */
+        document.addEventListener("DOMContentLoaded", function () {
+          /* 标志必须在回调里读：spec 自己的 addInitScript 排在本夹具之后注册，
+             在外层读时它还没执行，会把「默认聊天首页」守护用例误翻成页面视图。 */
+          if (localStorage.getItem("wb_agent_e2e_keep_chat_home") === "1") return;
+          try {
+            if (typeof setActive === "function") {
+              setActive((typeof active !== "undefined" && active) || "office");
+              if (typeof render === "function") render();
+            }
+          } catch (e) { /* 后续就绪等待判据自然决定红绿，不放宽 */ }
+        }, { once: true });
       } catch (e) { /* 存储不可用时保持原行为 */ }
     });
     await use(page);
   },
 });
 
-module.exports = { test, expect: base.expect };
+module.exports = { test, expect: base.expect, gotoPageView };

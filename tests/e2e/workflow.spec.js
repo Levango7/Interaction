@@ -240,8 +240,11 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       // 等 alert 被自动 accept，配置落盘（AI 配置页不是抽屉，故不再断言抽屉关闭）
       await page.waitForTimeout(400);
 
-      // 切到办公场景，应有聊天框
-      await switchScene(page, "office");
+      /* 批十：AI 配置保存后回「对话」入口才是真用户路径。这里的旧写法用
+         switchScene(office)——setActive 会退出 chatHome，页面视图下 #chatForm
+         让位而恒 hidden（本地两档复跑抓出）；断言零放宽，改走同一枚导航按钮。 */
+      await page.click('#side [data-chat="1"]');
+      await page.waitForFunction(() => document.querySelector(".body").classList.contains("chat-home"));
       await page.waitForSelector("#chatForm", { timeout: 10_000 });
 
       /* 平板（768×1024）下聊天面板默认折叠：.chat-panel.collapsed{width:0;overflow:hidden}，

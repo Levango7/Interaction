@@ -19,14 +19,13 @@
  * 本文件用**真实鼠标/键盘事件**复现并锁死这两条，防止回退。
  * 守护策略同其它 e2e：默认跳过，E2E=1 才跑。
  */
-const { test, expect } = require("./_fixture");
-
-const APP_URL = "./agent-workbench.html";
+const { test, expect, gotoPageView } = require("./_fixture");
 
 /* 进入有日期字段的场景（办公 → 会议）。办公是默认场景，会议 tab 里有 date 字段。 */
 async function gotoForm(page) {
-  await page.goto(APP_URL);
-  await page.waitForSelector("#main", { timeout: 15_000 });
+  /* 批十：#main 在 chatHome 下让位，显式回到 office 页面视图再进会议 tab；
+     原 15s 等待与「会议」点击判据原样保留，只把前提移到等待之前。 */
+  await gotoPageView(page);
   await page.click("text=会议", { timeout: 10_000 }).catch(() => {});
   await page.waitForTimeout(700);
 }

@@ -967,6 +967,24 @@ function setupMobNav(){
       if(btn.dataset.gear){ _sideActive = null; closeSideSheet(); AppBridge.openDrawer(); return; }
       if(btn.dataset.help){ _sideActive = null; closeSideSheet(); AppBridge.renderHelp(); return; }
       if(btn.dataset.aipage){ _sideActive = null; closeSideSheet(); if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage(); return; }
+      /* 批十复绿轮五：抽屉里的「对话」此前没有分支 —— menuId="chat" 在菜单数据树里
+         没有 run，点了等于没点（本地全量 e2e mobile 一例抓出的真死入口）。与桌面
+         委托同构：关抽屉、必要时退出 code/design、回聊天首页；AI 配置仍走输入区
+         模型选择器，不在导航里偷偷跳配置页。 */
+      if(btn.dataset.chat){
+        _sideActive = null;
+        closeSideSheet();
+        const _b = document.querySelector(".body");
+        if(_b && (_b.classList.contains("code-mode") || _b.classList.contains("design-mode")) && typeof setUIMode === "function") setUIMode("work");
+        if(typeof showChatHome === "function") showChatHome();
+        /* 窄屏中栏本来就是抽屉：只翻 chatHome 不会给 #chatPanel 加 .show，
+           真机实测点完仍在视口外（left=375）。走与 #phAiAskBtn 同一条
+           __aiPanelExpand → setChatDrawer(true)，让「对话」真的是可见的对话。 */
+        if((window.innerWidth||0) < 768 && typeof window.__aiPanelExpand === "function"){
+          try{ window.__aiPanelExpand(); }catch(_e){ if(typeof pushDiag === "function"){ try{ pushDiag("warn", "mobile chat drawer open failed: "+((_e && _e.message)||_e), {where:"sideSheet"}); }catch(_e2){ /* 诊断自身失败不影响抽屉入口 */ } } }
+        }
+        return;
+      }
       const menuId = btn.getAttribute("data-menu");
       if(!menuId) return;
       const item = _findSideMenuItem(menuId);
