@@ -67,14 +67,16 @@ test.describe("移动端（竖屏 375×667）", () => {
       .toBe("office");
   });
 
-  test("底部导航进 AI 配置页：助手组 → 抽屉 → AI 页", async ({ page }) => {
+  test("底部导航进 AI 配置页：助手组 → 对话 → AI 页", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#mobBar", { timeout: 15_000 });
 
     await page.click('#mobBar [data-mob-group="assistant"]');
     await page.waitForSelector("#sideSheet.open", { timeout: 10_000 });
 
-    await page.click('#sideSheetBody [data-menu="feat-ai"]');
+    /* 批十：导航 AI 入口改为「对话」（AI 配置走聊天输入区模型选择器），侧栏助手组只剩 data-chat。
+       旧 [data-menu="feat-ai"] 已不存在；真机实测点对话入口后 AI 配置页即可达，钉同一可达性。 */
+    await page.click('#sideSheetBody [data-chat="1"]');
     await expect(page.locator("#cfgEnabled"), "AI 配置页的启用开关应可见").toBeVisible({ timeout: 10_000 });
   });
 });

@@ -76,7 +76,7 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
      新判据钉死：chat 占满中栏主体、#main 无入口可达、tabbar/tab 节点彻底不存在。
      产品裁决反转而非放宽——旧判据里的往返路径本身被用户删除，不能留作「功能没删」的挡箭牌。 */
   test("批十：无 active 偏好时默认落聊天首页，点页面/对话可往返", async ({ page }) => {
-    /* 这是产品默认形态的唯一守护：公共 fixture 会注入 overview（页面前提），
+    /* 这是产品默认形态的唯一守护：公共 fixture 会注入 office（场景前提），
        这里显式删掉，模拟真实新用户打开。 */
     await page.addInitScript(() => { try { localStorage.removeItem("wb_agent_active"); } catch (e) { /* ignore */ } });
     await page.goto(APP_URL);

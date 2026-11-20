@@ -32,12 +32,16 @@ const test = base.test.extend({
         if (localStorage.getItem("wb_agent_uimode") === null) {
           localStorage.setItem("wb_agent_uimode", JSON.stringify("work"));
         }
-        /* 批十（产品默认落聊天首页）：绝大多数 e2e 写于「打开就是页面」时代，断言的是
-           各自页面功能而非默认形态。仅在缺省时注入一个页面键，把前提显式钉在夹具里；
-           产品「无偏好 → 聊天首页」由 ui-mode-layout 的专门用例独占守护。
+        /* 批十（产品默认落聊天首页）：绝大多数 e2e 写于「打开就是 office 场景」时代，
+           且大量用例的 helper 直接 appendChat("office") / getChat("office")/ 断言场景头控件。
+           缺省注入 overview（页面键）会让：① 聊天输入区在页面视图下不渲染；② 写死 office 的
+           会话与 renderChat() 读的 getChat(active=overview) 错开——CI 连红三轮的根因。
+           改注入 office（场景键）：chatHome=true ⇒ 聊天首页（气泡+输入区可见），写死 office 的
+           helper 自然对齐；要测页面视图的用例点侧栏导航即可（setActive 会退出 chatHome）。
+           产品「无偏好 → 聊天首页」仍由 ui-mode-layout 的专门用例独占守护（它显式删本键）。
            与 uimode 同理：只缺省注入，不覆盖 spec 自己预置的 active（如 ics 预置 tasks）。 */
         if (localStorage.getItem("wb_agent_active") === null) {
-          localStorage.setItem("wb_agent_active", JSON.stringify("overview"));
+          localStorage.setItem("wb_agent_active", JSON.stringify("office"));
         }
       } catch (e) { /* 存储不可用时保持原行为 */ }
     });
