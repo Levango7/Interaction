@@ -40,6 +40,10 @@ test.describe("桌面 1440", () => {
   test("对话坞在主列底部且与主列同宽；任务轨在右栏", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#main");
+    /* 批十：fixture 缺省 active=office ⇒ 默认聊天首页（#main 让位、chatPanel 占满中栏，position:static）。
+       本用例量的是批九「贴底坞 + 页面视图」几何；显式切到页面键退出 chatHome 声明前提。
+       与 nav-pages-smoke 同手法，不改产品形态。 */
+    await page.evaluate(() => { if (typeof setActive === "function") { setActive("overview"); render(); } });
     await waitMainRendered(page);
     /* 布局 v2 默认只留输入行（历史收起）；本用例量的是展开态几何 */
     await ensureExpanded(page);
@@ -61,6 +65,8 @@ test.describe("桌面 1440", () => {
   test("折叠任务轨后主列变宽，顶栏按钮可再展开", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#main");
+    /* 同上：显式退出聊天首页，回到页面视图量任务轨折叠几何。 */
+    await page.evaluate(() => { if (typeof setActive === "function") { setActive("overview"); render(); } });
     await waitMainRendered(page);
     const before = (await geom(page)).wrap.width;
     await page.click("#taskRailCollapse");

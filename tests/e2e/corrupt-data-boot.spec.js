@@ -58,7 +58,14 @@ async function booted(page) {
   await page.waitForSelector("#main", { state: "attached", timeout: 15_000 });
   await expect(page.locator(".topbar"), "顶栏必须照常渲染").toBeVisible();
   await expect(page.locator("#side"), "侧栏必须照常渲染").toBeVisible();
-  await expect(page.locator("#main"), "主内容必须照常渲染").toBeVisible();
+  /* 批十：fixture 缺省 active=office（场景键）⇒ 默认落聊天首页，#main 让位、#chat 占满中栏。
+     「主内容渲染」的语义是「不是空白、不是错误兜底页」，聊天首页同样满足；用二选一的可见性
+     判据覆盖两种形态，不放宽「必须渲染出真实内容」的本意。 */
+  const mainOrChatVisible = await page.evaluate(() => {
+    const vis = (id) => { const e = document.getElementById(id); return !!e && !!(e.offsetWidth || e.offsetHeight); };
+    return vis("main") || vis("chat");
+  });
+  expect(mainOrChatVisible, "主内容（页面视图 #main 或聊天首页 #chat）必须照常渲染").toBe(true);
   /* 错误边界的兜底页（含「数据异常」）出现 = 启动链真的崩过 */
   await expect(page.locator("#main"), "主内容不得落到数据异常兜底页").not.toContainText("数据异常");
 }
