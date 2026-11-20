@@ -870,7 +870,7 @@ async function onChatSubmit(e){
   if(memHit && memHit[2]){
     const r=addMemory(active, memHit[2].trim());
     hist.push({role:"user", content:text});
-    hist.push({role:"assistant", content: r? t("ai.remembered","好的，已记住：「")+r.text+t("ai.rememberedScene","」（场景：")+SCENARIOS[active].name+t("ai.rememberedSuffix","，后续对话会自动带上）") : t("ai.nothingToRemember","没有可记住的内容")});
+    hist.push({role:"assistant", content: r? t("ai.remembered","好的，已记住：「")+r.text+t("ai.rememberedScene","」（场景：")+(SCENARIOS[active] || SCENARIOS.office).name+t("ai.rememberedSuffix","，后续对话会自动带上）") : t("ai.nothingToRemember","没有可记住的内容")});
     trimChatHist(hist);
     save(PREFIX+"chat_"+sc, hist); renderChat(); scrollChat();
     return;

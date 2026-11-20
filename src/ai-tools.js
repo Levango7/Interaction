@@ -3507,7 +3507,10 @@ function renderChat(){
       return `<div class="msg ${m.role}">${_nImg ? '<div class="msg-imgs" data-mi="' + _mi + '"></div>' : ""}${esc(_chatContentToText(m.content)||"")}</div>`;
     }
     return `<div class="msg ${m.role}">${esc(_chatContentToText(m.content)||"")}</div>`;
-  }).join("") : `<div class="msg assistant">${t("ai.greetingPrefix","你好，我是")}${SCENARIOS[active].name}${t("ai.greetingSuffix","助手，可以直接让我「建个任务」「查总览」「搜索」。")}</div>` + chatSuggestHtml());
+  /* 批十：`active` 可能停在页面键（overview/tasks/store…），SCENARIOS[active] 为 undefined；
+     greeting 用的是「通用助手」口吻，回落到 office 场景名即可，不能让整个 renderChat 抛错
+     （一旦抛错，startup 后续 #phAiAskBtn / onboarding 完成态全不渲染，CI e2e 25 红由此而来）。 */
+  }).join("") : `<div class="msg assistant">${t("ai.greetingPrefix","你好，我是")}${(SCENARIOS[active] || SCENARIOS.office).name}${t("ai.greetingSuffix","助手，可以直接让我「建个任务」「查总览」「搜索」。")}</div>` + chatSuggestHtml());
   /* 图片缩略图在消毒之后补 DOM：sanitizeHtml 会剥 data: URL 属性，
      且只认 base64 位图白名单（_imgDataUrlOk），坏数据只是不显示，不会变成可执行面。 */
   Array.prototype.forEach.call(el.querySelectorAll(".msg-imgs[data-mi]"), function(slot){

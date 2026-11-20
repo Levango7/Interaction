@@ -54,6 +54,10 @@ test.describe("手机 375×667（有固定底部导航 #mobBar）", () => {
 
   test("R-31：点场景头「问 AI 助手」→ 抽屉滑入、在视口内、输入框点得到、遮罩可关", async ({ page }) => {
     await page.addInitScript(() => {
+      /* 批十：公共 fixture 缺省注入 active=overview（页面视图），而 #phAiAskBtn 由场景头
+         renderSceneHead() 渲染，只有 active 是场景键才有。本用例钉的是「场景头问 AI」真路径，
+         显式预置 office 场景键声明前提（与 layout-v2 手机抽屉用例同手法），不覆盖 fixture 的其它注入。 */
+      localStorage.setItem("wb_agent_active", JSON.stringify("office"));
       /* AI 未就绪时 askAiAboutScene 只会 toast + 跳设置页，抽屉不会开。
          预置一份最小合法配置，让入口走"真开抽屉"那条路。 */
       localStorage.setItem("wb_agent_cfg", JSON.stringify({
@@ -87,6 +91,8 @@ test.describe("手机 375×667（有固定底部导航 #mobBar）", () => {
 
   test("反向对照：把 .show 摘掉，同一条判据必须判红（证明尺子有射程）", async ({ page }) => {
     await page.addInitScript(() => {
+      /* 同上：钉住场景键前提，确保 #phAiAskBtn（场景头按钮）存在。 */
+      localStorage.setItem("wb_agent_active", JSON.stringify("office"));
       localStorage.setItem("wb_agent_cfg", JSON.stringify({
         enabled: true, activeId: "p",
         profiles: [{ id: "p", name: "默认", base: "https://example.invalid/v1", key: "k", model: "" }],

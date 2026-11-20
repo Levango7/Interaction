@@ -105,8 +105,11 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       // v3.7.68：「跳过」直接结束引导（旧语义是翻到下一步，要连点三次才脱身），所以只点一次
       await page.locator("#onboardSkip").click();
       await expect(page.locator(".onboard-modal"), "跳过后不应再弹下一步").toHaveCount(0);
-      // 引导完成后默认落聊天首页；后面 switchScene 会切到工作台 office tile 再等 #taskForm
-      await page.waitForSelector("#chat, #taskForm", { timeout: 10_000 });
+      /* 批十：fixture 缺省注入 active=overview（页面视图），#chat 在页面视图下 display:none、
+         #taskForm 只在场景视图存在，两者都等不到。这里要等的只是「跳过后主界面渲染完成」——
+         `.foot-bar` 由 appendFoot() 在所有 render 分支产出（聊天首页/场景页/页面页都有），是稳定信号。
+         后面 switchScene 会切到 office 场景再等真正的 #taskForm，判据没放宽，只是换了正确的就绪信号。 */
+      await page.waitForSelector(".foot-bar", { timeout: 10_000 });
     });
 
     // ---------- 3. 创建任务 ----------
