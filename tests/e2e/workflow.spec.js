@@ -225,7 +225,9 @@ test.describe("E2E tests (set E2E=1 to run)", () => {
       await page.click('#side [data-chat="1"]');
       await page.waitForFunction(() => document.querySelector(".body").classList.contains("chat-home"));
       await page.waitForSelector("#chatModelSelect", { state: "visible", timeout: 10_000 });
-      await page.click("#chatModelSelect");
+      /* 自研下拉：可见触发框是兄弟节点 `.ds-trigger`，原生 <select> 被它覆盖（CI 实测点 <select>
+         报「<span class=ds-label>未配置</span> intercepts pointer events」）。点 trigger 才真能进配置页。 */
+      await page.locator("#chatModelSelect").locator('xpath=following-sibling::button[contains(@class,"ds-trigger")]').click();
       await page.waitForSelector("#cfgEnabled", { state: "visible", timeout: 10_000 });
       await page.check("#cfgEnabled");
       // 填写 profile 表单

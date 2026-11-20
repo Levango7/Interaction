@@ -15,6 +15,9 @@ test.beforeEach(async ({ page }, testInfo) => {
   await page.goto("./agent-workbench.html");
   await page.waitForFunction(() => document.getElementById("chat")?.children.length > 0);
   await page.evaluate(() => {
+    /* 批十：聊天面板折叠后输入区整块收起（用户裁定「折叠只留标题栏」），#chatTextInput 不在布局中。
+       本用例要往输入框塞图，先显式展开面板（与用户点展开按钮同一路径），不改产品默认。 */
+    if (typeof window.__aiPanelExpand === "function") window.__aiPanelExpand();
     localStorage.setItem("wb_agent_onboarded", "true");
     _resetCrypto();
     localStorage.setItem("wb_agent_cfg", JSON.stringify({

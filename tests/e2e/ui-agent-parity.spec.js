@@ -66,7 +66,7 @@ test.describe("主线 agent 观感（2026-11-07）", () => {
   test("聊天代码卡：语言标签 + 复制按钮，点击必须有回执", async ({ page }) => {
     await bootWithAi(page);
     await page.evaluate(() => {
-      appendChat("office", { role: "assistant", content: "看这段：\n\n```js\nconst a = 1;\n```" });
+      appendChat(typeof active !== "undefined" ? active : "office", { role: "assistant", content: "看这段：\n\n```js\nconst a = 1;\n```" });
       renderChat();
     });
 

@@ -42,7 +42,9 @@ async function seedSvgCard(page, svg) {
   }, null, { timeout: 10000 });
   await page.evaluate((s) => {
     const raw = "__SVG__" + JSON.stringify({ title: "架构图", svg: s });
-    appendChat("office", {
+    /* 批十：fixture 把 active 钉在 overview（页面键），而 renderChat() 读 getChat(active)。
+       写死 office 会话就与渲染源错开 ⇒ .svg-msg 永远不出现。写入当前 active 才能对齐。 */
+    appendChat(typeof active !== "undefined" ? active : "office", {
       role: "tool",
       tool_call_id: "call-draw_svg",
       content: raw,

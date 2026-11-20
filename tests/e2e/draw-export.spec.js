@@ -81,7 +81,7 @@ async function seedCard(page, kind) {
     const raw = kind === "svg"
       ? execTool("draw_svg", { title: "export-proof", svg })
       : execTool("render_chart", { type: "bar", data: [{ label: "A", value: 20 }, { label: "B", value: 40 }] });
-    appendChat("office", { role: "tool", content: raw, _raw: _markerRaw(raw), _disp: raw });
+    appendChat(typeof active !== "undefined" ? active : "office", { role: "tool", content: raw, _raw: _markerRaw(raw), _disp: raw });
     renderChat();
     if (typeof window.__aiPanelExpand === "function") window.__aiPanelExpand();
   }, { svg: SVG, kind });
@@ -188,7 +188,7 @@ test("SVG 下载完成且源码可重新解析", async ({ page }, testInfo) => {
 
 test("Mermaid 导出的 SVG 保留节点与连线标签且不含 foreignObject", async ({ page }, testInfo) => {
   await page.evaluate(async () => {
-    appendChat("office", { role: "assistant", content: "```mermaid\ngraph TD\nA[开始] -->|继续| B[结束]\n```" });
+    appendChat(typeof active !== "undefined" ? active : "office", { role: "assistant", content: "```mermaid\ngraph TD\nA[开始] -->|继续| B[结束]\n```" });
     renderChat();
     if (typeof window.__aiPanelExpand === "function") window.__aiPanelExpand();
     await renderMermaidBlocks(document.getElementById("chat"));
@@ -212,7 +212,7 @@ test("草图刷新可恢复，聊天裁剪后画布底稿仍独立保存", async
   await page.locator("#chat [data-canvasembed]").click();
   const diagram = await page.evaluate(() => dcActive().id);
   await page.evaluate(() => {
-    for (let i = 0; i < 50; i++) appendChat("office", { role: "user", content: "后续消息 " + i });
+    for (let i = 0; i < 50; i++) appendChat(typeof active !== "undefined" ? active : "office", { role: "user", content: "后续消息 " + i });
   });
   await page.reload();
   await page.waitForFunction(() => document.getElementById("chat")?.children.length > 0);
