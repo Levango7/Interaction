@@ -706,6 +706,13 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
 .help-menu{position:absolute;top:calc(var(--mb-h) - 2px);right:var(--space-2);z-index:var(--z-popover);
   display:flex;flex-direction:column;min-width:180px;padding:var(--space-1);
   background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-2)}
+/* 批十（用户「帮助放左下角，与设置并列」）：桌面隐藏顶栏入口，菜单贴左栏底部弹出；
+   窄屏仍保留顶栏入口（左栏是抽屉，底部 foot 不可见）。 */
+@media(min-width:768px){
+  #btnHelpMenu{display:none!important}
+  .help-menu{position:fixed;left:var(--space-2);right:auto;top:auto;
+    bottom:calc(56px + env(safe-area-inset-bottom,0px))}
+}
 .help-menu[hidden]{display:none}
 .help-item{min-height:28px;padding:0 var(--space-2);border:0;background:transparent;color:var(--text);
   font-size:var(--fs-xs);text-align:left;border-radius:var(--radius-sm);cursor:pointer}
@@ -5481,6 +5488,24 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   .chat-panel.collapsed{width:auto;max-height:none;overflow:visible;transform:none}
   .chat-panel.collapsed .chat,
   .chat-panel.collapsed .chat-toolbar{display:none}
+  /* 批十（用户「折叠只留一条标题栏」）：输入区也收起。此前折叠后仍留 168px，
+     在 1080 高下会压住正文底部；展开仍由标题栏同一枚按钮负责。 */
+  .chat-panel.collapsed .chat-input-area{display:none}
+  /* 批十（用户「中间默认就是聊天区」）：中栏 = 气泡 + 输入行，#main 让位；
+     与 code 模式同一套几何，但只在 work 形态生效（code/design 已有各自规则）。 */
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.toolbar-row{display:none}
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.main{display:none}
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel{
+    position:static;flex:1 1 auto;max-height:none;min-height:0;overflow:hidden;border-top:none}
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel .chat,
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel.collapsed .chat{
+    display:flex;flex:1 1 auto;max-height:none;min-height:0;overflow-y:auto}
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel .chat-toolbar,
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel.collapsed .chat-toolbar{display:flex}
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel .chat-input-area,
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel.collapsed .chat-input-area{
+    display:block;max-height:none}
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel #chatPanelCollapse{display:none}
   .chat-panel-rail{display:none!important}
   .main{flex:1 0 auto}
   /* 坞头：标题占满，动作靠右；折叠键在坞里用「上/下」表达展开/收起（原左右箭头是侧栏语义） */
@@ -9108,6 +9133,9 @@ const MESSAGES = {
     "side.menu.recycle": "回收站",
     "side.menu.settings": "设置",
     "side.menu.help": "说明",
+    "side.menu.chat": "对话",
+    "side.group.chat": "对话",
+    "side.foot.help": "帮助",
     "side.group.overview": "总览",
     "side.group.scenario": "场景",
     "side.group.apps": "应用",
@@ -9174,7 +9202,6 @@ const MESSAGES = {
     "ai.undo.already": "这条改动已经撤销过",
     "ai.undo.unsupported": "这类改动暂不支持撤销",
     "side.group.work": "工作台",
-    "side.group.assistant": "助手",
     "side.group.more": "更多",
     "side.sub.wordDoc": "Word 文档",
     "side.sub.sheet": "表格",
@@ -13356,6 +13383,9 @@ const MESSAGES = {
     "side.menu.recycle": "Recycle",
     "side.menu.settings": "Settings",
     "side.menu.help": "Help",
+    "side.menu.chat": "Chat",
+    "side.group.chat": "Chat",
+    "side.foot.help": "Help",
     "side.group.overview": "Overview",
     "side.group.scenario": "Scenarios",
     "side.group.apps": "Apps",
@@ -13421,7 +13451,6 @@ const MESSAGES = {
     "ai.undo.already": "This change was already undone",
     "ai.undo.unsupported": "This kind of change cannot be undone yet",
     "side.group.work": "Workbench",
-    "side.group.assistant": "Assistant",
     "side.group.more": "More",
     "side.sub.wordDoc": "Word Document",
     "side.sub.sheet": "Spreadsheet",
@@ -19260,6 +19289,34 @@ if(!active){
 }
 // v1.9.3g：当前视图状态机——"main"（场景/总览/统计/回收站）| "settings"（设置页）| "help"（指南页）。
 // 侧栏高亮据此渲染（renderSide 弃 DOM 嗅探），由 openDrawer / renderHelp / render 显式赋值。
+/* 批十（2026-11-18 用户标注图 + 裁定）：中间默认就是聊天区。
+   `chatHome` 不是第二个 active 状态机——active 仍是唯一事实源；它只回答
+   「当前中栏该显示聊天气泡还是页面」。页面键（tasks/store/…）一律落页面；
+   场景键（office/code/…）默认落聊天（聊天内容仍按该场景的会话读取）。
+   `setActive()` 是显式页面导航 ⇒ 自动退出聊天；`showChatHome()` 是唯一回到聊天的入口。 */
+const CHAT_PAGE_KEYS = {
+  overview:1, stats:1, recycle:1, tasks:1, toolbox:1, store:1, chainpage:1,
+  timeline:1, workbench:1, authwelcome:1, authlogin:1, authregister:1, authreset:1,
+  tool:1, app:1,
+};
+let chatHome = !CHAT_PAGE_KEYS[active];
+/** 当前会话可承载聊天的场景键（页面键不参与渲染）。 */
+function _chatSceneKey(){
+  try{
+    const s = (typeof getActiveSessionObj === "function") ? getActiveSessionObj() : null;
+    if(s && s.sc) return s.sc;
+  }catch(_e){ /* 会话未就绪时回落合法场景 */ }
+  return (typeof SCENARIOS !== "undefined" && SCENARIOS[active]) ? active : "office";
+}
+/** 回到「对话」：中栏显示聊天气泡。只管状态与重渲染；code/design 的模式切换
+    由调用方（渲染层导航委托）先做 —— 数据层不得直接调 setUIMode（分层契约 lint:layers，
+    且 setUIMode→applyUIMode 只切 body class 不调 render()，必须由调用方补一刀）。 */
+function showChatHome(){
+  chatHome = true;
+  const sc = _chatSceneKey();
+  if(active !== sc){ active = sc; save(PREFIX+"active", sc); }
+  render();
+}
 let uiView = "main";
 /* v2.1.0：场景任务视图模式——kanban（看板，默认）/ calendar（日历）/ todo（待办列表）。
    侧栏「总览 ▸ 任务」三项切换；持久化到 localStorage。 */
@@ -19298,7 +19355,8 @@ function getActive(){ return active; }
  * @param {string} sc - 场景键
  * @returns {void}
  */
-function setActive(sc){ active = sc; save(PREFIX+"active", sc); } // 内含持久化；render 由调用方触发
+/* 批十：显式切页面 ⇒ 退出聊天态（chatHome 只影响中栏呈现，不写第二个存储键）。 */
+function setActive(sc){ active = sc; chatHome = false; save(PREFIX+"active", sc); } // 内含持久化；render 由调用方触发
 function getChat(sc){ return chats[sc] || []; }
 /* v3.4.5 G2 修复：写路径补 slice(-50) 裁剪——与读路径（启动/导入 slice(-50)，L6765/6950）对齐。
  * 此前 appendChat 直接 concat 全量写回：读时裁过的数组一经追加即恢复超长并持续增长，
@@ -19393,7 +19451,10 @@ function switchSession(sid){
      session.sc 仍是空串，左栏分组照旧；返回值保持 it.sc，调用方 null 判据不变。 */
   const fallback = (typeof SCENARIOS !== "undefined" && SCENARIOS[active]) ? active : "office";
   const renderSc = it.sc || fallback;
-  if(active !== renderSc) setActive(renderSc);
+  /* 批十：选中会话 = 回到对话。这里不能走 setActive()（它是显式页面导航、会关掉 chatHome），
+     active 仍写场景键，保证聊天数据仍按场景会话读取。 */
+  chatHome = true;
+  if(active !== renderSc){ active = renderSc; save(PREFIX+"active", renderSc); }
   setActiveSession(sid);
   chats[renderSc] = _chatTag((it.msgs || []).slice(-50), renderSc);
   save(PREFIX + "chat_" + renderSc, chats[renderSc]);
@@ -23820,7 +23881,10 @@ function renderChat(){
       return `<div class="msg ${m.role}">${_nImg ? '<div class="msg-imgs" data-mi="' + _mi + '"></div>' : ""}${esc(_chatContentToText(m.content)||"")}</div>`;
     }
     return `<div class="msg ${m.role}">${esc(_chatContentToText(m.content)||"")}</div>`;
-  }).join("") : `<div class="msg assistant">${t("ai.greetingPrefix","你好，我是")}${SCENARIOS[active].name}${t("ai.greetingSuffix","助手，可以直接让我「建个任务」「查总览」「搜索」。")}</div>` + chatSuggestHtml());
+  /* 批十：`active` 可能停在页面键（overview/tasks/store…），SCENARIOS[active] 为 undefined；
+     greeting 用的是「通用助手」口吻，回落到 office 场景名即可，不能让整个 renderChat 抛错
+     （一旦抛错，startup 后续 #phAiAskBtn / onboarding 完成态全不渲染，CI e2e 25 红由此而来）。 */
+  }).join("") : `<div class="msg assistant">${t("ai.greetingPrefix","你好，我是")}${(SCENARIOS[active] || SCENARIOS.office).name}${t("ai.greetingSuffix","助手，可以直接让我「建个任务」「查总览」「搜索」。")}</div>` + chatSuggestHtml());
   /* 图片缩略图在消毒之后补 DOM：sanitizeHtml 会剥 data: URL 属性，
      且只认 base64 位图白名单（_imgDataUrlOk），坏数据只是不显示，不会变成可执行面。 */
   Array.prototype.forEach.call(el.querySelectorAll(".msg-imgs[data-mi]"), function(slot){
@@ -26000,11 +26064,14 @@ function _buildSideMenu(){
      不删任何入口、不改结构（避免动 nav-pages-smoke 直接 click 子项的路径）。 */
   let _aiNeedCfg = false;
   try{ _aiNeedCfg = (typeof aiReadyProfile === "function") ? !aiReadyProfile() : false; }catch(_e){ _aiNeedCfg = false; }
-  const aiNode = {
-    id:"feat-ai", label:t("page.ai.title", "AI"), icon:(SIDE_MENU_ICONS.ai||"").replace("<svg","<svg aria-hidden=\"true\""), color:"var(--accent)",
-    cnt: _aiNeedCfg ? t("side.ai.needCfg", "待配置") : "", menuId:"feat-ai",
-    extraAttrs:' id="sideBtnAi" data-aipage="1"' + (_aiNeedCfg ? ' data-need-cfg="1"' : ""),
-    active: !_sideActive && uiView==="ai"
+  /* 批十（用户「中间默认就是聊天区」）：原 AI 固定页入口改为「对话」——
+     AI 配置不再占一个导航目的地（输入区「未配置」与设置 AI 页仍有真入口），
+     省下的位置由对话承接，导航仍是 5 项。 */
+  const chatNode = {
+    id:"chat", label:t("side.menu.chat", "对话"), icon:UI_ICONS.chat.replace("<svg","<svg aria-hidden=\"true\""), color:"var(--accent)",
+    cnt: _aiNeedCfg ? t("side.ai.needCfg", "待配置") : "", menuId:"chat",
+    extraAttrs:' id="sideBtnChat" data-chat="1"' + (_aiNeedCfg ? ' data-need-cfg="1"' : ""),
+    active: !_sideActive && uiView==="main" && !!chatHome
   };
   const toolboxNode = {
     id:"feat-toolbox", label:t("side.menu.toolbox", "工具箱"), icon:(SIDE_MENU_ICONS.toolbox||"").replace("<svg","<svg aria-hidden=\"true\""), color:"#8b5cf6",
@@ -26040,7 +26107,7 @@ function _buildSideMenu(){
        不再出现在菜单里，移动端底栏与抽屉随 gid 自动变成 4 组。 */
     {gid:"today", name:t("side.group.today", "今日"), nodes:[overviewNode, tasksNode, timelineNode]},
     {gid:"work", name:t("side.group.work", "工作台"), nodes:[workbenchNode]},
-    {gid:"assistant", name:t("side.group.assistant", "助手"), nodes:[aiNode]},
+    {gid:"assistant", name:t("side.group.chat", "对话"), nodes:[chatNode]},
     {gid:"more", name:t("side.group.more", "更多"), nodes:[toolboxNode, storeNode, recycleNode, gearNode, helpNode]}
   ];
 }
@@ -26101,7 +26168,7 @@ function renderSide(){
      所以这里只做**渲染筛选**，不删数据、不改点击路径。
      被收起的页面仍有真入口：时间轴→任务页头按钮；工具箱→商店「工具」视图；
      回收站→设置「数据管理」卡；设置/说明→左栏底部既有入口。 */
-  const DESKTOP_NAV_IDS = ["home", "tasks", "feat-workbench", "feat-store", "feat-ai"];
+  const DESKTOP_NAV_IDS = ["chat", "home", "tasks", "feat-workbench", "feat-store"];
   const allNodes = groups.reduce(function(acc, g){ return acc.concat(g.nodes || []); }, []);
   const navNodes = DESKTOP_NAV_IDS.map(function(id){
     return allNodes.filter(function(n){ return n.id === id; })[0];
@@ -26173,6 +26240,10 @@ function renderSide(){
     + '" aria-label="' + esc(t("api.login", "登录")) + '">'
     + '<span class="side-foot-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>'
     + '<span class="side-foot-lbl">' + esc(t("api.login", "登录")) + "</span></button>"
+    + '<button type="button" class="side-foot-btn" data-foot="help" title="' + esc(t("side.foot.help", "帮助"))
+    + '" aria-label="' + esc(t("side.foot.help", "帮助")) + '">'
+    + '<span class="side-foot-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2-3 4"/><path d="M12 17h.01"/></svg></span>'
+    + '<span class="side-foot-lbl">' + esc(t("side.foot.help", "帮助")) + "</span></button>"
     + '<button type="button" class="side-foot-btn' + footSettingsActive + '" data-foot="settings" title="' + esc(t("side.menu.settings", "设置"))
     + '" aria-label="' + esc(t("side.menu.settings", "设置")) + '">'
     + '<span class="side-foot-ic" aria-hidden="true">' + UI_ICONS.gear.replace("<svg", '<svg aria-hidden="true"') + "</span>"
@@ -26642,6 +26713,13 @@ function setupSideMenu(){
         const ub = document.getElementById("btnUser"); if(ub && typeof ub.click === "function") ub.click();
       }else if(which === "settings"){
         if(typeof AppBridge !== "undefined" && typeof AppBridge.openDrawer === "function") AppBridge.openDrawer();
+      }else if(which === "help"){
+        /* 批十：帮助从顶栏移到底部（与设置并列）。复用顶栏同一枚菜单触发器，
+           菜单定位由 CSS 在桌面端贴左下弹出；窄屏仍用顶栏入口。 */
+        /* 必须异步开：本点击还会冒泡到 document 的帮助委托，那里对非菜单 action
+           会执行 `_helpMenuClose()`；同步点开会被同一轮冒泡当场关掉（实测菜单不出现）。 */
+        const hb = document.getElementById("btnHelpMenu");
+        if(hb && typeof hb.click === "function") setTimeout(function(){ hb.click(); }, 0);
       }
       return;
     }
@@ -26671,6 +26749,15 @@ function setupSideMenu(){
       return;
     }
     /* 顶级固定入口（保留旧 data 属性语义） */
+    if(btn.dataset.chat){
+      _sideActive = null;
+      /* 批十：code/design → work 的模式切换由渲染层做（数据层不调 setUIMode，分层契约）。
+         setUIMode 只切 body class 不重渲染（批九实测），showChatHome 里的 render() 负责落 chat-home。 */
+      const _b = document.querySelector(".body");
+      if(_b && (_b.classList.contains("code-mode") || _b.classList.contains("design-mode")) && typeof setUIMode === "function") setUIMode("work");
+      showChatHome();
+      return;
+    }
     if(btn.dataset.gear){ _sideActive = null; AppBridge.openDrawer(); return; }
     if(btn.dataset.help){ _sideActive = null; AppBridge.renderHelp(); return; }
     if(btn.dataset.aipage){ _sideActive = null; leaveCodeForMain(); if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage(); return; }
@@ -26829,6 +26916,24 @@ function setupMobNav(){
       if(btn.dataset.gear){ _sideActive = null; closeSideSheet(); AppBridge.openDrawer(); return; }
       if(btn.dataset.help){ _sideActive = null; closeSideSheet(); AppBridge.renderHelp(); return; }
       if(btn.dataset.aipage){ _sideActive = null; closeSideSheet(); if(typeof AppBridge.openAiPage==="function") AppBridge.openAiPage(); return; }
+      /* 批十复绿轮五：抽屉里的「对话」此前没有分支 —— menuId="chat" 在菜单数据树里
+         没有 run，点了等于没点（本地全量 e2e mobile 一例抓出的真死入口）。与桌面
+         委托同构：关抽屉、必要时退出 code/design、回聊天首页；AI 配置仍走输入区
+         模型选择器，不在导航里偷偷跳配置页。 */
+      if(btn.dataset.chat){
+        _sideActive = null;
+        closeSideSheet();
+        const _b = document.querySelector(".body");
+        if(_b && (_b.classList.contains("code-mode") || _b.classList.contains("design-mode")) && typeof setUIMode === "function") setUIMode("work");
+        if(typeof showChatHome === "function") showChatHome();
+        /* 窄屏中栏本来就是抽屉：只翻 chatHome 不会给 #chatPanel 加 .show，
+           真机实测点完仍在视口外（left=375）。走与 #phAiAskBtn 同一条
+           __aiPanelExpand → setChatDrawer(true)，让「对话」真的是可见的对话。 */
+        if((window.innerWidth||0) < 768 && typeof window.__aiPanelExpand === "function"){
+          try{ window.__aiPanelExpand(); }catch(_e){ if(typeof pushDiag === "function"){ try{ pushDiag("warn", "mobile chat drawer open failed: "+((_e && _e.message)||_e), {where:"sideSheet"}); }catch(_e2){ /* 诊断自身失败不影响抽屉入口 */ } } }
+        }
+        return;
+      }
       const menuId = btn.getAttribute("data-menu");
       if(!menuId) return;
       const item = _findSideMenuItem(menuId);
@@ -38865,7 +38970,7 @@ async function onChatSubmit(e){
   if(memHit && memHit[2]){
     const r=addMemory(active, memHit[2].trim());
     hist.push({role:"user", content:text});
-    hist.push({role:"assistant", content: r? t("ai.remembered","好的，已记住：「")+r.text+t("ai.rememberedScene","」（场景：")+SCENARIOS[active].name+t("ai.rememberedSuffix","，后续对话会自动带上）") : t("ai.nothingToRemember","没有可记住的内容")});
+    hist.push({role:"assistant", content: r? t("ai.remembered","好的，已记住：「")+r.text+t("ai.rememberedScene","」（场景：")+(SCENARIOS[active] || SCENARIOS.office).name+t("ai.rememberedSuffix","，后续对话会自动带上）") : t("ai.nothingToRemember","没有可记住的内容")});
     trimChatHist(hist);
     save(PREFIX+"chat_"+sc, hist); renderChat(); scrollChat();
     return;
@@ -39279,6 +39384,29 @@ function renderChatDisabled(){
 function bindChatPanel(){
   const panel=$("#chatPanel"); if(!panel || panel._bound) return false;
   panel._bound=true;
+  /* 批十复绿轮五（本地全量 e2e workflow×2 抓出的真回归）：「未配置模型 → 直达 AI 配置」
+     原绑在 #chatModelSelect 的节点级 onclick 上。从页面视图点「对话」进 chatHome 时
+     renderChat 重建了选择器节点，而 bindChatPanel 有 _bound 只绑一次 ⇒ 新节点没有
+     onclick，点可见的 .ds-trigger 只会展开自研列表（本地真机实测 drawerOpen=false）。
+     这里是一次性 document 委托：同时覆盖原生 select 与 .ds-select 包装后的 trigger/选项，
+     节点重建后依旧可达；profiles 非空时零动作，切换 profile 的 onchange 行为不变。 */
+  /* 必须用**捕获阶段**：ui-select 的 trigger 点击处理里 e.stopPropagation()，
+     冒泡阶段的 document 委托根本收不到（真机复跑证伪了冒泡版）。 */
+  document.addEventListener("click", function(e){
+    try{
+      const src = e.target && e.target.closest ? e.target : null;
+      if(!src) return;
+      const nativeSel = src.closest("#chatModelSelect");
+      const wrap = src.closest(".ds-select");
+      const modelSel = nativeSel || (wrap && wrap.querySelector("#chatModelSelect"));
+      if(!modelSel) return;
+      const c = getCfg();
+      const profiles = (c && Array.isArray(c.profiles)) ? c.profiles : [];
+      if(profiles.length === 0 && typeof AppBridge.openAiPage === "function") AppBridge.openAiPage();
+    }catch(_e){
+      if(typeof pushDiag === "function") pushDiag("warn", "chat model select click: "+((_e && _e.message)||_e), {where:"bindChatPanel"});
+    }
+  }, true);
   // v1.9.5：快捷指令 chips——点击填入输入框并聚焦（事件委托，chips 随 renderChat 重建）
   document.addEventListener("click", function(e){
     const chip = e.target && e.target.closest ? e.target.closest(".chat-suggest .chip") : null;
@@ -39350,14 +39478,8 @@ function bindChatPanel(){
       // 切换后立即重新渲染聊天（让后续请求使用新 profile）
       try{ if(typeof renderChat === "function") renderChat(); }catch(e){ /* noop */ }
     };
-    // 点击「未配置模型」时跳转到 AI 配置页（v1.15：改走 openAiPage，直达 AI 配置而非设置首页）
-    modelSelect.onclick=()=>{
-      const c = getCfg();
-      const profiles = (c && Array.isArray(c.profiles)) ? c.profiles : [];
-      if(profiles.length === 0 && typeof AppBridge.openAiPage === "function"){
-        AppBridge.openAiPage();
-      }
-    };
+    /* 「未配置 → AI 配置页」已收进 bindChatPanel 的一次性 document 委托（见该文件顶部）：
+       节点级 onclick 在 chatHome 往返重建后失效，且会和委托重复触发 openAiPage。 */
     // 暴露刷新方法供外部（如设置保存后）调用
     panel._refreshModelSelect = refreshModelSelect;
   }
@@ -41499,6 +41621,20 @@ function renderMetricsStrip(){
 /* v3.7.15（解耦 S2b）：把渲染调度器注册到桥接，供低层受控调用（见 docs/decoupling-plan.md） */
 AppBridge.render = render;
 
+/* 批十：聊天首页（中栏只有气泡 + 输入行）。不新开渲染器——复用 renderChat /
+   renderChatDisabled 这唯一数据源；右栏 sessions 同步刷新，避免切会话后列表滞后。 */
+function renderChatHome(){
+  appendFoot(); // 状态栏版本/待办/AI 状态与页面视图同源，聊天首页也必须有
+  try{
+    const cfg = getCfg();
+    if(cfg.enabled) renderChat();
+    else renderChatDisabled();
+  }catch(e){
+    try{ if(typeof pushDiag === "function") pushDiag("error", "chatHome render: "+((e&&e.message)||e), {where:"renderChatHome"}); }catch(_e){}
+  }
+  try{ if(typeof renderTaskRail === "function") renderTaskRail(); }catch(_e){ /* 右栏刷新失败不阻断聊天 */ }
+}
+
 function render(){
   try{
     // v1.9.4：切出回收站页面时移除铺满类（openRecycle 会重新添加）
@@ -41514,6 +41650,17 @@ function render(){
     const _help = $("#helpPage"); if(_help) _help.remove();
     uiView = "main"; // v1.9.3g：回到主视图，侧栏高亮据此渲染（场景/总览/统计/回收站）
     AppBridge.renderSide();
+    /* 批十（用户「中间默认就是聊天区」）：chatHome 时中栏只放聊天气泡，#main 让位。
+       窄屏仍走原页面/聊天抽屉：聊天区是桌面三栏形态，390 下强切会变成空壳。
+       ⚠️ 必须排除 code/design：CSS 的 `.body.chat-home:not(.code-mode):not(.design-mode)`
+       只在 work 形态接管中栏；code 模式自身已是纯聊天（批九裁定），design 模式是画布。
+       若 JS 在这里不分模式就 return，code/design 下的场景 DOM（#taskForm 等）根本不渲染，
+       而 CSS 又没隐藏它 → 空白中栏。批十首版漏了这层，onboarding boot 级用例全红抓出。 */
+    const _bodyEl = document.querySelector(".body");
+    const _modeBlocks = !!(_bodyEl && (_bodyEl.classList.contains("code-mode") || _bodyEl.classList.contains("design-mode")));
+    const _chatHomeNow = !!chatHome && !_modeBlocks && (window.innerWidth || 0) >= 768;
+    if(_bodyEl) _bodyEl.classList.toggle("chat-home", _chatHomeNow);
+    if(_chatHomeNow){ renderChatHome(); return; }
     /* 批八：tab 条已删，视图注册表只在工作台 tile / 数据层 API 中使用，render 不再重绘 UI tab。 */
     /* 首次渲染后武装通用撤销：此前（seed/迁移）的快照清掉，也不弹「可撤销」提示 */
     if(typeof armUndo === "function") armUndo();
