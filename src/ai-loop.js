@@ -29,8 +29,9 @@ function parseNaturalLanguageTask(text){
   const raw = String(text===null||text===undefined?"":text).trim();
   if(!raw) return {hit:false};
   // 检测建任务意图：帮我建个任务 / 建任务 / 创建任务 / 添加任务 / 新建任务 / 新增任务
-  // 命中后取冒号或空格后的内容作为 body
-  const intentRegex = /(?:帮我|请|给我|要)?\s*(?:建|创建|新建|添加|新增|做)\s*(?:个|一个)?\s*(?:任务|待办|todo)?\s*[:：]?\s*(.*)/i;
+  // 2026-11-22 F1：通用「做」不得脱离任务名词——「做个总览/报表」不是建任务；
+  // 任务名词必须显式出现且整句锚定，寒暄前缀只允许「你好」。
+  const intentRegex = /^(?:你好[，,、\s]*)?(?:帮我|请|给我|我要|要)?\s*(?:建|创建|新建|添加|新增|做)\s*(?:个|一个)?\s*(?:任务|待办|todo)\s*[:：]?\s*(.+)$/i;
   const m = raw.match(intentRegex);
   if(!m || !m[1] || !m[1].trim()) return {hit:false};
   let body = m[1].trim();
