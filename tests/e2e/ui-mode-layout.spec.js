@@ -34,6 +34,7 @@ const probeCodeMode = () => {
   };
   const main = q("#main"), wrap = q(".main-wrap"), chat = q("#chatPanel");
   const msgs = q("#chat"), collapseBtn = q("#chatPanelCollapse");
+  const inputArea = q("#chatPanel .chat-input-area");
   const dock = q("#agentDock"), sd = q("#sessionDock");
   const agentSec = q('#taskRail [data-rr-sec="agent"]');
   const todaySec = q('#taskRail [data-rr-sec="today"]');
@@ -48,6 +49,8 @@ const probeCodeMode = () => {
     msgs: msgs ? box(msgs) : null,
     msgsDisplay: msgs ? getComputedStyle(msgs).display : null,
     collapseDisplay: collapseBtn ? getComputedStyle(collapseBtn).display : null,
+    inputDisplay: inputArea ? getComputedStyle(inputArea).display : null,
+    input: inputArea ? box(inputArea) : null,
     sessionBtnInMenubar: !!q(".menubar #chatSessionBtn"),
     chipInStatusbar: !!q(".statusbar #ctxBudgetChip"),
     /* 2026-11-17 批八：tabbar 整条退役，中栏常驻纯聊天 */
@@ -144,6 +147,10 @@ test.describe("宽屏 1440×900 · code 模式几何（P1-1/2、P2-5）", () => 
     expect(g.pillInSide, "模式胶囊应迁入左侧栏").toBe(true);
     expect(g.footInSide, "用户/设置应固定在左栏最下方").toBe(true);
     expect(g.collapseDisplay, "主形态无折叠概念，#chatPanelCollapse 应隐藏").toBe("none");
+    /* 2026-11-22 批十回归：折叠规则不得误伤 code 主形态——collapse 控件隐藏时，
+       输入区必须仍可见，否则用户在默认 code 聊天页没有任何可达输入/展开路径。 */
+    expect(g.inputDisplay, "code 主形态输入区必须可达，collapsed 类也不得隐藏").not.toBe("none");
+    expect(g.input.h, `输入区高 ${g.input.h}px，应可实际输入`).toBeGreaterThan(80);
     expect(g.sessionBtnInMenubar, "会话管理按钮应留在顶栏 menubar").toBe(true);
     expect(g.chipInStatusbar, "上下文预算芯片应迁至状态栏").toBe(true);
 
