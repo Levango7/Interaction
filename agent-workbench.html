@@ -5704,7 +5704,11 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
   .body.code-mode .main-wrap>.chat-panel .chat-toolbar,
   .body.code-mode .main-wrap>.chat-panel.collapsed .chat-toolbar{display:flex}
   .body.code-mode .main-wrap>.chat-panel #chatPanelCollapse{display:none}
-  .body.code-mode .main-wrap>.chat-panel .chat-input-area{max-height:none}
+  /* 2026-11-22：code 主形态无折叠概念，批十「折叠隐藏输入区」只该作用于 work 页面坞。
+     这里必须连 collapsed 也覆盖，否则默认 code 的 collapse 控件隐藏、输入区也隐藏，
+     用户没有任何真实可达的输入/展开路径（实测 panel 内可见按钮=0）。 */
+  .body.code-mode .main-wrap>.chat-panel .chat-input-area,
+  .body.code-mode .main-wrap>.chat-panel.collapsed .chat-input-area{display:flex;max-height:none}
   /* 批八：旧工作区分屏几何整块退役（tabbar 已删，无任何入口再加那个状态类）。 */
   .body.code-mode .task-rail{grid-column:3;grid-row:1;width:auto;min-height:0}
   /* P2-5（2026-11-02）：code 模式的能力面在右下 agentDock（同源数据 + 2.5s 活轮询），
