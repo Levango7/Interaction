@@ -2,7 +2,8 @@
  * mermaid.test.js —— Mermaid 懒加载渲染（2026-10-23）
  * ----------------------------------------------------------------------------
  * 单测用假的 window.mermaid 钉住：代码块识别、SVG 消毒（script/事件/外链）、
- * 失败回退源码；vendor 文件与 node_modules 逐字节一致。
+ * 失败回退源码；vendor 的 dist 产物与 node_modules 逐字节一致（LICENSE 自 10.9.8 起
+ * npm 包不再随附，改判在位 + 条件强校验，见 describe 内注）。
  * 真渲染在 e2e（file:// + 真 vendor）里跑。
  */
 import { afterEach, describe, expect, it } from "vitest";
@@ -81,13 +82,25 @@ describe("Mermaid 渲染", () => {
 
 describe("vendor/mermaid", () => {
   const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-  it("与 node_modules 逐字节一致，版本钉在 10.x", () => {
+  it("dist 产物与 node_modules 逐字节一致，版本钉在 10.x", () => {
     const pkg = JSON.parse(readFileSync(join(root, "node_modules/mermaid/package.json"), "utf8"));
     expect(pkg.version.split(".")[0]).toBe("10");
-    for (const [dest, src] of [["mermaid.min.js", "dist/mermaid.min.js"], ["LICENSE", "LICENSE"]]) {
+    for (const [dest, src] of [["mermaid.min.js", "dist/mermaid.min.js"]]) {
       const d = join(root, "vendor/mermaid", dest);
       expect(existsSync(d), d).toBe(true);
       expect(readFileSync(d).equals(readFileSync(join(root, "node_modules/mermaid", src))), dest + " 不同步").toBe(true);
+    }
+  });
+  it("LICENSE 在位；npm 包恢复随附时必须与 node_modules 逐字节一致", () => {
+    // 2026-11-23：mermaid 10.9.8 起 npm 包不再随附 LICENSE（git tag v10.9.8 取回比对一致），
+    // 仓内副本为权威；包侧一旦恢复随附，立刻恢复逐字节强校验。
+    const d = join(root, "vendor/mermaid", "LICENSE");
+    expect(existsSync(d), d).toBe(true);
+    const fromPkg = join(root, "node_modules/mermaid", "LICENSE");
+    if (existsSync(fromPkg)) {
+      expect(readFileSync(d).equals(readFileSync(fromPkg)), "LICENSE 与 node_modules 不同步").toBe(true);
+    } else {
+      expect(readFileSync(d, "utf8")).toContain("The MIT License (MIT)");
     }
   });
 });
