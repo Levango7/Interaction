@@ -37476,8 +37476,9 @@ function parseNaturalLanguageTask(text){
   const raw = String(text===null||text===undefined?"":text).trim();
   if(!raw) return {hit:false};
   // 检测建任务意图：帮我建个任务 / 建任务 / 创建任务 / 添加任务 / 新建任务 / 新增任务
-  // 命中后取冒号或空格后的内容作为 body
-  const intentRegex = /(?:帮我|请|给我|要)?\s*(?:建|创建|新建|添加|新增|做)\s*(?:个|一个)?\s*(?:任务|待办|todo)?\s*[:：]?\s*(.*)/i;
+  // 2026-11-22 F1：通用「做」不得脱离任务名词——「做个总览/报表」不是建任务；
+  // 任务名词必须显式出现且整句锚定，寒暄前缀只允许「你好」。
+  const intentRegex = /^(?:你好[，,、\s]*)?(?:帮我|请|给我|我要|要)?\s*(?:建|创建|新建|添加|新增|做)\s*(?:个|一个)?\s*(?:任务|待办|todo)\s*[:：]?\s*(.+)$/i;
   const m = raw.match(intentRegex);
   if(!m || !m[1] || !m[1].trim()) return {hit:false};
   let body = m[1].trim();
@@ -39346,6 +39347,11 @@ function chatSuggestHtml(){
  */
 function renderChatDisabled(){
   const el=$("#chat"); if(!el) return;
+  /* 2026-11-22 F1：无 AI 配置不等于消息区必须清空。NL 工具链（建任务等）成功后
+     AppBridge.render() 也会走到这里；旧实现无条件写 greeting，把刚产生的用户/助手
+     回执整块盖掉。已有历史时按正常消息流渲染，空历史才展示未启用引导。 */
+  const existing = getChat(active);
+  if(existing.length){ renderChat(); return; }
   const s = SCENARIOS[active] || {name:""};
   /* 2026-11-17：未配置态补「能做什么」引导，填掉消息下方的整片空白（用户：'对话区大面积空白'）。
      ⚠️ 不加「去配置」按钮/常驻条 —— 那是 2026-09-23 用户明确要求去掉的（87px 条挤压输入区 +
