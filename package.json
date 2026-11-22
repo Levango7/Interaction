@@ -68,7 +68,7 @@
     "eslint": "^8.57.0",
     "eslint-plugin-html": "^8.1.1",
     "jsdom": "^24.1.3",
-    "mermaid": "10.9.1",
+    "mermaid": "^10.9.8",
     "pdfjs-dist": "^3.11.174",
     "vitest": "^2.1.9"
   }

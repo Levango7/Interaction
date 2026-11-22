@@ -3,6 +3,14 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-23 · **mermaid 10.9.1 → 10.9.8（安全 bump，npm audit 行动项）**
+
+- **动因**：`npm audit`（官方源实跑）报 mermaid 10.9.1 五条 high——DOMPurify 原型污染、sequenceDiagram 标签 XSS、`classDef`/`classDefs` HTML 与 CSS 注入、Gantt 无限循环 DoS。修复在 minor 线 10.9.8；**仍在 10.x UMD 经典脚本线**（11.x 起只发 ESM，`file://` 单文件形态不可用，选型理由见 `scripts/vendor-mermaid.mjs` 头注）。
+- **vendor 重打**：`vendor/mermaid/mermaid.min.js` 3,335,717 → 3,337,857 B；`LICENSE` **逐字节不变**（10.9.8 的 npm 包不再随附 LICENSE，从 git tag `v10.9.8` 取回与 10.9.1 版比对一致）。mermaid 懒加载、不进入主 HTML，**主交付物体积与 sha 不变**（`git status` 对 `agent-workbench.html` 零改动为证）。
+- **lock 归一 + 依赖树**：`package-lock.json` 内 49 条 npmmirror URL 改写为 npmjs.org（本机 `.npmrc` 镜像 + 混合 host 锁 ⇒ 任何单一 registry 都拒跨 host 拉装；integrity 不变），mermaid 传递依赖随 10.9.8 更新（cytoscape 7.9.0→7.9.2 及 d3/micromark 族）；`package.json` 钉精确 `10.9.8`（沿用 vendored 依赖精确钉惯例）。
+- **验证**：mermaid 单测 **5/5**（含 vendor↔node_modules 逐字节一致 + 版本钉 10.x）；e2e 真渲染 **2/2**（file:// + 真 vendor 懒加载出 SVG）；全量 vitest **2692 例 2678 passed / 3 failed / 2 文件级 failed**——两文件（`prod-startup-guard` / `server-sms-providers`）失败根因是净副本未装 `server/node_modules`（CI 有专步、本机净副本需自装，EOL 批同款先例），自装后隔离复跑 **14/14 全绿**，判环境非代码；`npm run lint` rc=0；`check:source-state` ✓ 40/40。
+- **同批发现登记**：`pdfjs-dist@3.11.174` 亦在 audit high 榜（恶意 PDF 任意 JS 执行），修复需 3.x→6.x major 迁移（API 变动面大），**不在本批夹带**，单独立项评估。
+
 ### 2026-11-22 · **主流 agent 视觉收口：分段导航 / 居中阅读列 / 轻卡片**
 
 - **分段导航**：`.set-nav` 从满宽蓝色大按钮改为胶囊分段控件（`--radius-full` + 紧凑内距 + 轻边框），概览 / 任务 / 商店 / 设置共用；**≤767 显式回退原满宽分段卡**——胶囊组在该断点会把「运行器」等按钮压到 37px 使文字越出盒外（`three-state-layout` 元素级溢出抓出），故移动端保持原满宽可换行形态。
