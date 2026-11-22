@@ -65,7 +65,7 @@
   --mb-h:32px; --tb-h:36px; --st-h:24px;
   /* ===== 亮色画布（Vercel Geist 风格：中性浅灰底、纯白卡、品牌蓝主色；场景色仍走 --sc-*） =====
      v3.2 阶段三：底色加深（原浅灰→更深浅灰），与纯白卡片对比 ~15%（V2 解决） */
-  --bg:#e0e0e4; --panel:#ffffff; --panel2:#f5f5f5; --line:#d5d5d5;
+  --bg:#ececf0; --panel:#ffffff; --panel2:#f5f5f5; --line:#e4e4e8;
   --side-bg:#ffffff;
   --tb-row2-bg:transparent;
   --text:#111111; --muted:#616161; --accent:#0067e0;
@@ -5859,6 +5859,61 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 .subagent-running{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)}
 .subagent-report{font-size:var(--fs-xs);line-height:1.5;white-space:pre-wrap;margin-top:var(--space-1);
   overflow:hidden;text-overflow:ellipsis}
+
+/* 2026-11-23 · 主流 agent 视觉收口：紧凑分段控件、内容居中、弱边框。
+   只改呈现，不改导航/右栏默认展开/功能；色值与间距全部复用既有令牌。 */
+:root{--chat-content-max:840px;--chat-composer-max:760px}
+.set-nav{
+  display:inline-flex;max-width:100%;gap:var(--space-1);
+  padding:var(--space-1);border:1px solid color-mix(in srgb,var(--line) 55%,transparent);
+  border-radius:var(--radius-full);background:var(--panel2);box-shadow:none}
+.set-nav-btn{
+  flex:0 1 auto;min-width:88px;min-height:36px;padding:var(--space-1) var(--space-4);
+  border:0;border-radius:var(--radius-full);background:transparent}
+.set-nav-btn:hover{border-color:transparent;background:var(--surface-hover)}
+.set-nav-btn.active{border-color:transparent;box-shadow:var(--shadow-1)}
+/* 卡片只保留分隔，不再用厚重边框抢内容。 */
+.set-card,.card{border-color:color-mix(in srgb,var(--line) 58%,transparent)}
+.rr-sec{border-bottom-color:color-mix(in srgb,var(--line) 52%,transparent)}
+.rail-sec-title{color:var(--text-dim)}
+/* 对话正文是内容，不是表单卡片。 */
+.chat-panel .msg.assistant:not(.tool):not(.failed):not(.canceled){
+  max-width:82%;padding:var(--space-2) 0;background:transparent;border-color:transparent}
+.chat-empty-guide{max-width:640px;padding:var(--space-4) 0;border:0;background:transparent}
+.chat-empty-guide-t{font-size:var(--fs-sm);letter-spacing:0}
+.chat-empty-guide li{font-size:var(--fs-sm);line-height:1.7}
+/* 主流 agent 的居中阅读列与 Composer；仅作用于主聊天形态，不动底部工作坞。 */
+.body.code-mode .main-wrap>.chat-panel .chat,
+.body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel .chat{
+  width:100%;max-width:var(--chat-content-max);margin-left:auto;margin-right:auto;
+  padding:var(--space-4) var(--space-5)}
+.body.code-mode .main-wrap>.chat-panel .chat-input-area,
+.body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel .chat-input-area{
+  width:calc(100% - 48px);max-width:var(--chat-composer-max);margin:0 auto var(--space-4);
+  background:var(--panel);border:1px solid color-mix(in srgb,var(--line) 58%,transparent);
+  border-radius:var(--radius-lg);box-shadow:var(--shadow-2)}
+/* 商店从居中表单卡改成易扫读的左对齐列表卡。 */
+.store-card .app-card-tx{align-items:flex-start;text-align:left}
+.store-card .store-ops{justify-content:flex-start}
+/* 第二轮：阅读行距、右栏层级与页面头弱边框。 */
+.chat-panel .chat{gap:var(--space-3)}
+.chat-panel .msg.assistant:not(.tool):not(.failed):not(.canceled){line-height:1.7}
+.rr-sec-toggle{color:var(--text-dim)}
+.rail-item{line-height:1.45}
+.card.page-head-card{border-color:color-mix(in srgb,var(--line) 58%,transparent)}
+@media(max-width:767px){
+  /* ≤767 回退原满宽分段卡：胶囊 nav 在 scene/toolbox 的多按钮行会横向溢出。 */
+  .set-nav{display:flex;flex-wrap:wrap;width:100%;gap:var(--space-2);
+    padding:var(--space-4) var(--space-3);background:var(--panel);
+    border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-1)}
+  /* 移动端不压缩按钮：flex:1 会把「运行器」压到 37px 而内容需 58px，文字越出盒外；
+     改为按内容宽度换行，既零溢出也不缩字号。 */
+  .set-nav-btn{flex:0 0 auto;min-height:38px;padding:var(--space-2) var(--space-4);
+    border:1px solid var(--line);background:var(--panel2);color:var(--text-dim);
+    border-radius:var(--radius-lg);font-size:var(--fs-sm);white-space:nowrap}
+  .set-nav-btn.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+  .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel .chat{padding:var(--space-3)}
+}
 </style>
 </head>
 <body>
