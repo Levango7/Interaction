@@ -1246,6 +1246,11 @@ function chatSuggestHtml(){
  */
 function renderChatDisabled(){
   const el=$("#chat"); if(!el) return;
+  /* 2026-11-22 F1：无 AI 配置不等于消息区必须清空。NL 工具链（建任务等）成功后
+     AppBridge.render() 也会走到这里；旧实现无条件写 greeting，把刚产生的用户/助手
+     回执整块盖掉。已有历史时按正常消息流渲染，空历史才展示未启用引导。 */
+  const existing = getChat(active);
+  if(existing.length){ renderChat(); return; }
   const s = SCENARIOS[active] || {name:""};
   /* 2026-11-17：未配置态补「能做什么」引导，填掉消息下方的整片空白（用户：'对话区大面积空白'）。
      ⚠️ 不加「去配置」按钮/常驻条 —— 那是 2026-09-23 用户明确要求去掉的（87px 条挤压输入区 +
