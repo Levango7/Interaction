@@ -5902,8 +5902,16 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
 .rail-item{line-height:1.45}
 .card.page-head-card{border-color:color-mix(in srgb,var(--line) 58%,transparent)}
 @media(max-width:767px){
-  .set-nav{display:flex;width:100%;border-radius:var(--radius-lg)}
-  .set-nav-btn{flex:1;min-width:0;min-height:44px;padding:var(--space-1) var(--space-2)}
+  /* ≤767 回退原满宽分段卡：胶囊 nav 在 scene/toolbox 的多按钮行会横向溢出。 */
+  .set-nav{display:flex;flex-wrap:wrap;width:100%;gap:var(--space-2);
+    padding:var(--space-4) var(--space-3);background:var(--panel);
+    border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-1)}
+  /* 移动端不压缩按钮：flex:1 会把「运行器」压到 37px 而内容需 58px，文字越出盒外；
+     改为按内容宽度换行，既零溢出也不缩字号。 */
+  .set-nav-btn{flex:0 0 auto;min-height:38px;padding:var(--space-2) var(--space-4);
+    border:1px solid var(--line);background:var(--panel2);color:var(--text-dim);
+    border-radius:var(--radius-lg);font-size:var(--fs-sm);white-space:nowrap}
+  .set-nav-btn.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
   .body.chat-home:not(.code-mode):not(.design-mode) .main-wrap>.chat-panel .chat{padding:var(--space-3)}
 }
 </style>
