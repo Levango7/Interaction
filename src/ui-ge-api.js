@@ -1133,6 +1133,8 @@
       const session = _integrationsAuthSession;
       if(!session || session.expires < Date.now()) return;
       if(e.source !== session.source || e.origin !== session.origin) return;
+      // 服务端 state 校验之外的第二道相关性校验：回调载荷的 state 必须与本次发起的一致
+      if(session.state && d.state && d.state !== session.state) return;
       _integrationsAuthSession = null; // 一次性消费，重复消息不得重复刷状态
       const connected = !!d.connected;
       _loadIntegrations().then(function(){
@@ -1284,7 +1286,7 @@
             if(!/^https?:$/.test(authorize.protocol) || !/^https?:$/.test(callback.protocol)) throw new Error("invalid oauth URL");
             const w = window.open(authorize.href, "_blank", "width=520,height=680");
             if(w){
-              _integrationsAuthSession = { source: w, origin: callback.origin, expires: Date.now() + 10*60*1000 };
+              _integrationsAuthSession = { source: w, origin: callback.origin, expires: Date.now() + 10*60*1000, state: authorize.searchParams.get("state") || null };
               try{ toast(t("api.integrationAuthorizeOpened", "已打开授权页，请在弹窗中完成授权"), "ok"); }catch(_){}
             }else{
               location.href = authorize.href; // 弹窗被拦截：同页跳转兜底
