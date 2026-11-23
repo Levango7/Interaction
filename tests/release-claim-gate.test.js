@@ -31,8 +31,9 @@ const row = (paths, session, status, claimedAt) =>
 
 /** release.mjs 真实写入的 8 个版本源（与 build.mjs --check 的多源门禁一致）。 */
 const WRITE_TARGETS = [
-  "package.json", "electron/package.json", "manifest.json", "agent-workbench.html",
-  "service-worker.js", "README.md", "package-lock.json", "electron/package-lock.json",
+  "package.json", "electron/package.json", "manifest.json", "server/package.json",
+  "agent-workbench.html", "service-worker.js", "README.md", "package-lock.json",
+  "electron/package-lock.json",
 ];
 
 describe("renderClaimRow()：一行登记表的渲染", () => {
