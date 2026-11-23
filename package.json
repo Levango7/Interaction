@@ -1,6 +1,6 @@
 {
   "name": "agent-workbench",
-  "version": "3.7.155",
+  "version": "3.7.156",
   "private": true,
   "engines": {
     "node": ">=22"

@@ -27,13 +27,16 @@
 import { BOARD, SECTION, parseTable, renderClaimRow, insertClaimRow } from "../claim-check.mjs";
 
 /** 切版会写到 / 按惯例必须一起提交的路径。
- *  前 8 个是 `release.mjs` 的真实写入目标（与 `build.mjs --check` 的多源门禁一致），
- *  第 9 个 `CHANGELOG.md` 是发版提交的惯例内容，也是铁律第 5 条点名的最高共写面。
+ *  前 9 个是 `release.mjs` 的真实写入目标（与 `build.mjs --check` 的多源门禁一致；
+ *  第 4 个 `server/package.json` 是 v3.7.156 起的第 9 版本源——/api/health 版本哨兵单一源，
+ *  漏登记它会被 `undeclaredWrites()` 在切版当场拦下，本注释即那次拦截的留痕），
+ *  末个 `CHANGELOG.md` 是发版提交的惯例内容，也是铁律第 5 条点名的最高共写面。
  *  ⚠️ 这份清单不许和 release.mjs 的实际写入漂移 —— `undeclaredWrites()` 在切版当场核对。 */
 export const RELEASE_PATHS = [
   "package.json",
   "electron/package.json",
   "manifest.json",
+  "server/package.json",
   "agent-workbench.html",
   "service-worker.js",
   "README.md",
