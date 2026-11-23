@@ -192,8 +192,9 @@ test.describe("10 套主题渲染层不变量", () => {
       const overflow = await checkOverflow(page);
       expect(overflow, "主题 " + th + " 出现横向溢出 " + overflow + "px").toBeLessThanOrEqual(0);
 
-      /* ② 顶栏 / 侧栏 / 主内容都存在且可见 */
-      await expect(page.locator(".topbar"), "主题 " + th + "：顶栏不可见").toBeVisible();
+      /* ② 顶区壳 / 侧栏 / 主内容都存在且可见（B5：.topbar 退役，改钉 menubar + 左栏列壳） */
+      await expect(page.locator(".menubar"), "主题 " + th + "：菜单栏不可见").toBeVisible();
+      await expect(page.locator(".side-col"), "主题 " + th + "：左栏列壳不可见").toBeVisible();
       await expect(page.locator("#side"), "主题 " + th + "：侧栏不可见").toBeVisible();
       await expect(page.locator("#main"), "主题 " + th + "：主内容不可见").toBeVisible();
 
@@ -206,10 +207,10 @@ test.describe("10 套主题渲染层不变量", () => {
         expect(box.height, "主题 " + th + "：侧栏项高度塌陷 " + box.height + "px").toBeGreaterThanOrEqual(28);
       }
 
-      /* ④ 顶栏高度未漂移 */
-      const topbar = await page.locator(".topbar").boundingBox();
-      expect(topbar.height, "主题 " + th + "：顶栏高度异常 " + topbar.height + "px").toBeGreaterThan(28);
-      expect(topbar.height, "主题 " + th + "：顶栏高度异常 " + topbar.height + "px").toBeLessThan(96);
+      /* ④ 顶区高度未漂移（B5：钉 menubar；顶栏已退役） */
+      const menubar = await page.locator(".menubar").boundingBox();
+      expect(menubar.height, "主题 " + th + "：菜单栏高度异常 " + menubar.height + "px").toBeGreaterThan(18);
+      expect(menubar.height, "主题 " + th + "：菜单栏高度异常 " + menubar.height + "px").toBeLessThan(96);
     }
   });
 });

@@ -192,7 +192,9 @@ test.describe("Design 模式窄屏", () => {
     await page.goto(APP_URL);
     await toDesign(page);
     const m = await page.evaluate(() => {
-      const side = document.getElementById("side");
+      /* B5：左栏整列藏改由 .side-col（列壳）承担；#side 是壳内滚动区，
+         父级 display:none 时它自己的 computed display 仍非 none，必须量列壳。 */
+      const side = document.querySelector(".side-col");
       const mob = document.getElementById("mobBar");
       const host = document.getElementById("drawCanvasHost");
       const svg = document.getElementById("drawSvg");

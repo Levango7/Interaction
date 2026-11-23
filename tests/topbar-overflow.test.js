@@ -1,15 +1,15 @@
 /**
- * topbar-overflow.test.js —— B5：窄屏顶栏溢出菜单（jsdom 面）
+ * topbar-overflow.test.js —— B5：左栏工具镜像组（jsdom 面；文件名保留历史前缀）
  * ----------------------------------------------------------------------------
- * 背景（实测，非推断）：≤479px 顶栏有 8 个按钮，2026-10-20 那版把命中宽度压到 26px
- * 才勉强不横向溢出（CSS 注释里自认"正解是收进溢出菜单，属独立设计项，未在本批做"）。
- * 本批补上正解：低频按钮用 **data-fold 声明**、窄屏收起、行项只转发点击给原按钮。
+ * 背景：B5 把 .topbar 整体退役，系统按钮族迁入左栏底部工具区（宽屏直接可见）；
+ * ≤767px 左栏整列藏，由底部抽屉里的 #sideSheetTools 镜像组兜底可达。
+ * 镜像行**只转发点击**给真按钮，不重写任何行为——与旧 topbarMorePanel 同口径。
  *
  * 这里守四件事（真实宽度与"不溢出"在 tests/e2e/topbar-overflow.spec.js 里量，jsdom 没有布局）：
- *   ① 声明面不漂移 —— data-fold 的按钮集合与面板行项**一一对应**（B3 的教训：6-7 处手工登记必然漏一处）；
- *   ② 开合状态机 —— is-open 与 aria-expanded 同步，外点/Esc 都收；
- *   ③ 行项是转发不是重写 —— 点行项必须真的触发原按钮的 handler（否则快捷键在那条路上失效）；
- *   ④ 能力缺失即隐藏 —— 目标按钮当前不可见时行项一起隐掉，不留"点了没反应"。
+ *   ① 声明面不漂移 —— 镜像行集合与左栏工具按钮集合**一一对应**；
+ *   ② 行项是转发不是重写 —— 点行项必须真的触发原按钮 handler（幂等/账号态逻辑只有一份）；
+ *   ③ 能力缺失即隐藏 —— 目标按钮 hidden/u-hidden/未 .show 的安装入口，行项一起隐掉；
+ *   ④ 标签跟真源 —— #btnUser 登录态会改写 .lbl，镜像行文本必须跟随（否则抽屉里显示"登录"但点下去是登出）。
  */
 import { afterEach, describe, expect, it } from "vitest";
 import { loadApp } from "./helpers/loadApp.js";
@@ -25,78 +25,48 @@ function boot() {
   return win;
 }
 
-describe("① 声明面：低频按钮与溢出面板一一对应", () => {
-  it("data-fold 的集合 = 面板行项集合，谁都不能多也不能少", () => {
+describe("① 声明面：左栏工具按钮与抽屉镜像组一一对应", () => {
+  it("快捷区 + 工具区的按钮集合 = 镜像行集合，谁都不能多也不能少", () => {
     const win = boot();
     const doc = win.document;
-    const folded = Array.prototype.slice.call(doc.querySelectorAll('.topbar .tbtn[data-fold]')).map((b) => b.id).sort();
-    const rows = Array.prototype.slice.call(doc.querySelectorAll("#topbarMorePanel [data-fold-target]")).map((r) => r.getAttribute("data-fold-target")).sort();
-    expect(folded.length, "必须确实有按钮声明为低频（删光了就等于把功能弄丢）").toBeGreaterThan(0);
-    expect(rows, "面板行项与 data-fold 声明必须完全一致").toEqual(folded);
+    const tools = Array.prototype.slice.call(doc.querySelectorAll("#sideQuick .tbtn, #sideTool .tbtn"))
+      .map((b) => b.id).sort();
+    const rows = Array.prototype.slice.call(doc.querySelectorAll("#sideSheetTools [data-fold-target]"))
+      .map((r) => r.getAttribute("data-fold-target")).sort();
+    expect(tools.length, "左栏工具区必须有按钮（删光了就等于把抽屉入口弄丢）").toBeGreaterThan(0);
+    expect(rows, "镜像行与左栏工具按钮必须完全一致").toEqual(tools);
     rows.forEach((id) => expect(doc.getElementById(id), "行项指向的按钮必须真实存在: " + id).toBeTruthy());
-    /* 常驻按钮不许被收起：搜索/今日/消息/用户 是窄屏主路径 */
-    ["btnSearchTop", "btnTaskRail", "btnMessages", "btnUser"].forEach((id) => {
-      expect(doc.getElementById(id).hasAttribute("data-fold"), id + " 属于高频，不应被收进溢出菜单").toBe(false);
-    });
   });
 
-  it("「更多」入口与面板都在，且 aria-controls 指得准", () => {
+  it("顶栏已退役：.topbar 壳与溢出面板都不再存在（防复活）", () => {
     const win = boot();
-    const btn = win.document.getElementById("btnMore");
-    expect(btn, "顶栏必须有 #btnMore 入口").toBeTruthy();
-    expect(btn.getAttribute("aria-expanded"), "初始应为收起").toBe("false");
-    expect(btn.getAttribute("aria-controls")).toBe("topbarMorePanel");
-    expect(win.document.getElementById("topbarMorePanel"), "面板容器必须存在").toBeTruthy();
-    expect(btn.querySelector("svg"), "入口要有图标（纯文字窄屏放不下）").toBeTruthy();
+    const doc = win.document;
+    expect(doc.querySelector(".topbar"), "B5 起 .topbar 必须不存在").toBeFalsy();
+    expect(doc.getElementById("btnMore"), "#btnMore 已随顶栏退役").toBeFalsy();
+    expect(doc.getElementById("topbarMorePanel"), "溢出面板已随顶栏退役").toBeFalsy();
+  });
+
+  it("同步状态是指示器不是控件，不进镜像组", () => {
+    const win = boot();
+    const doc = win.document;
+    const sync = doc.getElementById("syncStatus");
+    expect(sync, "syncStatus 仍在左栏工具区").toBeTruthy();
+    expect(sync.closest("#sideTool"), "syncStatus 必须住在底部工具区").toBeTruthy();
+    expect(doc.querySelector('#sideSheetTools [data-fold-target="syncStatus"]'), "指示器不镜像").toBeFalsy();
   });
 });
 
-describe("② 开合状态机", () => {
-  it("点「更多」开 → 再点关；is-open 与 aria-expanded 必须同步", async () => {
-    const win = boot();
-    const btn = win.document.getElementById("btnMore");
-    const panel = win.document.getElementById("topbarMorePanel");
-    btn.click();
-    await wait(20);
-    expect(panel.classList.contains("is-open"), "点入口必须真的展开").toBe(true);
-    expect(btn.getAttribute("aria-expanded")).toBe("true");
-    btn.click();
-    await wait(20);
-    expect(panel.classList.contains("is-open")).toBe(false);
-    expect(btn.getAttribute("aria-expanded")).toBe("false");
-  });
-
-  it("Esc 与点击面板外都会收起（展开着不关是移动端最常见的卡死感）", async () => {
-    const win = boot();
-    const btn = win.document.getElementById("btnMore");
-    const panel = win.document.getElementById("topbarMorePanel");
-    btn.click();
-    expect(panel.classList.contains("is-open")).toBe(true);
-    win.document.dispatchEvent(new win.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    await wait(10);
-    expect(panel.classList.contains("is-open"), "Esc 必须收起").toBe(false);
-
-    btn.click();
-    expect(panel.classList.contains("is-open")).toBe(true);
-    win.document.getElementById("main").click();
-    await wait(10);
-    expect(panel.classList.contains("is-open"), "点外部必须收起").toBe(false);
-  });
-});
-
-describe("③ 行项是转发不是重写", () => {
-  it("点面板里的「主题」行 ⇒ 原 #btnTheme 的 handler 被调用、面板收起", async () => {
+describe("② 行项是转发不是重写", () => {
+  it("点镜像行「主题」⇒ 原 #btnTheme 的 handler 被调用一次", async () => {
     const win = boot();
     let hits = 0;
     const themeBtn = win.document.getElementById("btnTheme");
     const original = themeBtn.onclick;
-    themeBtn.onclick = function (e) { hits++; if (original) original.apply(this, arguments); };
-    win.document.getElementById("btnMore").click();
-    const row = win.document.querySelector('#topbarMorePanel [data-fold-target="btnTheme"]');
+    themeBtn.onclick = function () { hits++; if (original) original.apply(this, arguments); };
+    const row = win.document.querySelector('#sideSheetTools [data-fold-target="btnTheme"]');
     row.click();
     await wait(20);
     expect(hits, "行项必须把点击交给原按钮（同一份逻辑，别在这里重写第二套）").toBe(1);
-    expect(win.document.getElementById("topbarMorePanel").classList.contains("is-open"), "选完要自动收起").toBe(false);
     themeBtn.onclick = original;
   });
 
@@ -107,39 +77,40 @@ describe("③ 行项是转发不是重写", () => {
     const original = dl.onclick;
     dl.onclick = function () { hits++; if (original) original.apply(this, arguments); };
     dl.hidden = true;                       // 模拟"能力缺失即隐藏"
-    win.syncTopbarMoreItems();
-    const row = win.document.querySelector('#topbarMorePanel [data-fold-target="btnDownload"]');
+    win.syncSideSheetTools();
+    const row = win.document.querySelector('#sideSheetTools [data-fold-target="btnDownload"]');
     expect(row.hasAttribute("hidden"), "目标隐藏时行项必须一起隐掉").toBe(true);
-    win.document.getElementById("btnMore").click();
     row.click();
     await wait(20);
     expect(hits, "隐藏的行项不该真的驱动原按钮").toBe(0);
     dl.onclick = original;
+    dl.hidden = false;
+    win.syncSideSheetTools();
   });
 });
 
-describe("④ 可见性同步", () => {
-  it("被 CSS 收起（display:none）的目标不能让行项一起消失 —— 这正是本功能在做的事", () => {
+describe("③ 可见性同步", () => {
+  it("被 CSS 收起（display:none）的目标不能让行项一起消失 —— 左栏 ≤767 整列藏正是这一步", () => {
     /* 这条守的是实现里最容易写错的一处：用 getComputedStyle(target).display 判可见，
-       会把每个折叠按钮的行项都标成隐藏 ⇒ 窄屏打开"更多"是空面板（真浏览器实测踩过）。
-       jsdom 不跑 media query，所以这里直接改内联 display 复现折叠态。 */
+       会把整列被 CSS 藏起来的每个按钮的行项都标成隐藏 ⇒ 抽屉里是空面板。
+       jsdom 不跑 media query，所以这里直接改内联 display 复现"整列藏"态。 */
     const win = boot();
     const doc = win.document;
     const cmd = doc.getElementById("btnCmd");
-    const row = doc.querySelector('#topbarMorePanel [data-fold-target="btnCmd"]');
-    win.syncTopbarMoreItems();
-    expect(row.hasAttribute("hidden"), "折叠前：命令面板常驻可用，行项应可见").toBe(false);
-    cmd.style.display = "none";           // 模拟 @media(max-width:479px) 的收起规则
-    win.syncTopbarMoreItems();
-    expect(row.hasAttribute("hidden"), "目标只是被折叠规则收起来，行项必须还在（否则菜单是空的）").toBe(false);
+    const row = doc.querySelector('#sideSheetTools [data-fold-target="btnCmd"]');
+    win.syncSideSheetTools();
+    expect(row.hasAttribute("hidden"), "同步前：命令面板常驻可用，行项应可见").toBe(false);
+    cmd.style.display = "none";           // 模拟 ≤767 左栏整列藏 / 任何折叠规则
+    win.syncSideSheetTools();
+    expect(row.hasAttribute("hidden"), "目标只是被 CSS 藏起来，行项必须还在（否则抽屉是空的）").toBe(false);
     cmd.style.display = "";
   });
 
   it("行项跟随目标按钮的真实可见性（不写死数量：安装入口本身是条件可见的）", () => {
     const win = boot();
     const doc = win.document;
-    const row = (id) => doc.querySelector('#topbarMorePanel [data-fold-target="' + id + '"]');
-    const base = win.syncTopbarMoreItems();
+    const row = (id) => doc.querySelector('#sideSheetTools [data-fold-target="' + id + '"]');
+    const base = win.syncSideSheetTools();
     expect(base, "至少三个行项应随目标可见（全隐藏=转发链断了也测不出来）").toBeGreaterThanOrEqual(3);
     expect(row("btnCmd").hasAttribute("hidden"), "命令面板常驻可用 ⇒ 行项不该被隐").toBe(false);
     /* 安装入口只在捕获到 beforeinstallprompt 时才 .show —— 浏览器里没有该事件，
@@ -150,10 +121,27 @@ describe("④ 可见性同步", () => {
 
     const cmd = doc.getElementById("btnCmd");
     cmd.hidden = true;
-    expect(win.syncTopbarMoreItems(), "目标隐藏后计数要减一").toBe(base - 1);
+    expect(win.syncSideSheetTools(), "目标隐藏后计数要减一").toBe(base - 1);
     expect(row("btnCmd").hasAttribute("hidden")).toBe(true);
     cmd.hidden = false;
-    expect(win.syncTopbarMoreItems(), "恢复后要回到原计数").toBe(base);
+    expect(win.syncSideSheetTools(), "恢复后要回到原计数").toBe(base);
     expect(row("btnCmd").hasAttribute("hidden")).toBe(false);
+  });
+});
+
+describe("④ 标签跟真源", () => {
+  it("#btnUser 的 .lbl 被登录态改写后，镜像行文本随之同步（含中文文案）", () => {
+    const win = boot();
+    const doc = win.document;
+    const userBtn = doc.getElementById("btnUser");
+    const row = doc.querySelector('#sideSheetTools [data-fold-target="btnUser"]');
+    const lbl = userBtn.querySelector(".lbl");
+    expect(lbl, "#btnUser 必须有 .lbl（登录态写回点）").toBeTruthy();
+    lbl.textContent = "user@example.com";
+    win.syncSideSheetTools();
+    expect(row.textContent, "镜像行必须显示与真按钮一致的标签").toBe("user@example.com");
+    lbl.textContent = "登录";
+    win.syncSideSheetTools();
+    expect(row.textContent).toBe("登录");
   });
 });

@@ -55,11 +55,14 @@ test.describe("跨视口布局不变量", () => {
       await expect(page.locator("#mobBar"), "宽屏应隐藏底部导航").toBeHidden();
     }
 
-    /* ③ 顶栏高度合理（历史上修过窄屏溢出，这里防漂移） */
-    const topbar = await page.locator(".topbar").boundingBox();
-    expect(topbar, "顶栏应存在").toBeTruthy();
-    expect(topbar.height, `顶栏高度异常：${topbar.height}px`).toBeGreaterThan(28);
-    expect(topbar.height, `顶栏高度异常：${topbar.height}px`).toBeLessThan(96);
+    /* ③ 顶区几何（B5：.topbar 退役，改钉三横带 menubar/tabbar/statusbar 高度合理） */
+    for (const [sel, label] of [[".menubar", "菜单栏"], [".tabbar", "tab 条"], [".statusbar", "状态栏"]]) {
+      const box = await page.locator(sel).boundingBox();
+      expect(box, `${label}应存在`).toBeTruthy();
+      expect(box.height, `${label}高度异常：${box.height}px`).toBeGreaterThan(18);
+      expect(box.height, `${label}高度异常：${box.height}px`).toBeLessThan(96);
+    }
+    expect(await page.locator(".topbar").count(), ".topbar 已随 B5 退役").toBe(0);
 
     /* ④ 主内容区未被压扁 */
     /* 阈值按本机 CDP 实测取：375 → 375px、768 → 288px（侧栏 180 + 折叠聊天面板占位）、1280 → 770px。

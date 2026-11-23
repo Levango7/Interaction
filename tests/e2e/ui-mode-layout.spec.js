@@ -167,8 +167,10 @@ test.describe("窄屏 390×844 · 胶囊禁用与抽屉层（P2-8、P2-7）", ()
     const z = await page.evaluate(() => getComputedStyle(document.getElementById("taskRail")).zIndex);
     expect(z, `窄屏 taskRail z-index=${z}，应为抽屉层 60（--z-drawer）`).toBe("60");
 
-    /* ② 真点击开 taskRail（聊天此刻是关的，按钮没被盖住——顺带证明 390 下按钮可用） */
-    await page.click("#btnTaskRail");
+    /* ② 真点击开 taskRail（聊天此刻是关的，入口没被盖住）。B5 起 #btnTaskRail 住左栏底部工具区，
+       ≤767 左栏整列藏 ⇒ 窄屏可达入口是 tabbar 的右栏把手 .railbtn（≤1023 显示，行为转发 #btnTaskRail，
+       B2 起不重写），这里点它顺带证明 390 下入口可用。 */
+    await page.click(".railbtn");
     await page.waitForFunction(() => document.getElementById("taskRail").classList.contains("open"));
 
     /* ③ 再开聊天抽屉（__aiPanelExpand 的窄屏分支走真实 setChatDrawer）→ taskRail 应被关掉 */

@@ -56,9 +56,9 @@ describe("响应式三档 · pad(768-1023)", () => {
       .not.toContain("grid-template-columns:repeat(2,minmax(0,1fr))");
   });
 
-  it("平板侧栏保持紧凑 180px（不吃掉主区）", () => {
-    const blk = mediaBlock(PAD_Q, ".side{width:180px");
-    expect(blk, "平板断点应把侧栏收到 180px").toBeTruthy();
+  it("平板侧栏保持紧凑 180px（不吃掉主区；B5 起宽度收在列壳 .side-col 上）", () => {
+    const blk = mediaBlock(PAD_Q, ".side-col{width:180px");
+    expect(blk, "平板断点应把左栏列壳收到 180px").toBeTruthy();
   });
 });
 

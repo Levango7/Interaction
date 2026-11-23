@@ -40,7 +40,7 @@
 | `ui-drawer` | UI | `ai-retry` `crypto` `data-links` `data-migrate` `render-widgets` `ui-daily` `ui-ge-api` `ui-ge-theme` `ui-global-events` `ui-guide` `ui-theme` `util-markdown` | 48 |
 | `ui-hotkeys` | UI | `ai-retry` `core-commands` `core-shared` `data-rw` `render-widgets` `ui-drawer` `ui-palette` `ui-scene-bind` | 10 |
 | `ui-select` | UI | — | 0 |
-| `ui-global-events` | UI | `ai-retry` `ai-tools` `core` `core-shared` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-entry` `render-scene-main` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-integrations` `ui-ge-pomodoro` `ui-ge-theme` `ui-guide` `ui-onboarding` `ui-palette` `ui-theme` `util-perf` | 145 |
+| `ui-global-events` | UI | `ai-retry` `ai-tools` `core` `core-shared` `crypto` `data-idb` `data-links` `data-migrate` `data-rw` `render-entry` `render-scene-main` `render-widgets` `ui-backup-stats` `ui-daily` `ui-drawer` `ui-ge-api` `ui-ge-calendar` `ui-ge-integrations` `ui-ge-pomodoro` `ui-ge-theme` `ui-guide` `ui-onboarding` `ui-palette` `ui-theme` `util-perf` | 148 |
 | `ui-ge-api` | UI | `core-i18n` `crypto` `render-overview` `ui-drawer` | 5 |
 | `ui-ge-plugins` | UI | `data-links` `util-markdown` | 2 |
 | `ui-ge-theme` | UI | `chain` | 1 |
@@ -67,8 +67,8 @@
 | `dangerConfirm` | `core-shared` | 12 |
 | `active` | `data-links` | 12 |
 | `getRec` | `data-rw` | 12 |
+| `setActive` | `data-links` | 11 |
 | `setTasks` | `data-rw` | 10 |
-| `setActive` | `data-links` | 10 |
 | `getLinks` | `data-links` | 9 |
 | `getActiveProfile` | `data-migrate` | 9 |
 

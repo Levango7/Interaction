@@ -618,6 +618,37 @@ function _mobCurrentGroup(groups){
   return "overview"; // v3.4.5：兜底 gid（与组 gid 对齐，语言无关）
 }
 let _mobSheetGroup = null;
+/* B5（2026-11-18）：左栏工具镜像组同步（与 openSideSheet 同模块，避免跨层引用）。
+ * 行项不重写行为，只转发点击（转发委托在 ui-global-events）；这里只同步可见性与标签：
+ * 目标当前不可见（hidden / u-hidden / 安装入口未 .show）时行项一起隐掉，
+ * 否则就是本仓反复踩过的"点了没反应"。
+ * ⚠️ 不能用 getComputedStyle(target).display 判可见 —— 左栏在 ≤767 本来就被 CSS 整列藏起，
+ * 照 display 判会把每一行都标成隐藏，于是"打开抽屉却是空的"（真浏览器实测踩过同款）。 */
+function syncSideSheetTools(){
+  const box = $("#sideSheetTools");
+  if(!box) return 0;
+  let shown = 0;
+  Array.prototype.forEach.call(box.querySelectorAll("[data-fold-target]"), function(row){
+    const id = row.getAttribute("data-fold-target");
+    const target = document.getElementById(id);
+    let vis = false;
+    if(target){
+      vis = !target.hidden
+        && !target.classList.contains("u-hidden")
+        && !(target.classList.contains("install-btn") && !target.classList.contains("show"));
+      /* 标签跟真按钮走（#btnUser 登录态会改写 .lbl；切语言时 data-i18n 重写行项、
+         下次开抽屉再按真源同步，两侧不会打架） */
+      const srcLbl = target.querySelector(".lbl");
+      if(srcLbl && srcLbl.textContent && row.textContent !== srcLbl.textContent){
+        row.textContent = srcLbl.textContent;
+      }
+    }
+    if(vis){ row.removeAttribute("hidden"); shown++; }
+    else row.setAttribute("hidden", "");
+  });
+  return shown;
+}
+syncSideSheetTools();
 /**
  * 打开移动端底部抽屉，展示指定组的完整节点列表（父项为分组标题，子项平铺）。
  * @param {string} groupName - 组名（总览/场景/功能/系统）
@@ -645,6 +676,8 @@ function openSideSheet(groupGid){
     });
   });
   body.innerHTML = sanitizeHtml(rows.join(""));
+  /* B5：工具镜像组按真按钮当前状态同步（登录态/安装能力变化后，开抽屉即刷新） */
+  syncSideSheetTools();
   sheet.classList.add("open");
   if(mask) mask.classList.add("open");
   renderMobBar();

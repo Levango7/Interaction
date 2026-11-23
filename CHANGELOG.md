@@ -3,6 +3,17 @@
 _（新条目追加在本节之下、`## [3.7.155]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-18 · **UI 形态 A B5：`.topbar` 退役（左栏列壳 + 快捷/工具区 + 窄屏抽屉镜像组）**
+
+_功能设计 §5/§6 B5 落地。用户 11-18 裁「甲」= 开工 B5（topbar 退役 + 旧坞 CSS 清理 + draw-responsive 判据重写 + 六档探针入 e2e）。设计权下放的扩展已披露：§5 表未列的 5 个控件按表精神归底部工具区、≤767 整列藏改走抽屉镜像组。_
+
+- **`agent-workbench.html`**：`.topbar` 壳与 `#topbarMorePanel` 整块删；左栏改列壳 `.side-col`（宽度/底色/毛玻璃/分隔/折叠 `:has(.side.collapsed)` 全收壳上，`nav#side` 退化为唯一滚动区）+ `.side-quick`（搜索/命令，§5 表）+ `.side-tool`（btnTaskRail/btnMessages/btnTheme/btnDownload/btnInstall/syncStatus/btnUser/fileInput）；抽屉内新增 `.side-sheet-tools` 8 行镜像组；`.topbar` 全族 CSS（纵排 tbtn、窄屏收紧、`data-fold` 收起、`topbar-more-*`、主题 ×4）退役；`--topbar-h`/`--topbar-tint` 删，`--chrome-h` 110→45；≤767 左栏整列藏须 `body .side-col`（带前缀提特异性——基础 `display:flex` 在同块之后同特异性，裸选择器被覆盖，六档探针实测抓到）；`.main > .foot`/`.overview-grid > .foot` 死规清（`.foot` 基础样式保留，drawer 路径仍在用）。
+- **`src/ui-global-events.js`**：`syncTopbarMoreItems/setTopbarMoreOpen/#btnMore` handler/外点/Esc 开合全删；Esc 监听裁到只保留 `_helpMenuClose()`；新增镜像组点击转发委托（纯 DOM 依赖）；`#btnHelp` 死绑定删。
+- **`src/render-widgets.js`**：新增 `syncSideSheetTools()`（可见性只看 hidden/u-hidden/install `.show`，**不看 display**——≤767 整列藏会被误判成"空抽屉"；标签跟真按钮 `.lbl` 同步），`openSideSheet()` 打开即同步；与 openSideSheet 同模块定义，避免 `render-widgets → ui-global-events` 逆层边（module-graph 首跑抓到 145 项新增，迁函数后归零）。
+- **判据随实现改写（逐个披露）**：`tests/topbar-overflow.test.js` 主体迁镜像组（一一对应/转发/hidden 不转发/display 收起仍可见/标签跟真源/防复活）；`ui-scale-floor` 44×44 地板钉 `.side-quick/.side-tool .tbtn`（旧顶栏规则不许复活）；`ui-spec-guards` 改「`--topbar-h` 不得出现 + `--chrome-h`=45px」；`css-structure` toast 锚期望 110→45；`ui-consistency` 改钉三横带+列壳；`responsive-breakpoints` 180px 钉到 `.side-col`；`e2e/topbar-overflow` 重写六档 chrome 探针（320/375/480/768/1024/1280：零横向溢出 + 顶栏不存在 + 宽档 44×44 + 窄档抽屉镜像组端到端换主题 + 真按钮路径 + 标签同步）；`viewport/theme-matrix/corrupt-data-boot` 的 `.topbar` 钉改 menubar/三横带；`ui-mode-layout`/`layout-v2` 窄屏右栏入口改 tabbar `.railbtn`；`draw-responsive` ⑤ 侧栏收起判据改量列壳。
+- **验证**：全量 `npm run test:local` **245 文件 230 passed / 13 failed；2680 例 2650 passed / 15 failed**（1101s）——wrapper 判定为既定「vitest-worker RPC 超时」抖动形态（`Timeout calling "onTaskUpdate"` 成串出现、红文件每轮轮换）；按规矩只认单跑复跑：13 个红文件低并发（`--maxWorkers=2 --minWorkers=1`）单跑 **11 文件全绿、2 文件红（127 例中 124 passed）**，两红＝`tests/server-sms-providers.test.js`（缺 `bcryptjs`，文件级收集失败）+ `tests/prod-startup-guard.test.js` A/B/C（缺 `express` ⇒ `MODULE_NOT_FOUND`）＝本 worktree 缺 server 依赖的预存环境面，与 B6 回执同签名、与本批零交集。首跑 9 红归因：2 真修（`mob-nav-parity` ×2 双侧副本同步 DL-O15；`i18n-dead-keys` 4 死键 zh/en 双块删）＋3 负载（单跑绿）＋4 env。`npm run lint` **rc=0**（eslint 0 errors / 12 预存 warnings 逐条与 B6 基线同构；colors 0 违规、css-structure 2745 规则、breakpoints 8 值、false-receipt 新增 0、bindings 8⇄8、src-split 40/40）；`check:source-state` ✓ 40/40（HTML 679KB 源码态）；e2e 六族实测：六档 chrome 探针 28 passed、`ui-mode-layout` 12 passed、`viewport`+`theme-matrix`+`corrupt-data-boot` 37 passed、`draw-responsive`+`layout-v2` 23 passed、`mobile`+`three-state-layout`+`main-cta`+`form-controls` 39 passed；窄变异两条（删镜像组点击转发委托 / 改 44×44 地板选择器）精确打红 3 例并已复原。
+- **高共写面声明**：workflow / package-lock / node_modules / server / electron 零改动；零凭据落盘。
+
 ### 2026-11-14 · **UI 形态 A B6：专注模式 + 帮助菜单（§8 三条待决结案）**
 
 _用户 11-14 两句裁定：「加专注模式按钮（推荐）」+「一组「帮助」菜单（推荐）」。_

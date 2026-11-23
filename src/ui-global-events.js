@@ -68,71 +68,22 @@ document.addEventListener("click", function(e){
     }
   }
 });
-/* ---------- B5（2026-10-26）：窄屏顶栏溢出菜单 ----------
+/* ---------- B5（2026-11-18）：左栏工具镜像组（topbar 退役） ----------
+ * 顶栏退役后，原 #topbarMorePanel 收的入口移到左栏底部工具区（宽屏直接可见）；
+ * ≤767px 左栏整列藏，由 .side-sheet-tools 镜像组兜底可达。
  * 行项**不重写行为**，只把点击转给原按钮 —— 快捷键、可见性判定、状态同步都只有那一份真源；
  * 目标当前不可见（Electron 才有的安装、能力缺失即隐藏的入口）时行项一起隐掉，
- * 否则就是本仓反复踩过的"点了没反应"。面板用 is-open 类开合（不用内联 style，窄屏基线由 CSS 决定）。 */
-function syncTopbarMoreItems(){
-  const panel = $("#topbarMorePanel");
-  if(!panel) return 0;
-  let shown = 0;
-  Array.prototype.forEach.call(panel.querySelectorAll("[data-fold-target]"), function(row){
-    const id = row.getAttribute("data-fold-target");
-    const target = document.getElementById(id);
-    /* ⚠️ 不能用 getComputedStyle(target).display 判可见 —— 被收起的按钮在窄屏**本来**就是
-       display:none（那正是本功能在做的事），照 display 判会把每一行都标成隐藏，
-       于是"打开菜单却是空的"（真浏览器实测过这一步）。
-       这里只看应用层的"能力/状态"信号：hidden 属性、u-hidden 工具类、
-       以及安装入口专用的 .show（未捕获 beforeinstallprompt 时不给点）。 */
-    let vis = false;
-    if(target){
-      vis = !target.hidden
-        && !target.classList.contains("u-hidden")
-        && !(target.classList.contains("install-btn") && !target.classList.contains("show"));
-    }
-    if(vis){ row.removeAttribute("hidden"); shown++; }
-    else row.setAttribute("hidden", "");
-  });
-  return shown;
-}
-function setTopbarMoreOpen(open){
-  const panel = $("#topbarMorePanel");
-  const btn = $("#btnMore");
-  if(!panel || !btn) return false;
-  const on = !!open;
-  if(on) syncTopbarMoreItems();
-  if(on) panel.classList.add("is-open"); else panel.classList.remove("is-open");
-  btn.setAttribute("aria-expanded", on ? "true" : "false");
-  return on;
-}
-const _btnTopbarMore = $("#btnMore");
-if(_btnTopbarMore){
-  _btnTopbarMore.onclick = function(e){
-    e.stopPropagation();
-    const panel = $("#topbarMorePanel");
-    setTopbarMoreOpen(!(panel && panel.classList.contains("is-open")));
-  };
-}
-const _topbarMorePanel = $("#topbarMorePanel");
-if(_topbarMorePanel){
-  _topbarMorePanel.onclick = function(e){
-    const row = e.target && e.target.closest ? e.target.closest("[data-fold-target]") : null;
-    if(!row || row.hasAttribute("hidden")) return;
-    const target = document.getElementById(row.getAttribute("data-fold-target"));
-    setTopbarMoreOpen(false);
-    if(target) target.click();
-  };
-}
+ * 否则就是本仓反复踩过的"点了没反应"。
+ * 可见性/标签同步 syncSideSheetTools() 定义在 render-widgets（与 openSideSheet 同模块），
+ * 此处只做点击转发（纯 DOM 依赖，无跨层引用）。 */
 document.addEventListener("click", function(e){
-  const panel = $("#topbarMorePanel");
-  const btn = $("#btnMore");
-  if(!panel || !panel.classList.contains("is-open")) return;
-  if(panel.contains(e.target) || (btn && btn.contains(e.target))) return;
-  setTopbarMoreOpen(false);
+  const row = e.target && e.target.closest ? e.target.closest("#sideSheetTools [data-fold-target]") : null;
+  if(!row || row.hasAttribute("hidden")) return;
+  const target = document.getElementById(row.getAttribute("data-fold-target"));
+  if(target) target.click();
 });
 document.addEventListener("keydown", function(e){
   if(e.key !== "Escape") return;
-  setTopbarMoreOpen(false);
   _helpMenuClose();   /* B6：Esc 收帮助菜单（复用同一口子，不新开监听） */
 });
 // 空态引导按钮委托（data-empty-action）：与快捷键 N 同款行为——切场景 + 聚焦新建表单
@@ -1589,8 +1540,7 @@ $("#cfgProfileDup").onclick = dupProfile;
 $("#cfgProfileDel").onclick = delProfile;
 $("#btnTheme").onclick = toggleTheme;
 $("#btnCmd").onclick = openCmd;
-$("#btnHelp").onclick = renderHelp;
-/* 顶栏下载按钮：复用 doExport（导出 JSON 备份） */
+/* 左栏工具区下载按钮（B5 自顶栏迁入）：复用 doExport（导出 JSON 备份） */
 const _btnDownload = $("#btnDownload"); if(_btnDownload) _btnDownload.onclick = doExport;
 $("#btnRecover").onclick = recoverAutoBackup;
 

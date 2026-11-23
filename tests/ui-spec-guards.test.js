@@ -161,15 +161,16 @@ describe("几何令牌：具体数值钉死（此前只断言「是 px」，改�
     expect(rootToken("--control-r"), "表单控件专属圆角（规范 §5.1）").toBe("12px");
   });
 
-  it("顶栏高度：--topbar-h=54px（全断点一致；移动端按钮 44px 时仍 54px）", () => {
-    expect(rootToken("--topbar-h")).toBe("54px");
+  it("顶栏令牌已随 .topbar 退役删除：--topbar-h 不得复活，--chrome-h 收窄为工具行 45px", () => {
+    expect(HTML, "--topbar-h 不允许再出现（B5 已删，防复活）").not.toMatch(/--topbar-h\s*:/);
+    expect(rootToken("--chrome-h"), "B5 后常驻头部只有工具行").toBe("45px");
   });
 
   /* 几何令牌只在 :root —— 本轮把「主题不得重复声明」的范围从 --label-col-w 一条
      扩到全部几何令牌（此前只守了一条，其余可被逐主题抄漏而不报错）。 */
   it("所有几何令牌只在 :root 定义，主题块不得重复声明", () => {
     const GEO = ["--control-h", "--control-h-sm", "--control-r", "--label-h", "--field-msg-h", "--label-col-w",
-      "--icon-sm", "--icon-md", "--icon-lg", "--icon-set", "--topbar-h"];
+      "--icon-sm", "--icon-md", "--icon-lg", "--icon-set", "--chrome-h"];
     /* 切成「:root{...}」与「:root[data-theme=X]{...}」块，只看后者里有没有几何令牌 */
     const blocks = [...HTML.matchAll(/:root\[data-theme="(\w+)"\]\{([\s\S]*?)\n\}/g)];
     const bad = [];

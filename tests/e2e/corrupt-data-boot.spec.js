@@ -56,7 +56,8 @@ async function seedCorruptTasks(page, { breakBackup = false } = {}) {
 
 async function booted(page) {
   await page.waitForSelector("#main", { state: "attached", timeout: 15_000 });
-  await expect(page.locator(".topbar"), "顶栏必须照常渲染").toBeVisible();
+  await expect(page.locator(".menubar"), "菜单栏必须照常渲染（B5 顶栏退役后顶区三横带）").toBeVisible();
+  await expect(page.locator(".tabbar"), "tab 条必须照常渲染").toBeVisible();
   await expect(page.locator("#side"), "侧栏必须照常渲染").toBeVisible();
   await expect(page.locator("#main"), "主内容必须照常渲染").toBeVisible();
   /* 错误边界的兜底页（含「数据异常」）出现 = 启动链真的崩过 */

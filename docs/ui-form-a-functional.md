@@ -62,10 +62,17 @@
   （同文件 `body:has(#drawer.drawer-page.open) .topbar` 先例），并在 `tests/e2e/ui-mode-layout.spec.js`
   加真 `:has()` 引擎断言钉死（jsdom 无排版/:has 引擎，静态扫只能兜底字面）。
 
-## 5. 删除面（旧 topbar 退役）
+## 5. 删除面（旧 topbar 退役）——**B5 已落地（2026-11-18）**
 
 - `#uiModePill` 从 `.topbar` 迁到 tab 条左（#134 已删 `#btnUIMode`/`#uiModeMenu`，全仓 grep 0 命中）。
 - `.topbar` 整体退役，控件逐一定好新家后再删旧壳（每批可回退）：
+- **B5 落地裁定与扩展**：左栏改为**列壳 `.side-col`**（组帧视觉/宽度/折叠 `:has(.side.collapsed)` 全部收在壳上），
+  壳内 `nav#side` 退化为唯一滚动区；`.side-quick`（搜索/命令）与 `.side-tool`（系统按钮族）为固定区。
+  §5 表**未列**的 `btnTaskRail`/`btnMessages`/`btnInstall`/`syncStatus`/`btnUser`/`fileInput` 按表精神同归底部工具区
+  （布局设计权下放裁）；`syncStatus` 是指示器不镜像。≤767 左栏整列藏（`body .side-col{display:none}`，须带 body 前缀
+  提高特异性——基础 `display:flex` 在本块之后同特异性，裸选择器会被覆盖，e2e 六档探针实测抓到），可达性由抽屉
+  `#sideSheetTools` 的 8 行镜像组承担（行项只转发点击；标签跟真按钮 `.lbl` 同步；`btnInstall` 未 `.show` 时行项同隐）。
+  `topbarMorePanel`/`data-fold`/`--topbar-h`/`--topbar-tint` 全族删除；`--chrome-h` 110→45（工具行高度）。
 
 | 旧控件 | 新家 | 契约随迁 |
 |---|---|---|
@@ -86,7 +93,19 @@
   `src/render-widgets.js:244` 原样搬）+ 其余三节壳迁 id 留 + h4 折叠持久化（新键 `wb_agent_form_a_rr_sec`，
   kind:"c" sync:true backup:true，值＝收起节 id 数组 JSON；旧键 `rail_tab` 连登记原子同批删）。
   原型「产出 / 网页速览」两节不落地（无数据源映射，留 §8 待决）。
-- **B5 topbar 退役 + 旧坞 CSS 清理 + draw-responsive 判据重写 + 六档探针入 e2e**。
+- **B5 topbar 退役 + 旧坞 CSS 清理 + draw-responsive 判据重写 + 六档探针入 e2e（2026-11-18 落地）**：
+  markup/JS/CSS 全族退役（见 §5 落地裁定）；判据随实现改写并逐个披露——
+  `tests/topbar-overflow.test.js` 主体迁移为镜像组一一对应/转发/可见性/标签同步；
+  `tests/ui-scale-floor.test.js` 44px 地板钉到 `.side-quick/.side-tool .tbtn`；
+  `tests/ui-spec-guards.test.js` 改「`--topbar-h` 不得复活 + `--chrome-h`=45px」；
+  `tests/css-structure.test.js` toast 锚点期望 110→45；
+  `tests/ui-consistency.test.js` 改钉三横带 + 列壳；`tests/responsive-breakpoints.test.js` 180px 钉到 `.side-col`；
+  `tests/e2e/topbar-overflow.spec.js` 重写为六档（320/375/480/768/1024/1280）chrome 探针
+  （零横向溢出 + 宽档 44×44 + 窄档抽屉镜像组端到端换主题 + 真按钮路径）；
+  `viewport/theme-matrix/corrupt-data-boot` 的 `.topbar` 钉改 menubar/三横带；
+  `ui-mode-layout` / `layout-v2` 的窄屏右栏入口改 tabbar `.railbtn`（≤1023 显示，转发 `#btnTaskRail`）；
+  `draw-responsive` ⑤ 侧栏收起判据改量列壳。`.main > .foot` / `.overview-grid > .foot` 死规同批清（`.foot` 基础样式保留，
+  `.drawer-page > .foot` 仍在用）。
 - **B6 专注模式 + 帮助菜单（2026-11-14 落地，用户两句裁定）**：menubar 右侧「帮助」（`faMenuOpen`，
   菜单四项转既有真入口）与「专注」（`faFocusToggle`，`body.is-focus` 与页面驱动取并集，落盘
   `wb_agent_form_a_focus` 布尔）；Esc / 外点 / 选项后三路收起，开菜单首项获焦。

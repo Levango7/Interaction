@@ -17,8 +17,14 @@ describe("UI 一致性 · 令牌体系", () => {
     expect(bare, `发现裸 z-index 数字: ${bare?.join(",")}`).toBeNull();
   });
 
-  it("topbar 单行布局 + 正文工具行存在（toolbar-row / main-wrap）", () => {
-    expect(html).toContain('class="topbar"');
+  it("B5 三横带 + 左栏列壳存在（menubar/tabbar/statusbar；topbar 已退役）", () => {
+    expect(html).not.toContain('class="topbar"');
+    expect(html).toContain('class="menubar"');
+    expect(html).toContain('class="tabbar"');
+    expect(html).toContain('class="statusbar"');
+    expect(html, "左栏列壳（导航+快捷区+底部工具区）").toContain('class="side-col"');
+    expect(html).toContain('id="sideQuick"');
+    expect(html).toContain('id="sideTool"');
     // v1.9.7：工具行演化为正文顶部消息提示栏（class="toolbar-row msg-bar"），断言改为前缀匹配
     expect(html).toMatch(/class="toolbar-row[^"]*"/);
     expect(html).toContain('class="main-wrap"');

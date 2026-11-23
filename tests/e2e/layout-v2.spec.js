@@ -146,14 +146,16 @@ test.describe("平板 800（任务轨滑出）", () => {
 test.describe("手机 375（聊天保持右抽屉）", () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
-  test("底栏仍在、无横向溢出、任务轨可从顶栏滑出", async ({ page }) => {
+  test("底栏仍在、无横向溢出、任务轨可从 tabbar 把手滑出", async ({ page }) => {
     await page.goto(APP_URL);
     await page.waitForSelector("#main");
     await waitMainRendered(page);
     const g = await geom(page);
     expect(g.sw).toBeLessThanOrEqual(g.vw + 1);
     expect(await page.isVisible("#mobBar")).toBe(true);
-    await page.click("#btnTaskRail");
+    /* B5：左栏（含 #btnTaskRail）在 ≤767 整列藏；窄屏入口 = tabbar 右栏把手 .railbtn（≤1023 显示，
+       行为转发 #btnTaskRail，B2 起不重写）。 */
+    await page.click(".railbtn");
     await page.waitForFunction(() => document.getElementById("taskRail").classList.contains("open"));
     await page.mouse.click(8, 300); /* 点遮罩的可见区域：轨道铺满右侧，元素中心其实落在轨道上 */
     await page.waitForFunction(() => !document.getElementById("taskRail").classList.contains("open"));
