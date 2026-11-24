@@ -63,8 +63,9 @@ function abortChat(){
  * aborted 恒为 false —— 与「无取消能力」的既有语义一致。
  * @returns {boolean}
  */
-function _chatCancelled(){
-  return !!(typeof chatController !== "undefined" && chatController && chatController.aborted);
+function _chatCancelled(ctrl){
+  const c = ctrl || chatController;
+  return !!(c && c.aborted);
 }
 /**
  * 为「因取消而未执行」的工具调用补一条 tool 回执。
@@ -287,9 +288,9 @@ async function continueAgentRun(){
   if(!p) return { ok:false, executed:0, results:[] };
   const rec = p.rec;
   const remaining = rec.steps.slice(p.done);
-  chatController = createChatController();
+  const ctrl = createChatController(); chatController = ctrl;
   showChatThinking(true);
-  const signal = (chatController && chatController.ac) ? chatController.ac.signal : undefined;
+  const signal = (ctrl && ctrl.ac) ? ctrl.ac.signal : undefined;
   try{
     const r = await executeAgentPlanReactive(
       { goal: rec.goal || "", steps: remaining },
@@ -335,8 +336,8 @@ async function continueAgentRun(){
     return { ok:false, executed:0, results:[], summary: String((e && e.message) || e) };
   }finally{
     showChatThinking(false);
-    if(chatController && chatController.timer) clearTimeout(chatController.timer);
-    chatController = null;
+    if(ctrl && ctrl.timer) clearTimeout(ctrl.timer);
+    if(chatController === ctrl) chatController = null;
   }
 }
 
@@ -456,7 +457,7 @@ async function proposeAgentPlan(text){
   }
   hist.push({ role:"user", content: raw });
   renderChat(); scrollChat();
-  chatController = createChatController();
+  const ctrl = createChatController(); chatController = ctrl;
   showChatThinking(true);
   let plan = null, errText = "";
   try{
@@ -465,7 +466,7 @@ async function proposeAgentPlan(text){
       { role:"system", content: agentPlanSysPrompt(raw) + skillsPromptBlock(raw) },
       { role:"user", content: raw }
     ];
-    const resp = await chatOnce(msgs, { signal: (chatController && chatController.ac) ? chatController.ac.signal : undefined });
+    const resp = await chatOnce(msgs, { signal: (ctrl && ctrl.ac) ? ctrl.ac.signal : undefined });
     const content = (resp && resp.choices && resp.choices[0] && resp.choices[0].message && resp.choices[0].message.content) || "";
     plan = parseAgentPlan(content);
     if(!plan) errText = t("aiagent.noPlan","模型没有返回可执行的计划，请换个说法，或直接走普通对话。");
@@ -473,8 +474,8 @@ async function proposeAgentPlan(text){
     errText = t("aiagent.planError","规划失败：")+String((e && e.message) || e);
   }finally{
     showChatThinking(false);
-    if(chatController && chatController.timer) clearTimeout(chatController.timer);
-    chatController = null;
+    if(ctrl && ctrl.timer) clearTimeout(ctrl.timer);
+    if(chatController === ctrl) chatController = null;
   }
   if(plan){
     pendingAgentPlan = { plan: plan, text: raw, sc: active };
@@ -498,9 +499,9 @@ async function confirmAgentPlan(){
   const sc = p.sc;
   const hist = getChat(sc);
   hist.push({ role:"user", content: t("common.confirm","确认") });
-  chatController = createChatController();
+  const ctrl = createChatController(); chatController = ctrl;
   showChatThinking(true);
-  const signal = (chatController && chatController.ac) ? chatController.ac.signal : undefined;
+  const signal = (ctrl && ctrl.ac) ? ctrl.ac.signal : undefined;
   /* v3.7.116：确认即落盘（刷新/崩溃后可续跑）。done 由 onProgress 逐步追加；
      容量 1 份 —— 有待续运行时 proposeAgentPlan 会先提示，不会静默覆盖到这里。 */
   saveAgentRun({ goal: p.plan.goal || "", text: p.text || "", sc: sc, steps: p.plan.steps, done: [], at: Date.now() });
@@ -570,8 +571,8 @@ async function confirmAgentPlan(){
   }finally{
     chatProgressEnd();
     showChatThinking(false);
-    if(chatController && chatController.timer) clearTimeout(chatController.timer);
-    chatController = null;
+    if(ctrl && ctrl.timer) clearTimeout(ctrl.timer);
+    if(chatController === ctrl) chatController = null;
     trimChatHist(hist);
     save(PREFIX+"chat_"+sc, hist); renderChat(); scrollChat();
   }
@@ -998,7 +999,10 @@ let _ctxWarnLevel = null;
 async function runChatLoop(messages, hist, sc){
   sc = sc || active; /* v3.7.71 竞态修复：长循环期间切场景不串写，数据键用定格场景 */
   // T3.1：创建控制器 + 记录上次请求（重试用）+ 显示思考中
-  chatController=createChatController();
+  /* v3.7.157 并发收口：chatController 从模块级单例改为每循环局部变量（ctrl）。
+     取消按钮仍指向当前活动循环（chatController = ctrl，见 finally 的条件清理）——
+     第二个会话提交不再废掉第一个循环的取消/超时句柄。 */
+  const ctrl = createChatController(); chatController = ctrl;
   lastChatRequest={ messages:messages, hist:hist, sc:sc };
   /* v3.7.132：发送前估算入账（估算/策略早已在，这里补「可观测」；向下调用 ai-tools，方向合法） */
   if(typeof recordSendEstimate === "function") recordSendEstimate(messages);
@@ -1035,9 +1039,9 @@ async function runChatLoop(messages, hist, sc){
     }
     while(guard++<maxLoops){
       // v3.7.52：每轮重置超时——超时语义应是「单次请求超时」，而不是「整段循环总预算」
-      if(chatController && chatController.resetTimeout) chatController.resetTimeout();
-      // T5.3 浏览器兼容：chatController.ac 可为 null（AbortController 不可用），此时不传 signal
-      const chatSignal = (chatController && chatController.ac) ? chatController.ac.signal : undefined;
+      if(ctrl && ctrl.resetTimeout) ctrl.resetTimeout();
+      // T5.3 浏览器兼容：ctrl.ac 可为 null（AbortController 不可用），此时不传 signal
+      const chatSignal = (ctrl && ctrl.ac) ? ctrl.ac.signal : undefined;
       // 流式打字机：所有轮次（含工具调用轮）边收边渲染——流式中先挂一条 _streaming 消息增量更新，
       // 完成后用真实结果替换。工具轮曾因「半截 tool_calls 污染 hist」保守关闭（v3.2 C-档），
       // 但占位消息只累积**文本**，tool_calls 始终由 chatOnce 拼好的最终消息携带；
@@ -1109,7 +1113,7 @@ async function runChatLoop(messages, hist, sc){
           for(let ci=0; ci<allowed.length; ci++){
             const c = allowed[ci];
             /* v3.7.59：取消即刻生效——剩余调用不再执行，补「已跳过」回执后退出循环 */
-            if(_chatCancelled()){
+            if(_chatCancelled(ctrl)){
               for(let k=ci; k<allowed.length; k++) _pushSkippedToolReceipt(messages, hist, allowed[k].id, allowed[k].name);
               throw new Error("__USER_CANCEL__");
             }
@@ -1133,7 +1137,7 @@ async function runChatLoop(messages, hist, sc){
         for(let ti=0; ti<msg.tool_calls.length; ti++){
           const tc = msg.tool_calls[ti];
           /* v3.7.59：取消即刻生效——剩余调用不再执行，补「已跳过」回执后退出循环 */
-          if(_chatCancelled()){
+          if(_chatCancelled(ctrl)){
             for(let k=ti; k<msg.tool_calls.length; k++)
               _pushSkippedToolReceipt(messages, hist, msg.tool_calls[k].id, msg.tool_calls[k].function.name);
             throw new Error("__USER_CANCEL__");
@@ -1174,7 +1178,7 @@ async function runChatLoop(messages, hist, sc){
        原因：`ac.abort(reason)` 时浏览器 fetch 是以**传入的 reason 拒绝**的（name 是 "Error"，
        不是 "AbortError"）—— 原实现只认 `err.name==="AbortError"`，于是用户点「取消」会落进错误分支，
        把英文 "user-cancel" 当助手回复上屏（超时同理会显示 "timeout"）。 */
-    const cReason = chatController ? chatController.reason : null;
+    const cReason = ctrl ? ctrl.reason : null;
     const isAbort = (err && err.name === "AbortError") || cReason === "user" || cReason === "timeout";
     if(isAbort && cReason !== "timeout"){
       // T3.1 用户主动取消：显示「已取消」提示（灰色斜体），不报错
@@ -1195,10 +1199,10 @@ async function runChatLoop(messages, hist, sc){
       if(hist[si].content) hist[si]._streaming = false;
       else hist.splice(si, 1);
     }
-    // T3.1 清理控制器 + 隐藏思考中指示
+    // T3.1 清理控制器 + 隐藏思考中指示（只清自己的——并发时不清另一个循环的）
     chatProgressEnd();
-    if(chatController && chatController.timer){ clearTimeout(chatController.timer); }
-    chatController=null;
+    if(ctrl && ctrl.timer){ clearTimeout(ctrl.timer); }
+    if(chatController === ctrl) chatController = null;
     showChatThinking(false);
   }
   trimChatHist(hist);
