@@ -46,7 +46,7 @@ function makeQuietVirtualConsole() {
   return vc;
 }
 
-export function loadApp({ storage = {}, noCrypto = false, instrument = false } = {}) {
+export function loadApp({ storage = {}, noCrypto = false, instrument = false, beforeParse } = {}) {
   const html = fs.readFileSync(HTML_PATH, "utf8");
   assertDeliveredState(html);
   const dom = new JSDOM(html, {
@@ -98,6 +98,7 @@ export function loadApp({ storage = {}, noCrypto = false, instrument = false } =
       }
       window.confirm = function () { return true; };
       window.alert = function () {};
+      if (typeof beforeParse === "function") beforeParse(window);
     },
   });
   return dom.window;
