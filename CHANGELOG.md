@@ -3,6 +3,13 @@
 _（新条目追加在本节之下、`## [3.7.156]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-25 · **agent loop 步数耗尽可见化：不再静默退出**
+
+- **缺口实证**：`while(guard++<maxLoops)` 打满即静默退出——用户看到的是最后一条工具回执，分不清「模型说完了」还是「被步数掐停」。
+- **修法**：循环内新增 `finishedNormally` 标记（只有模型自然收尾——无 tool_calls 的 assistant 消息——才置真）；循环结束后若 `!finishedNormally && guard >= maxLoops`，追加一条 `_capped` 提示消息：「已达本轮步数上限（{n} 步），已停止。如需继续，请说『继续』。」（i18n zh/en）。
+- **钉子**：新增 `tests/agent-loop-cap-notice.test.js` 2 例（恒返 tool_calls 打满上限 → `_capped` 消息含上限数字与「继续」；自然收尾 → 无 `_capped`）。
+- **验证**：新钉 2/2 + ai-retry-contract 7/7；`npm run lint` rc=0；`check:source-state` ✓。
+
 ### 2026-11-24 · **通知偏好不再「保存即谎报」：调度器读偏好 + 面板总开关/定时提醒·推送**
 
 - **缺口实证**：`fireDueSchedules` 此前从不读 `store.getNotifyPrefs` —— 通知偏好面板的开关只存不读，用户关掉提醒照推（保存即谎报）。

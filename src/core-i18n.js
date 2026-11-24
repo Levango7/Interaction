@@ -107,6 +107,7 @@ const MESSAGES = {
     // AI 相关补充
     "ai.cancelled": "已取消",
     "ai.timeout": "请求超时（可在「设置 → AI」调大「请求超时」秒数）",
+    "ai.loopCapped": "已达本轮步数上限（{n} 步），已停止。如需继续，请说「继续」。",
     "ai.pendingConfirmTools": "（待确认）将执行 ",
     "ai.pendingConfirmToolsSuffix": " 个工具调用。发送「确认」以继续，其他内容取消。",
 
@@ -4359,6 +4360,7 @@ const MESSAGES = {
     // AI supplemental
     "ai.cancelled": "Cancelled",
     "ai.timeout": "Request timed out (raise “Request timeout” in Settings → AI)",
+    "ai.loopCapped": "Reached the step limit for this run ({n} steps) and stopped. Say “continue” to keep going.",
     "ai.pendingConfirmTools": "(pending) About to run ",
     "ai.pendingConfirmToolsSuffix": " tool call(s). Send “confirm” to continue, anything else cancels.",
 
