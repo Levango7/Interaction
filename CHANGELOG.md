@@ -11,6 +11,11 @@ _（新条目追加在本节之下、`## [3.7.156]` 之上。中段那个 `## [�
 - **钉子**：新增 `tests/integrations-oauth-state.test.js` 7 例（state 生成与绑定、有效 state 成功路径+一次性消费、无效 state、provider 不符、过期+清除、缺 code、not_configured），`server/verify/client-contract-check.cjs` 回调断言改为「无 state 应 400 invalid_state」。
 - **验证**：新钉 7/7；server-audit-fixes 21/21（28/28 合计）；client-contract-check **41/41**；`npm run lint` rc=0；`check:source-state` ✓。
 
+### 2026-11-24 · **nexusloom MCP 接入指南（α）**
+
+- 新增 `docs/loom-integration.md`：复用 Interaction 既有 MCP 客户端、工具白名单、危险确认与桌面主进程代理，接入 nexusloom 的 `/mcp` Streamable HTTP 端点；不改产品执行链，不引入另一套 DAG 控制台。
+- 文档覆盖 9 工具、admin-only 边界、会话内凭据、`wait=false` 长任务轮询，以及 `awaiting_approval` 时 approve/reject 与普通暂停 resume 的严格分流。真实跨仓联调已通过：9 工具发现、run 写调用一次、审批暂停、resume 拒绝、approve 后 done；零付费模型调用、零短信额度、零凭据落仓。
+
 ## [3.7.156] - 2026-11-23
 
 _（本段由 v3.7.156 发版切段生成；以下条目按时间倒序即当时 [Unreleased] 的原貌。）_
