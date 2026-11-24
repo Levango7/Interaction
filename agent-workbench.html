@@ -724,9 +724,30 @@ html{scrollbar-width:thin;scrollbar-color:var(--surface-muted) transparent}
   padding:0 var(--space-2);background:var(--panel);border-top:1px solid var(--line);
   color:var(--muted);font-size:var(--fs-xs);flex:none}
 .statusbar .foot-bar{flex:1 1 auto;min-width:0}
+.statusbar .foot-update-ready{flex:0 0 auto;min-height:24px;padding:0 var(--space-2);
+  border:0;border-radius:var(--radius-sm);background:var(--accent-soft);color:var(--accent);
+  font:inherit;cursor:pointer}
+.statusbar .foot-update-ready:hover{background:color-mix(in srgb,var(--accent) 16%,var(--accent-soft))}
+.statusbar .foot-update-ready:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+body:has(.body.design-mode) .statusbar #swUpdateReadyBtn,
+body.is-focus .statusbar #swUpdateReadyBtn,
+body:has(#drawer.drawer-page) .statusbar #swUpdateReadyBtn,
+body:has(.main.page-recycle) .statusbar #swUpdateReadyBtn{display:none}
 /* 2026-11-16：上下文预算芯片迁入状态栏。覆盖 .ctx-budget-chip 的 align-self:center（那是输入行用的），
    状态栏是横向 flex，芯片靠右；窄屏（foot-bar 三列换行）时压缩省略，不撑破 24px 栏高。 */
 .statusbar .status-ctx-chip{flex:0 1 auto;align-self:center;margin-left:auto;max-width:34vw}
+/* 更新待处理时把唯一入口抬到底栏之上；普通状态仍沿用原状态栏，不给移动端常驻加高。
+   设计模式底栏在文档流内，不套用这段 fixed 定位。 */
+@media(max-width:767px){
+  body:not(.design-mode):not(:has(.body.design-mode)) .statusbar:has(#swUpdateReadyBtn){
+    position:fixed;left:0;right:0;bottom:calc(57px + var(--safe));z-index:calc(var(--z-sidebar) + 2);
+    height:var(--st-h);padding-right:calc(44px + var(--space-2));background:transparent;
+    border-top:0;pointer-events:none}
+  body:not(.design-mode):not(:has(.body.design-mode)) .statusbar:has(#swUpdateReadyBtn) .foot-bar,
+  body:not(.design-mode):not(:has(.body.design-mode)) .statusbar:has(#swUpdateReadyBtn) .status-ctx-chip{display:none}
+  body:not(.design-mode):not(:has(.body.design-mode)) .statusbar:has(#swUpdateReadyBtn) .foot-update-ready{
+    pointer-events:auto;margin-left:auto;box-shadow:var(--shadow-1)}
+}
 /* ≤767：mi 文字菜单隐藏（B1 mi 容器空，规则先落、B2 填项后生效；复用 MAIN 断点 767，不新增值。
    窄变异登记：临时删本条 ⇒ 320 档 menubar 溢出，本机无浏览器栈自证，押 CI 窄屏探针）。 */
 @media (max-width:767px){
@@ -3572,6 +3593,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   max-width:min(360px,90vw);opacity:0;transition:opacity var(--transition-fast);white-space:pre-line;
   text-align:left;line-height:1.5;font-weight:500;
   display:inline-flex;align-items:center;justify-content:flex-start}
+.toast[data-wb-sw-update]{pointer-events:auto}
 .toast.warn{background:var(--warn)}
 .toast.ok{background:var(--ok)}
 /* 2026-10-20：error / info 两类此前没有独立视觉（29 处 error、12 处 info 调用都显示成普通 toast，
@@ -3819,6 +3841,8 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   .list li .body-row{flex-direction:column}
   /* v2.1.0：桌面侧栏（#side）在移动端隐藏，导航改由 .mob-bar 底栏 + .side-sheet 抽屉承载（规则见文件头部移动端导航块） */
   .main{padding:var(--space-3) var(--space-4) calc(72px + var(--safe));font-size:var(--fs-md)}
+  body:not(.design-mode):not(:has(.body.design-mode)):not(:has(#drawer.drawer-page)):not(:has(.main.page-recycle)):not(.is-focus):has(#swUpdateReadyBtn) .main{
+    padding-bottom:calc(96px + var(--safe))}
   .form-row{flex-direction:column}
   .form-row .fld{min-width:100%;max-width:none}
   /* v3.2 阶段三：移动端表单分组节奏——label 带左侧色条 + 字段间距加大，避免直接堆叠无节奏 */
