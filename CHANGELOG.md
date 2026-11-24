@@ -3,6 +3,14 @@
 _（新条目追加在本节之下、`## [3.7.156]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-24 · **集成 OAuth 回调断链修复：Bearer → 一次性 state（公开端点 + TTL + 一次性消费）**
+
+- **断链实证**：`/api/integrations/oauth/:provider/callback` 挂在 Bearer 鉴权后，而浏览器 OAuth 回跳是顶层导航、带不上 Authorization ⇒ 401，连接流程在真实浏览器里 100% 走不通（postMessage 结果页永远到不了，`_integrationsAuthSession` 永远等不到消息）。
+- **修法**（复用 auth.js GitHub 通道的同款模式）：`/status` 为已配置 provider 生成一次性 state 存 store 并绑定 userId + createdAt，写进 authorizeUrl；回调改**公开端点 + state 校验**（存在/未过期/未消费/provider 匹配/userId 绑定），TTL 默认 600s（`cfg.integrations.stateTtlSec` 可配），校验通过即一次性消费防重放；`not_configured` 分支保留。
+- **客户端**：开授权页时从 authorizeUrl 捕获 state 存 `_integrationsAuthSession`，消息处理时校验回调载荷 state 与本次发起一致（第二道相关性校验，与 source/origin 并列）。
+- **钉子**：新增 `tests/integrations-oauth-state.test.js` 7 例（state 生成与绑定、有效 state 成功路径+一次性消费、无效 state、provider 不符、过期+清除、缺 code、not_configured），`server/verify/client-contract-check.cjs` 回调断言改为「无 state 应 400 invalid_state」。
+- **验证**：新钉 7/7；server-audit-fixes 21/21（28/28 合计）；client-contract-check **41/41**；`npm run lint` rc=0；`check:source-state` ✓。
+
 ### 2026-11-24 · **nexusloom MCP 接入指南（α）**
 
 - 新增 `docs/loom-integration.md`：复用 Interaction 既有 MCP 客户端、工具白名单、危险确认与桌面主进程代理，接入 nexusloom 的 `/mcp` Streamable HTTP 端点；不改产品执行链，不引入另一套 DAG 控制台。

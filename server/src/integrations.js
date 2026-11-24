@@ -99,8 +99,8 @@ function exchangeCode(prov, cred, code) {
 /** 浏览器直达的回调结果页：把结果 postMessage 给开窗的应用页（同 ghCallbackPage 的口径）。
  *  载荷不含任何 token —— 应用侧收到消息后**重新拉 /status 取真值**，所以这条消息
  *  即使被伪造也只能触发一次「重新查询」，无法伪造连接状态本身。 */
-function integrationsResultPage(provider, connected, errCode, targetOrigin) {
-  const payload = JSON.stringify({ type: "agent-integrations-connected", provider: provider, connected: !!connected, error: connected ? null : String(errCode || "unknown") })
+function integrationsResultPage(provider, connected, errCode, targetOrigin, state) {
+  const payload = JSON.stringify({ type: "agent-integrations-connected", provider: provider, connected: !!connected, error: connected ? null : String(errCode || "unknown"), state: state || null })
     .replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026");
   const target = JSON.stringify(String(targetOrigin || "*"));
   const title = connected ? "连接成功" : "连接失败";
@@ -139,6 +139,7 @@ function integrationsRouter(cfg, store) {
      授权页 URL —— 客户端据此决定「打开授权页」还是「提示部署者填凭据」）。 */
   router.get("/status", am, (req, res) => {
     const providers = {};
+    const stateTtlMs = (Number(cfg.integrations && cfg.integrations.stateTtlSec) || 600) * 1000;
     Object.keys(PROVIDERS).forEach((name) => {
       const c = cred(name);
       const p = { configured: !!(c.clientId && c.clientSecret), authorizeUrl: null };
@@ -148,16 +149,39 @@ function integrationsRouter(cfg, store) {
         au.searchParams.set("response_type", "code");
         if (c.redirectUri) au.searchParams.set("redirect_uri", c.redirectUri);
         if (PROVIDERS[name].scope) au.searchParams.set("scope", PROVIDERS[name].scope);
+        /* 一次性 state（复用 auth.js GitHub 通道的同款模式）：OAuth 回跳是浏览器顶层导航、
+           带不上 Bearer，回调必须改为公开端点 + state 校验（TTL + 一次性消费 + provider
+           绑定 + userId 绑定），否则连 CSRF 都没有。state 只在这里生成，回调只消费一次。 */
+        const state = require("crypto").randomBytes(16).toString("hex");
+        store.setOAuthState(state, name, { userId: req.user.sub, createdAt: Date.now() });
+        au.searchParams.set("state", state);
         p.authorizeUrl = au.toString();
+        p.stateTtlSec = Math.round(stateTtlMs / 1000);
       }
       providers[name] = p;
     });
     return ok(res, { integrations: store.listIntegrations(req.user.sub), providers: providers });
   });
-  // OAuth 回调：code -> token -> 保存；凭据未配置时如实回 not_configured（不假装连上）
-  router.get("/oauth/:provider/callback", am, async (req, res) => {
+  /* OAuth 回调（公开端点，state 校验）：浏览器顶层回跳带不上 Bearer，
+     改为「state 存在 + 未过期 + 未消费 + provider 匹配 + 绑定 userId」——与 auth.js
+     GitHub 通道同口径。无 state / 无效 state / 过期 / provider 不符一律 400；
+     校验通过即一次性消费（防重放）。 */
+  router.get("/oauth/:provider/callback", async (req, res) => {
     const provider = validProvider(req.params.provider);
     if (!provider) return fail(res, 400, "bad_provider", { message: "未知 provider（支持: " + Object.keys(PROVIDERS).join(", ") + ")" });
+    const state = String(req.query.state || "");
+    const rec = state ? store.getOAuthState(state) : null;
+    if (!rec || rec.provider !== provider) {
+      return fail(res, 400, "invalid_state", { message: "OAuth state 无效或不属于该 provider，请重新从应用发起授权" });
+    }
+    const stateTtlMs = (Number(cfg.integrations && cfg.integrations.stateTtlSec) || 600) * 1000;
+    if (rec.createdAt && Date.now() - rec.createdAt > stateTtlMs) {
+      store.deleteOAuthState(state);
+      return fail(res, 400, "state_expired", { message: "授权已超时，请重新发起" });
+    }
+    store.deleteOAuthState(state); // 一次性消费：防重放
+    const userId = (rec.data && rec.data.userId) || null;
+    if (!userId) return fail(res, 400, "state_unbound", { message: "state 未绑定用户，请重新从应用发起授权" });
     const code = req.query.code;
     if (!code) return fail(res, 400, "missing_code");
     const c = cred(provider);
@@ -166,7 +190,7 @@ function integrationsRouter(cfg, store) {
     }
     try {
       const tok = await exchangeCode(PROVIDERS[provider], c, String(code));
-      store.setIntegration(req.user.sub, provider, {
+      store.setIntegration(userId, provider, {
         token: tok.access_token || null,
         refreshToken: tok.refresh_token || null,
         expiresAt: tok.expires_in ? Date.now() + Number(tok.expires_in) * 1000 : null
@@ -174,10 +198,10 @@ function integrationsRouter(cfg, store) {
       /* 浏览器 OAuth 流的最后一跳：渲染结果页（postMessage 通知应用窗刷新状态）。
          bad_provider/missing_code/not_configured 仍是 JSON —— 那三支是 API/契约
          语义（客户端直调与 verify 都按 JSON 断言），只有真正换完 token 的浏览器
-         流程需要人可读的收尾页。 */
-      return res.type("html").send(integrationsResultPage(provider, true, null, postMessageOrigin));
+         流程需要人可读的收尾页。state 回传给 opener 做相关性校验。 */
+      return res.type("html").send(integrationsResultPage(provider, true, null, postMessageOrigin, state));
     } catch (e) {
-      return res.type("html").send(integrationsResultPage(provider, false, "exchange_failed", postMessageOrigin));
+      return res.type("html").send(integrationsResultPage(provider, false, "exchange_failed", postMessageOrigin, state));
     }
   });
   router.delete("/oauth/:provider", am, (req, res) => {

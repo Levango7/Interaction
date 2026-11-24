@@ -134,8 +134,11 @@ function expect(label, res, want) {
   expect("POST /api/notifications/schedules", r, { status: 200 });
   r = await hit("GET", "/api/integrations/status", null);
   expect("GET  /api/integrations/status", r, { status: 200 });
+  /* v3.7.157 起回调改为「公开端点 + state 校验」（旧 Bearer 鉴权对浏览器回跳恒 401）。
+     无 state ⇒ 400 invalid_state（正确拒绝，不是缺陷）；
+     带有效 state 的全链路见 tests/integrations-oauth-state.test.js。 */
   r = await hit("GET", "/api/integrations/oauth/notion/callback?code=x", null);
-  expect("GET  /api/integrations/oauth/:p/callback", r, { status: 200 });
+  expect("GET  /api/integrations/oauth/:p/callback（无 state 应 400 invalid_state）", r, { status: 400, error: "invalid_state" });
 
   console.log("\n[2] 交叉路径必须不存在（404 + not_found 指纹；缺陷本体，回潮即红）");
   r = await hit("GET", "/api/integrations/preferences", null);

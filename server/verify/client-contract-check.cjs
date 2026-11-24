@@ -149,8 +149,12 @@ function record(group, label, res, expectStatuses, known) {
   r = await hit("GET", "/api/integrations/status", null);
   record("integ", "GET  /api/integrations/status", r, [200]);
 
+  /* v3.7.157 起回调改为「公开端点 + state 校验」（旧 Bearer 鉴权对浏览器回跳恒 401）。
+     无 state ⇒ 400 invalid_state（正确拒绝，不是缺陷）。
+     带有效 state 的全链路（生成/校验/消费/not_configured）由 tests/integrations-oauth-state.test.js 钉。 */
   r = await hit("GET", "/api/integrations/oauth/notion/callback?code=x", null);
-  record("integ", "GET  /api/integrations/oauth/:p/callback", r, [200]);
+  record("integ", "GET  /api/integrations/oauth/:p/callback（无 state 应 400 invalid_state）",
+    { status: r.status === 400 && r.json && r.json.error === "invalid_state" ? 200 : 0, json: null }, [200]);
 
   console.log("\n[2b] Body 契约（字段级断言：状态码 200 不等于字段对——P0 三类错位全都曾「绿着上线」）");
   /* 历史：定时提醒 / 通知偏好 / 集成面板三个端点 HTTP 层全是 200，但 body 字段与客户端
