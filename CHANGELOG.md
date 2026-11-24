@@ -3,6 +3,16 @@
 _（新条目追加在本节之下、`## [3.7.156]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-24 · **通知偏好不再「保存即谎报」：调度器读偏好 + 面板总开关/定时提醒·推送**
+
+- **缺口实证**：`fireDueSchedules` 此前从不读 `store.getNotifyPrefs` —— 通知偏好面板的开关只存不读，用户关掉提醒照推（保存即谎报）。
+- **修法**：
+  - **服务端**：调度器加偏好门控——`enabled === false` 全停、`schedules.push === false` 只停定时提醒；缺省（无偏好记录）维持旧行为（开）。
+  - **面板**：新增「提醒总开关」（`apiPrefMaster` → `prefs.enabled`）与「定时提醒·推送」（`apiPrefSchedulePush` → `prefs.schedules.push`）两行，load/save 接线；`api.notifyPrefsDesc` 改为如实说明生效范围与预留分组（不再宣称六键都有效）。
+  - **钉子**：新增 `tests/notifications-prefs-gate.test.js` 4 例（总开关关停、push=false 停、push=true 发、无偏好记录默认发）。
+- **验证**：新钉 4/4 + server-audit-fixes 21/21（25/25 合计）；`npm run lint` rc=0；`check:source-state` ✓。
+- **边界如实**：任务到期/断链/每日汇总三组偏好的**发送方本来就不存在**（零消费者）——本批让它们不再伪装生效，未新增发送功能（那是产品工作）。
+
 ### 2026-11-24 · **集成 OAuth 回调断链修复：Bearer → 一次性 state（公开端点 + TTL + 一次性消费）**
 
 - **断链实证**：`/api/integrations/oauth/:provider/callback` 挂在 Bearer 鉴权后，而浏览器 OAuth 回跳是顶层导航、带不上 Authorization ⇒ 401，连接流程在真实浏览器里 100% 走不通（postMessage 结果页永远到不了，`_integrationsAuthSession` 永远等不到消息）。
