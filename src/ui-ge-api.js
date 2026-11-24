@@ -1020,6 +1020,8 @@
       if(r.ok && r.data && r.data.preferences){
         const p = r.data.preferences;
         const set = (id, val) => { const el = document.getElementById(id); if(el) el.checked = !!val; };
+        set("apiPrefMaster", p.enabled !== false);
+        set("apiPrefSchedulePush", !p.schedules || p.schedules.push !== false);
         set("apiPrefTaskDueEmail", p.taskDue && p.taskDue.email);
         set("apiPrefTaskDuePush", p.taskDue && p.taskDue.push);
         set("apiPrefHabitEmail", p.habitBroken && p.habitBroken.email);
@@ -1226,6 +1228,8 @@
       savePrefsBtn.onclick = async function(){
         const get = id => { const el = document.getElementById(id); return el ? el.checked : false; };
         const prefs = {
+          enabled: get("apiPrefMaster"),
+          schedules: { push: get("apiPrefSchedulePush") },
           taskDue: { email: get("apiPrefTaskDueEmail"), push: get("apiPrefTaskDuePush"), local: true },
           habitBroken: { email: get("apiPrefHabitEmail"), push: get("apiPrefHabitPush"), local: true },
           dailyDigest: { email: get("apiPrefDigestEmail"), push: get("apiPrefDigestPush"), local: false },

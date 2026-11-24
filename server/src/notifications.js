@@ -195,6 +195,12 @@ async function fireDueSchedules(store, vapidSubject, sendPush) {
   for (const s of all) {
     if (!s || s.enabled === false) continue;
     if (!s.when || Number(s.when) > now) continue;
+    /* 偏好门控（v3.7.157 起）：服务端唯一真实发送方必须读偏好，否则面板开关只是装饰。
+       语义：enabled=false ⇒ 全停；schedules.push=false ⇒ 只停定时提醒的推送；
+       prefs 缺省（null / 未设位）= 维持旧行为（开）。 */
+    const prefs = (typeof store.getNotifyPrefs === "function") ? (store.getNotifyPrefs(s.userId) || null) : null;
+    if (prefs && prefs.enabled === false) continue;
+    if (prefs && prefs.schedules && prefs.schedules.push === false) continue;
     const subs = store.listPushSubs(s.userId) || [];
     const payload = JSON.stringify({
       title: String(s.title || "提醒"),
