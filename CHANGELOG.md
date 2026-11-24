@@ -3,6 +3,16 @@
 _（新条目追加在本节之下、`## [3.7.156]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-25 · **主会话并发收口：chatController 从模块级单例改为每循环局部变量**
+
+- **缺口实证**：`chatController` 是模块级单例，`runChatLoop` 入口无条件 `chatController = createChatController()` 覆盖它 ⇒ 第二个会话提交会把第一个循环的取消/超时句柄顶掉（AbortController 不可用、AbortError 落到错误的循环）——**多任务并行此前不成立**。
+- **修法**：
+  - `runChatLoop` / `chatOnce` / `continueAgentRun` / `proposeAgentPlan` / `confirmAgentPlan` 五处入口改为持有**局部 `ctrl`**；循环内部的 signal、`resetTimeout`、`_chatCancelled(ctrl)`、`cReason` 全部读局部控制器。
+  - **取消按钮仍指向当前活动循环**（`chatController = ctrl` 记录最近启动的循环），`finally` 只在 `chatController === ctrl` 时清空——并发时不清另一个循环的。
+  - `_chatCancelled(ctrl)` 支持传参（向后兼容：不传参回退到模块全局）。
+- **钉子**：新增 `tests/chat-per-loop-controller.test.js` 3 例（两控制器互相独立、`_chatCancelled(ctrl)` 只读传入的（B 取消 A 不误报）、不传参回退模块全局）。
+- **验证**：新钉 3/3 + ai-retry-contract 7/7（10/10 合计）；`npm run lint` rc=0；`check:source-state` ✓。
+
 ### 2026-11-24 · **通知偏好不再「保存即谎报」：调度器读偏好 + 面板总开关/定时提醒·推送**
 
 - **缺口实证**：`fireDueSchedules` 此前从不读 `store.getNotifyPrefs` —— 通知偏好面板的开关只存不读，用户关掉提醒照推（保存即谎报）。
