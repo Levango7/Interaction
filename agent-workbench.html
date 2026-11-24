@@ -6915,6 +6915,8 @@ input.img-pick-input{position:absolute;width:1px;height:1px;opacity:0;pointer-ev
       </div>
     </header>
     <div class="api-panel" id="apiNotifyPanel">
+      <div class="api-row"><span class="api-label" data-i18n="api.masterNotify">提醒总开关</span><input type="checkbox" id="apiPrefMaster"></div>
+      <div class="api-row"><span class="api-label" data-i18n="api.schedulePush">定时提醒·推送</span><input type="checkbox" id="apiPrefSchedulePush"></div>
       <div class="api-row"><span class="api-label" data-i18n="api.taskDueEmail">任务到期·邮件</span><input type="checkbox" id="apiPrefTaskDueEmail"></div>
       <div class="api-row"><span class="api-label" data-i18n="api.taskDuePush">任务到期·推送</span><input type="checkbox" id="apiPrefTaskDuePush"></div>
       <div class="api-row"><span class="api-label" data-i18n="api.habitEmail">断链·邮件</span><input type="checkbox" id="apiPrefHabitEmail"></div>
@@ -10917,7 +10919,9 @@ const MESSAGES = {
     "api.devices": "登录设备",
     "api.loginRequired": "请先登录以使用账号功能",
     "api.notifyPrefsTitle": "通知偏好",
-    "api.notifyPrefsDesc": "配置任务到期、断链、每日汇总的通知渠道。",
+    "api.notifyPrefsDesc": "提醒总开关与定时提醒·推送实时生效；任务到期/断链/每日汇总为预留分组（发送功能未接线，保存不产生行为）。",
+    "api.masterNotify": "提醒总开关",
+    "api.schedulePush": "定时提醒·推送",
     "api.taskDueEmail": "任务到期·邮件",
     "api.taskDuePush": "任务到期·推送",
     "api.habitEmail": "断链·邮件",
@@ -15163,7 +15167,9 @@ const MESSAGES = {
     "api.devices": "Devices",
     "api.loginRequired": "Please log in to use account features",
     "api.notifyPrefsTitle": "Notification preferences",
-    "api.notifyPrefsDesc": "Configure channels for task due, habit broken, and daily digest.",
+    "api.notifyPrefsDesc": "Master switch and reminder push take effect immediately; task due/habit/digest groups are reserved (senders not wired yet, saving changes nothing).",
+    "api.masterNotify": "Master switch",
+    "api.schedulePush": "Reminders·Push",
     "api.taskDueEmail": "Task due·Email",
     "api.taskDuePush": "Task due·Push",
     "api.habitEmail": "Habit broken·Email",
@@ -50800,6 +50806,8 @@ if (typeof window !== "undefined" && __TEST_GATE__) { window.__test = {}; }
       if(r.ok && r.data && r.data.preferences){
         const p = r.data.preferences;
         const set = (id, val) => { const el = document.getElementById(id); if(el) el.checked = !!val; };
+        set("apiPrefMaster", p.enabled !== false);
+        set("apiPrefSchedulePush", !p.schedules || p.schedules.push !== false);
         set("apiPrefTaskDueEmail", p.taskDue && p.taskDue.email);
         set("apiPrefTaskDuePush", p.taskDue && p.taskDue.push);
         set("apiPrefHabitEmail", p.habitBroken && p.habitBroken.email);
@@ -51006,6 +51014,8 @@ if (typeof window !== "undefined" && __TEST_GATE__) { window.__test = {}; }
       savePrefsBtn.onclick = async function(){
         const get = id => { const el = document.getElementById(id); return el ? el.checked : false; };
         const prefs = {
+          enabled: get("apiPrefMaster"),
+          schedules: { push: get("apiPrefSchedulePush") },
           taskDue: { email: get("apiPrefTaskDueEmail"), push: get("apiPrefTaskDuePush"), local: true },
           habitBroken: { email: get("apiPrefHabitEmail"), push: get("apiPrefHabitPush"), local: true },
           dailyDigest: { email: get("apiPrefDigestEmail"), push: get("apiPrefDigestPush"), local: false },
