@@ -1023,6 +1023,7 @@ async function runChatLoop(messages, hist, sc){
   let turnUserText = ""; /* catch 分支也要写 _prompt，故声明在 try 外 */
   try{
     let guard=0;
+    let finishedNormally = false; // 模型自然收尾（无 tool_calls 的 assistant 消息）才算「说完了」
     let maxLoops = activeGoal()? AGENT_GOAL_LOOP_MAX : 6; // 目标激活时放宽循环，支撑多步自主执行
     const acfg = getCfg()||{};
     if(!activeGoal()){ const n=Number(acfg.agentLoops); if(isFinite(n)&&n>=6&&n<=30) maxLoops=Math.round(n); }
@@ -1161,7 +1162,13 @@ async function runChatLoop(messages, hist, sc){
         AppBridge.render(); continue;
       }
       hist.push({role:"assistant", content:msg.content||t("label.noContent","(无内容)"), _prompt: turnUserText, _usage: usageFromResp(j)});
+      finishedNormally = true;
       break;
+    }
+    /* v3.7.157 步数耗尽可见化：此前 guard 打满即静默退出，用户分不清「说完了」还是「被掐停」。
+       只有自然收尾（finishedNormally）才不算被掐停；cap 消息明确给出上限与「继续」的出路。 */
+    if(!finishedNormally && guard >= maxLoops){
+      hist.push({ role:"assistant", content: t("ai.loopCapped", "已达本轮步数上限（{n} 步），已停止。如需继续，请说「继续」。").replace("{n}", String(maxLoops)), _capped: true, _prompt: turnUserText });
     }
     /* v3.7.59 Skills ③：本轮成功执行了 ≥2 个非破坏性工具 → 提示可把这条流程固化成技能。
        只是挂出候选（内存态）+ 一条 toast，不自动写盘：用户回「存为技能」或走命令面板才落库，
