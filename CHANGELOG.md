@@ -3,6 +3,15 @@
 _（新条目追加在本节之下、`## [3.7.156]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-25 · **AI 写入撤销覆盖：generate_doc / add_feature_record / remember / forget 全进撤销账**
+
+- **缺口实证**：这四类工具落用户数据却不进撤销账（`note_add` 有撤销、`generate_doc` 没有，同类不同命）——AI 写坏文档/资料记录/记忆后用户无法回滚，属信任底线。
+- **修法**：
+  - `generate_doc` 接入 `note_add` 回执（撤销=删掉这篇笔记）；`add_feature_record` 新增 `feature_add` 回执并带 `bcfg.key`——feature 记录落在 key 存储面（如 `meetings`），不是 `rec_<sc>`，撤销按 key 过滤删除才真生效。
+  - `remember` 新增 `memory_add` 回执（撤销=忘掉它）；`forget` 新增 `memory_del` 回执带 **`r.scope`** 与原文（撤销=把原文记回**它原来所在的 scope**，不是 args.scope 的回退 active——否则 recall 按原 scope 查不到，撤销形同虚设；此缺陷由测试真红抓出）。
+- **钉子**：新增 `tests/ai-write-undo-coverage.test.js` 4 例，逐类验证撤销**真实生效**（笔记删除 / meetings 清空 / 记忆召回消失 / 遗忘原文记回且 global 可召回）。
+- **验证**：新钉 4/4；全量 vitest 2722 例 2720 passed（两红均非本批：mermaid=共享 node_modules 版本差环境项、password-reset 隔离复跑 16/16=时序抖动）；`npm run lint` rc=0；`check:source-state` ✓。
+
 ### 2026-11-25 · **agent loop 步数耗尽可见化：不再静默退出**
 
 - **缺口实证**：`while(guard++<maxLoops)` 打满即静默退出——用户看到的是最后一条工具回执，分不清「模型说完了」还是「被步数掐停」。
