@@ -191,3 +191,64 @@ test.describe("auth 页窄屏不溢出（2026-10-24）", () => {
     }
   });
 });
+
+/**
+ * 移动端聊天抽屉：Composer safe-area 与触控目标（2026-11-26）
+ * ----------------------------------------------------------------------------
+ * 量化对照主流 agent 移动端（DeepSeek/千问/豆包同范式：贴底 Composer 接 home 条安全区、
+ * 触控 ≥44）实测 390×844 的两处真缺口：
+ *   ① mobBar / side-sheet / main 都接了 `--safe:env(safe-area-inset-bottom)`，唯独聊天抽屉的
+ *      .chat-input-area 没接（paddingBottom=0、底距只有 margin 8px）——iPhone home 条贴发送键；
+ *   ② 发送/附件按钮 42×42，差 WCAG 2.5.5 / HIG 的 44 下限 2px。
+ * 钉子用 CDP Emulation.setSafeAreaInsetsOverride **真注入 34px inset** 断言计算几何
+ * （已实证本机 chromium 支持、env() 真算出 34px），不是文本级「CSS 里必须这样写」。
+ * 反向例：不注入时 env=0，底距必须仍是 8px——防止把 margin 写成固定 42px 糊弄正例。
+ */
+test.describe("移动端聊天抽屉：safe-area 与触控目标（390×844）", () => {
+  test.beforeAll(() => {
+    test.skip(!process.env.E2E, "set E2E=1 to run");
+  });
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  async function openChatDrawer(page) {
+    await page.goto(APP_URL);
+    await page.waitForSelector("#mobBar", { timeout: 15_000 });
+    await page.click('#mobBar [data-mob-group="assistant"]');
+    await page.waitForSelector("#sideSheet.open", { timeout: 10_000 });
+    await page.click('#sideSheetBody [data-chat="1"]');
+    await page.waitForFunction(() => document.getElementById("chatPanel").classList.contains("show"), null, { timeout: 10_000 });
+  }
+
+  const geometry = (page) => page.evaluate(() => {
+    const composer = document.querySelector("#chatPanel .chat-input-area");
+    const send = document.getElementById("chatSendBtn").getBoundingClientRect();
+    const attach = document.getElementById("chatAttachBtn").getBoundingClientRect();
+    const r = composer.getBoundingClientRect();
+    return {
+      gapToBottom: Math.round(window.innerHeight - r.bottom),
+      sendW: Math.round(send.width), sendH: Math.round(send.height),
+      attachW: Math.round(attach.width), attachH: Math.round(attach.height),
+      docOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  });
+
+  test("注入 34px home 条安全区后：Composer 底距 = 8+34，发送/附件 ≥44", async ({ page }) => {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Emulation.setSafeAreaInsetsOverride", { insets: { top: 0, left: 0, right: 0, bottom: 34 } });
+    await openChatDrawer(page);
+    const g = await geometry(page);
+    expect(g.gapToBottom, "Composer 底距应 = margin 8 + safe-area 34（home 条不贴发送键）").toBe(42);
+    expect(g.sendW, "发送按钮宽 ≥44（WCAG 2.5.5）").toBeGreaterThanOrEqual(44);
+    expect(g.sendH, "发送按钮高 ≥44").toBeGreaterThanOrEqual(44);
+    expect(g.attachW, "附件按钮宽 ≥44").toBeGreaterThanOrEqual(44);
+    expect(g.attachH, "附件按钮高 ≥44").toBeGreaterThanOrEqual(44);
+    expect(g.docOverflow, "不应有横向溢出").toBeLessThanOrEqual(0);
+  });
+
+  test("反向：无安全区时底距仍是 8px（margin 未被写成固定值）", async ({ page }) => {
+    await openChatDrawer(page);
+    const g = await geometry(page);
+    expect(g.gapToBottom, "env=0 时 Composer 底距应仍是 margin 8").toBe(8);
+    expect(g.docOverflow, "不应有横向溢出").toBeLessThanOrEqual(0);
+  });
+});

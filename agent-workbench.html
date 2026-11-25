@@ -2676,6 +2676,13 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
     transform:translateX(100%);box-shadow:var(--shadow-3)}
   .chat-panel.show{transform:translateX(0)}
   .chat-panel.collapsed{width:100%;max-width:360px;overflow:visible;transform:translateX(100%);border-left-color:var(--line)}
+  /* 2026-11-26 移动端收口：抽屉 Composer 接 safe-area + 触控 ≥44（WCAG 2.5.5 / HIG）。
+     390×844 实测：mobBar/side-sheet/main 都接了 --safe，唯独这里底距只有 margin 8px
+     （iPhone home 条贴发送键）；发送/附件 42×42 差 44 下限 2px。
+     env=0 时 calc 退化为原值，桌面与无 home 条设备零影响（反向例钉住）。 */
+  .chat-panel .chat-input-area{margin-bottom:calc(var(--space-2) + var(--safe))}
+  .chat-panel .chat-attach-btn,
+  .chat-panel .chat-input-right .chat-send-btn{width:44px;height:44px}
 }
 
 /* ===== Markdown 渲染体（T3.5）·AI 回复与记录长文本共用 ===== */

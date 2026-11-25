@@ -3,6 +3,16 @@
 _（新条目追加在本节之下、`## [3.7.156]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-25 · **移动端聊天抽屉：Composer 接 safe-area + 发送/附件 ≥44px**
+
+- **量化对照**（仓外探针 390×844 / 375×667 实测，对照主流 agent 移动端同范式）：底栏 4 组 91×48 ✓、Composer 贴底且随输入生长 ✓、两视口零横向溢出零 JS 异常 ✓。两处真缺口：
+  - **safe-area 独漏聊天抽屉**：mobBar / side-sheet / main 都接了 `--safe:env(safe-area-inset-bottom)`，唯独 `.chat-input-area` 没接——iPhone home 条直接贴发送键。
+  - **触控目标**：发送/附件按钮 42×42，差 WCAG 2.5.5 / HIG 的 44 下限 2px。
+- **修法**（仅 ≤767 抽屉段两条 CSS）：`.chat-panel .chat-input-area{margin-bottom:calc(var(--space-2) + var(--safe))}`；发送/附件 44×44。env=0 时退化为原值，桌面零影响。
+- **钉子**（mobile.spec.js 新增两例，真实几何非文本断言）：CDP `Emulation.setSafeAreaInsetsOverride` 真注入 34px inset → Composer 底距=42；反向例不注入时底距仍=8（防固定值糊弄）。先红后绿：改前正例红、改后 9/9。
+- **验证**：受影响 e2e 回归（three-state / ui-mode-layout / layout-v2 / visual-polish / chat-drawer-mobile / viewport / topbar-overflow）94/94；`npm run lint` rc=0；`check:source-state` ✓。
+- **探针自证排除假缺陷**：绿色「今日待处理」chip 看似遮挡「向 AI 助手」按钮，实为 toast（`pointer-events:none` + 6s 自动消失 + 按钮命中自身）——瞬时提示非布局缺陷，未改产品。
+
 ### 2026-11-25 · **agent loop 步数耗尽可见化：不再静默退出**
 
 - **缺口实证**：`while(guard++<maxLoops)` 打满即静默退出——用户看到的是最后一条工具回执，分不清「模型说完了」还是「被步数掐停」。
