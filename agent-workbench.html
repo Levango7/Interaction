@@ -55105,30 +55105,41 @@ function _ragChunkText(text){
   return chunks;
 }
 
-/* ---------- PDF 文本抽取（pdfjs-dist 3.11 UMD，随 vendor 交付、按需加载） ----------
- * 为什么钉 3.11：4.x 起只发 ESM，file:// 形态会被 CORS 拦；3.11 是最后的 UMD 经典脚本线，
- * 单文件本地打开与线上/Electron 两种形态都能用。只抽文本、不渲染页面；
- * isEvalSupported:false 规避 CVE-2024-4367 的字体脚本执行路径。扫描件没有文本层 → 返回空串，
- * 由调用方提示改用 OCR/粘贴导入。 */
+/* ---------- PDF 文本抽取（pdfjs-dist 6.x IIFE，随 vendor 交付、按需加载） ----------
+ * 6.x 只发 ESM，构建期打成经典脚本以保留 file:// 单文件形态；本地先预载 worker 注册
+ * fake worker，线上仍用同源模块 Worker。只抽文本、不渲染页面；安全修复来自 6.5.438
+ * 版本升级。扫描件没有文本层 → 返回空串，由调用方提示改用 OCR/粘贴导入。 */
 let _pdfjsPromise = null;
 function _pdfjsUrl(name){
   try{ return new URL("vendor/pdfjs/" + name, document.baseURI).href; }catch(_e){ return "vendor/pdfjs/" + name; }
 }
+function _loadPdfjsScript(name){
+  return new Promise(function(resolve, reject){
+    const s = document.createElement("script");
+    s.src = _pdfjsUrl(name);
+    s.async = true;
+    s.onload = function(){ resolve(); };
+    s.onerror = function(){ reject(new Error(name + " load failed")); };
+    document.head.appendChild(s);
+  });
+}
 function _loadPdfjs(){
   if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
   if(_pdfjsPromise) return _pdfjsPromise;
-  _pdfjsPromise = new Promise(function(resolve, reject){
-    const s = document.createElement("script");
-    s.src = _pdfjsUrl("pdf.min.js");
-    s.async = true;
-    s.onload = function(){
-      if(!window.pdfjsLib){ reject(new Error("pdfjs not found")); return; }
-      try{ window.pdfjsLib.GlobalWorkerOptions.workerSrc = _pdfjsUrl("pdf.worker.min.js"); }catch(_e){ /* 配置失败仍可走主线程回退 */ }
-      resolve(window.pdfjsLib);
-    };
-    s.onerror = function(){ reject(new Error("pdfjs load failed")); };
-    document.head.appendChild(s);
-  }).catch(function(e){ _pdfjsPromise = null; throw e; });
+  _pdfjsPromise = (async function(){
+    if(/^file:/i.test(window.location.href)){
+      if(!window.pdfjsWorker || typeof window.pdfjsWorker.WorkerMessageHandler !== "function"){
+        await _loadPdfjsScript("pdf.worker.min.js");
+      }
+      if(!window.pdfjsWorker || typeof window.pdfjsWorker.WorkerMessageHandler !== "function"){
+        throw new Error("pdfjs worker not found");
+      }
+    }
+    await _loadPdfjsScript("pdf.min.js");
+    if(!window.pdfjsLib) throw new Error("pdfjs not found");
+    try{ window.pdfjsLib.GlobalWorkerOptions.workerSrc = _pdfjsUrl("pdf.worker.min.js"); }catch(_e){ /* 配置失败仍可走主线程回退 */ }
+    return window.pdfjsLib;
+  })().catch(function(e){ _pdfjsPromise = null; throw e; });
   return _pdfjsPromise;
 }
 /** textContent.items → 可读文本：hasEOL 断行；仅在「拉丁/数字接拉丁/数字」时补空格，避免中文块间被插入空格 */
@@ -55150,9 +55161,9 @@ function _pdfItemsToText(items){
  */
 async function extractPdfText(arrayBuffer){
   const lib = await _loadPdfjs();
-  const task = lib.getDocument({ data: new Uint8Array(arrayBuffer), isEvalSupported: false, useSystemFonts: true });
-  const doc = await task.promise;
+  const task = lib.getDocument({ data: new Uint8Array(arrayBuffer), useSystemFonts: true });
   try{
+    const doc = await task.promise;
     const pages = [];
     const total = Math.min(doc.numPages || 0, 300);
     for(let i = 1; i <= total; i++){
@@ -55164,7 +55175,7 @@ async function extractPdfText(arrayBuffer){
     }
     return pages.join("\n\n").trim();
   }finally{
-    try{ doc.destroy(); }catch(_e){ /* 关闭失败不阻塞结果 */ }
+    try{ await task.destroy(); }catch(e){ try{ if(typeof pushDiag === "function") pushDiag("warn", "pdf task cleanup failed: "+((e&&e.message)||e), {where:"extractPdfText"}); }catch(_e2){} }
   }
 }
 
