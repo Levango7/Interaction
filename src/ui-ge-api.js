@@ -1043,10 +1043,32 @@
         list.innerHTML = "";
         r.data.schedules.forEach(s => {
           const row = document.createElement("div");
-          row.className = "api-schedule-row";
+          row.className = "api-schedule-row" + (s.enabled === false ? " is-paused" : "");
           row.innerHTML = '<span><span class="api-device-name"></span><br><span class="api-device-meta"></span></span>';
           row.querySelector(".api-device-name").textContent = s.type || t("api.reminder", "提醒");
-          row.querySelector(".api-device-meta").textContent = s.cron || "";
+          /* 2026-11-26：下次触发时间让用户能确认「它什么时候会响」；暂停的如实标注，
+             不再与启用态同貌。旧记录无 enabled/when 字段 = 启用（与调度器缺省一致）。 */
+          let meta = s.cron || "";
+          if(s.enabled === false) meta = (meta ? meta + " · " : "") + t("api.schedPaused", "已暂停");
+          else if(Number(s.when) > 0) meta = (meta ? meta + " · " : "") + t("api.schedNext", "下次：{t}").replace("{t}", new Date(Number(s.when)).toLocaleString());
+          row.querySelector(".api-device-meta").textContent = meta;
+          /* 暂停/恢复：服务端 PUT enabled 早已支持，此前 UI 只有删除——想暂停只能删了重建。 */
+          const toggleBtn = document.createElement("button");
+          toggleBtn.type = "button";
+          toggleBtn.className = "api-btn";
+          toggleBtn.textContent = s.enabled === false ? t("api.schedResume", "恢复") : t("api.schedPause", "暂停");
+          toggleBtn.onclick = async function(){
+            try{
+              const r2 = await apiUpdateSchedule(s.id, { enabled: s.enabled === false });
+              if(r2 && r2.ok){ try{ toast(t("api.scheduleUpdated", "提醒已更新"), "ok"); }catch(_){} }
+            }catch(e){
+              /* 与删除失败同纪律：失败必须可见 + 留痕，且不在本地假翻状态（下面统一重拉）。 */
+              try{ toast(t("api.opFailed", "操作失败，请检查网络后重试"), "warn"); }catch(_){}
+              try{ if(typeof pushDiag === "function") pushDiag("error", "toggle schedule failed: "+((e&&e.message)||e), {where:"apiUpdateSchedule"}); }catch(_e2){}
+            }
+            _loadSchedules();
+          };
+          row.appendChild(toggleBtn);
           const delBtn = document.createElement("button");
           delBtn.type = "button";
           delBtn.className = "api-btn danger";
