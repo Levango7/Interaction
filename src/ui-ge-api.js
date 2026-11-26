@@ -526,6 +526,29 @@
     return apiFetch("/api/notifications/schedules/" + encodeURIComponent(id), { method: "DELETE" });
   }
 
+  /* 2026-11-26 提醒编辑态（IIFE 顶层声明：_loadSchedules 的行按钮与内层的表单绑定都要引用）。
+     行「编辑」预填 type/cron → 按钮变「保存修改」（旁边出「取消」）→ PUT 只传 type+cron
+     （**不带 enabled**：暂停的提醒改完仍是暂停）。失败保持编辑态，不丢用户改了一半的内容。 */
+  let _editingScheduleId = null;
+  function _resetScheduleForm(){
+    _editingScheduleId = null;
+    const addBtn = document.getElementById("btnApiAddSchedule");
+    if(addBtn) addBtn.textContent = t("common.add", "添加");
+    const cancelBtn = document.getElementById("btnApiCancelEditSchedule");
+    if(cancelBtn) cancelBtn.style.display = "none";
+  }
+  function _editSchedule(s){
+    _editingScheduleId = s.id;
+    const typeEl = document.getElementById("apiSchedType");
+    const cronEl = document.getElementById("apiSchedCron");
+    if(typeEl && [...typeEl.options].some(o => o.value === s.type)) typeEl.value = s.type;
+    if(cronEl) cronEl.value = s.cron || "";
+    const addBtn = document.getElementById("btnApiAddSchedule");
+    if(addBtn) addBtn.textContent = t("api.schedSave", "保存修改");
+    const cancelBtn = document.getElementById("btnApiCancelEditSchedule");
+    if(cancelBtn) cancelBtn.style.display = "";
+  }
+
   // ===== 第三方集成 API =====
 
   async function apiGetIntegrations(){
@@ -1069,6 +1092,13 @@
             _loadSchedules();
           };
           row.appendChild(toggleBtn);
+          /* 编辑：改触发时间不必删了重建（复用创建表单的编辑态，见 _editSchedule） */
+          const editBtn = document.createElement("button");
+          editBtn.type = "button";
+          editBtn.className = "api-btn";
+          editBtn.textContent = t("common.edit", "编辑");
+          editBtn.onclick = function(){ _editSchedule(s); };
+          row.appendChild(editBtn);
           const delBtn = document.createElement("button");
           delBtn.type = "button";
           delBtn.className = "api-btn danger";
@@ -1269,18 +1299,53 @@
     // 新增定时提醒
     const addSchedBtn = document.getElementById("btnApiAddSchedule");
     if(addSchedBtn){
+      /* 取消按钮只在编辑态出现（_editSchedule/_resetScheduleForm 控制显隐） */
+      const cancelEditBtn = document.createElement("button");
+      cancelEditBtn.type = "button";
+      cancelEditBtn.id = "btnApiCancelEditSchedule";
+      cancelEditBtn.className = "api-btn";
+      cancelEditBtn.style.display = "none";
+      cancelEditBtn.style.marginLeft = "8px";
+      cancelEditBtn.textContent = t("common.cancel", "取消");
+      cancelEditBtn.onclick = function(){
+        _resetScheduleForm();
+        const cronEl = document.getElementById("apiSchedCron");
+        if(cronEl) cronEl.value = "";
+      };
+      addSchedBtn.parentNode.insertBefore(cancelEditBtn, addSchedBtn.nextSibling);
       addSchedBtn.onclick = async function(){
         const type = document.getElementById("apiSchedType").value;
         const cron = document.getElementById("apiSchedCron").value.trim();
         if(!type || !cron) return;
         try{
-          const r = await apiCreateSchedule({ type, cron, enabled: true });
-          if(r.ok){ try{ toast(t("api.scheduleAdded", "提醒已添加"), "ok"); }catch(_){} _loadSchedules(); }
+          if(_editingScheduleId){
+            const r = await apiUpdateSchedule(_editingScheduleId, { type, cron });
+            if(r && r.ok){
+              try{ toast(t("api.scheduleUpdated", "提醒已更新"), "ok"); }catch(_){}
+              _resetScheduleForm();
+              const cronEl = document.getElementById("apiSchedCron");
+              if(cronEl) cronEl.value = "";
+              _loadSchedules();
+            }
+          }else{
+            const r = await apiCreateSchedule({ type, cron, enabled: true });
+            if(r.ok){ try{ toast(t("api.scheduleAdded", "提醒已添加"), "ok"); }catch(_){} _loadSchedules(); }
+          }
         }catch(e){
           /* v3.7.102 第六片：加提醒失败静默 → 用户以为提醒设好了，实际根本不会触发。
-             这是「谎报」里后果最实在的一类（与第三片 apiDeleteSchedule 对称）。 */
+             这是「谎报」里后果最实在的一类（与第三片 apiDeleteSchedule 对称）。
+             编辑态失败保持（可重试），不丢用户改了一半的内容。 */
           try{ toast(t("api.opFailed", "操作失败，请检查网络后重试"), "warn"); }catch(_){}
-          try{ if(typeof pushDiag === "function") pushDiag("error", "create schedule failed: "+((e&&e.message)||e), {where:"apiCreateSchedule"}); }catch(_e2){}
+          try{
+            if(typeof pushDiag === "function"){
+              /* 两条归因字面各自在场（slice6 静态守卫按 where:"apiCreateSchedule" 锚定，不可合并成变量） */
+              if(_editingScheduleId){
+                pushDiag("error", "update schedule failed: "+((e&&e.message)||e), {where:"apiUpdateSchedule"});
+              }else{
+                pushDiag("error", "create schedule failed: "+((e&&e.message)||e), {where:"apiCreateSchedule"});
+              }
+            }
+          }catch(_e2){}
         }
       };
     }
