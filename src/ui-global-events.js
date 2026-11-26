@@ -2351,6 +2351,27 @@ async function unsubscribePush(){
   }
 }
 
+/* 2026-11-27：SW 广播的「订阅轮换」消息此前**零消费者**——浏览器轮换订阅后推送静默中断
+   （定时提醒收不到，用户不知情）。收到 PUSH_SUBSCRIPTION_CHANGE 且本机确实订阅过
+   （有 push_subscription 记录）才走 subscribePush 重订阅：未开启推送的用户不被静默创建。
+   后台维护不弹 toast；失败留痕（pushRotation）。 */
+if(typeof navigator !== "undefined" && navigator.serviceWorker && typeof navigator.serviceWorker.addEventListener === "function"){
+  navigator.serviceWorker.addEventListener("message", function(ev){
+    const d = ev && ev.data;
+    if(!d || d.type !== "PUSH_SUBSCRIPTION_CHANGE") return;
+    let had = null;
+    try{ had = load(PREFIX + "push_subscription", null); }catch(_){ had = null; }
+    if(!had || !had.endpoint) return;
+    subscribePush().then(function(r){
+      if(!r || !r.ok){
+        try{ if(typeof pushDiag === "function") pushDiag("warn", "push rotation re-subscribe failed: "+((r&&r.err)||"unknown"), {where:"pushRotation"}); }catch(_){}
+      }
+    }).catch(function(e){
+      try{ if(typeof pushDiag === "function") pushDiag("warn", "push rotation re-subscribe error: "+((e&&e.message)||e), {where:"pushRotation"}); }catch(_){}
+    });
+  });
+}
+
 /**
  * 发送测试通知（本地 Notification，不经过推送服务器）。
  * @returns {Promise<{ok:boolean, err?:string}>}
