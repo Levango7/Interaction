@@ -14,7 +14,7 @@
  */
 // 缓存版本号必须随每次 agent-workbench.html 变更 bump，否则 PWA/安装版会一直吃旧缓存（用户看不到新 UI）。
 // 命名约定：v{应用版本}-{日期}{当日序号}。版本历史见 CHANGELOG.md（v1.11.1 起不再在代码注释内嵌版本日志，避免双份维护漂移）。
-var CACHE_VERSION = "v3.7.156-20261124225548"; /* [prod build] auto-bumped */
+var CACHE_VERSION = "v3.7.156-20261126075559"; /* [prod build] auto-bumped */
 var CACHE_NAME = "wb-cache-" + CACHE_VERSION;
 
 // v1.4-F：后台同步队列存储库名（IndexedDB 优先；SW 上下文无法访问 localStorage）
@@ -374,9 +374,10 @@ self.addEventListener("fetch", function (event) {
   }
 
   // (3) 其他请求：network-first（失败回退缓存）
+  var bypassCache = req.cache === "no-store" || url.searchParams.has("wb_update_check");
   event.respondWith(
     fetch(req).then(function (resp) {
-      if (resp && resp.status === 200 && (resp.type === "basic" || resp.type === "cors")) {
+      if (!bypassCache && resp && resp.status === 200 && (resp.type === "basic" || resp.type === "cors")) {
         var copy = resp.clone();
         caches.open(CACHE_NAME).then(function (cache) {
           _putWithTimestamp(cache, req, copy).then(function () {
@@ -387,6 +388,7 @@ self.addEventListener("fetch", function (event) {
       }
       return resp;
     }).catch(function () {
+      if (bypassCache) return new Response("", { status: 504, statusText: "Offline" });
       return caches.match(req).then(function (cached) {
         return cached || new Response("", { status: 504, statusText: "Offline" });
       });
