@@ -557,6 +557,10 @@ function thisWeekDone(sc){
   return getActiveTasks().filter(t=>t.sc===sc&&t.status==="done"&&t.doneAt&&t.doneAt>=mon.getTime());
 }
 
+let _swUpdatePending = false;
+function swUpdateState(){ return _swUpdatePending ? "pending" : "idle"; }
+function _swSetUpdatePending(v){ _swUpdatePending = !!v; }
+
 /* v3.7.78 解耦：自别处下沉（同层序逆层消除） */
 function weekRange(){
   const d=new Date(); const day=(d.getDay()+6)%7;

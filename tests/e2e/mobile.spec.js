@@ -83,6 +83,84 @@ test.describe("移动端（竖屏 375×667）", () => {
     await page.locator("#chatModelSelect").locator('xpath=following-sibling::button[contains(@class,"ds-trigger")]').click();
     await expect(page.locator("#cfgEnabled"), "AI 配置页的启用开关应可见").toBeVisible({ timeout: 10_000 });
   });
+  test("更新入口与刷新提示可真实点击且不被底部导航遮挡（320/375）", async ({ page }) => {
+    for (const width of [320, 375]) {
+      await page.setViewportSize({ width, height: 667 });
+      await page.goto(APP_URL);
+      await page.waitForSelector("#mobBar", { timeout: 15_000 });
+      await page.evaluate(() => {
+        _swSetUpdatePending(true);
+        appendFoot();
+      });
+      const update = page.locator("#swUpdateReadyBtn");
+      await expect(update).toHaveCount(1);
+      await expect(update).toBeVisible();
+
+      const geometry = await update.evaluate((btn) => {
+        const r = btn.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return {
+          hitSelf: hit === btn || btn.contains(hit),
+          hitText: hit ? hit.textContent.trim() : "",
+          overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        };
+      });
+      expect(geometry.hitSelf, `${width}px：更新按钮中心被 ${geometry.hitText || "空白"} 遮挡`).toBe(true);
+      expect(geometry.overflow, `${width}px：不应产生横向溢出`).toBeLessThanOrEqual(0);
+
+      const contentGap = await page.evaluate(async () => {
+        const main = document.getElementById("main");
+        const probe = document.createElement("div");
+        probe.id = "swContentProbe";
+        probe.style.height = "1px";
+        main.appendChild(probe);
+        const wrap = document.querySelector(".main-wrap");
+        wrap.scrollTop = wrap.scrollHeight;
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        const probeBottom = probe.getBoundingClientRect().bottom;
+        const updateTop = document.getElementById("swUpdateReadyBtn").getBoundingClientRect().top;
+        probe.remove();
+        return updateTop - probeBottom;
+      });
+      expect(contentGap, `${width}px：正文末尾不应被更新入口遮挡`).toBeGreaterThanOrEqual(0);
+
+      await update.click();
+      const updateToast = page.locator("#toasts .toast", { hasText: "新版本已就绪，点击刷新" });
+      await expect(updateToast).toBeVisible();
+      await page.evaluate(() => { window.__swReloadSentinel = "before-reload"; });
+      await updateToast.click();
+      await page.waitForFunction(() => !window.__swReloadSentinel);
+    }
+  });
+
+  test("更新入口在设计、专注、回收站与抽屉沉浸态隐藏", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto(APP_URL);
+    await page.waitForSelector("#mobBar", { timeout: 15_000 });
+    await page.evaluate(() => {
+      _swSetUpdatePending(true);
+      appendFoot();
+    });
+    const update = page.locator("#swUpdateReadyBtn");
+    await expect(update).toBeVisible();
+
+    for (const state of ["design", "focus", "recycle", "drawer"]) {
+      await page.evaluate((name) => {
+        if (name === "design") document.querySelector(".body").classList.add("design-mode");
+        if (name === "focus") document.body.classList.add("is-focus");
+        if (name === "recycle") document.getElementById("main").classList.add("page-recycle");
+        if (name === "drawer") document.getElementById("drawer").classList.add("drawer-page");
+      }, state);
+      await expect(update, `${state} 沉浸态不应显示更新入口`).toBeHidden();
+      await page.evaluate((name) => {
+        if (name === "design") document.querySelector(".body").classList.remove("design-mode");
+        if (name === "focus") document.body.classList.remove("is-focus");
+        if (name === "recycle") document.getElementById("main").classList.remove("page-recycle");
+        if (name === "drawer") document.getElementById("drawer").classList.remove("drawer-page");
+      }, state);
+      await expect(update, `${state} 退出后应恢复更新入口`).toBeVisible();
+    }
+  });
 });
 
 /**

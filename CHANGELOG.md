@@ -37,6 +37,14 @@ _（新条目追加在本节之下、`## [3.7.156]` 之上。中段那个 `## [�
 - **钉子**：新增 `tests/integrations-oauth-state.test.js` 7 例（state 生成与绑定、有效 state 成功路径+一次性消费、无效 state、provider 不符、过期+清除、缺 code、not_configured），`server/verify/client-contract-check.cjs` 回调断言改为「无 state 应 400 invalid_state」。
 - **验证**：新钉 7/7；server-audit-fixes 21/21（28/28 合计）；client-contract-check **41/41**；`npm run lint` rc=0；`check:source-state` ✓。
 
+### 2026-11-24 · **应用更新常驻入口：状态栏「更新可用」**
+
+- 从孤儿工作树只迁移仍有效的更新提醒能力，不重放已淘汰的右栏三段、menubar 会话组或今日轨退场；新入口与主流 Agent 的轻量状态栏形态对齐。
+- 新 Service Worker 激活、另一标签页留下 waiting SW、版本哨兵三条路径只触发版本核对，仅线上 `BUILD_TAG` 与页内不同才显示常驻按钮；点击可重新弹出刷新提示，重复渲染、并发核对与同一线上版本重复事件不会重复生成入口，线上回滚会撤销入口及刷新提示。
+- 共享更新状态留在 Core，按钮渲染留在 Render，点击与刷新行为由 UI 层事件委托承接，无新增逆层依赖；版本探针使用唯一查询参数避开旧 SW 离线回退，SW 对 `no-store`/版本探针请求禁止读写 Cache Storage，普通 network-first 缓存行为不变，页面端不再清空缓存。新增 17 条更新行为测试与 5 条 SW 缓存边界测试，覆盖三条更新路径、同版本负例、缓存不可用、并发幂等、回滚（含切语言）、缺失哨兵与离线探针。
+- 窄屏只在更新待处理时把入口抬到固定底栏之上，并为右侧聊天 rail 留位；刷新提示自身也可点击。设计、专注、回收站与抽屉沉浸态按真实 DOM 状态隐藏更新入口。新增真 Chromium 回归以 `elementFromPoint` + 实际点击守住 320/375 可达性，并验证正文末尾不被遮挡，完整 mobile E2E **9/9**。
+- **验证**：最终基线 `4aa53761` 全量 Vitest **252 文件 / 2738 用例通过**（4 workers）；CI 15 步分载体逐项通过（测试步采用同一稳定并发，其余 14 步串行；默认并发两次出现 worker RPC 超时，启动守卫隔离 5/5，未改断言）。完整 Playwright **266 passed / 5 skipped**（271 项，`E2E_GLOBAL_TIMEOUT=900000`；默认 600 秒曾在第 263 项触发总超时，无断言失败）。真实 HTTP + Service Worker 复核确认页面受控、版本探针零缓存、离线探针返回 504 且保持 pending、按钮与 toast 点击刷新均通过。
+
 ### 2026-11-24 · **nexusloom MCP 接入指南（α）**
 
 - 新增 `docs/loom-integration.md`：复用 Interaction 既有 MCP 客户端、工具白名单、危险确认与桌面主进程代理，接入 nexusloom 的 `/mcp` Streamable HTTP 端点；不改产品执行链，不引入另一套 DAG 控制台。

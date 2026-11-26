@@ -41,6 +41,17 @@ function appendFoot(){
     t("p3.html.footTodo","<span class=\"foot-stat\">待办 ") + esc(openN) + t("stat.recordsMid"," · 资料 ") + esc(recN) + t("stat.footStatSuffix"," 条</span>") +
     '<span class="foot-ai ' + (aiOn ? 'on' : 'off') + '">' + (aiOn ? '\u25CF' : '\u25CB') + ' ' + aiTxt + '</span>';
   sb.appendChild(footEl);
+  const oldUpdate = sb.querySelector(":scope > #swUpdateReadyBtn");
+  if(oldUpdate) oldUpdate.remove();
+  if(typeof swUpdateState === "function" && swUpdateState() === "pending"){
+    const updateBtn = document.createElement("button");
+    updateBtn.type = "button";
+    updateBtn.id = "swUpdateReadyBtn";
+    updateBtn.className = "foot-update-ready";
+    updateBtn.textContent = t("status.updateReady", "更新可用");
+    updateBtn.title = t("msg.newVersionReady", "新版本已就绪，点击刷新");
+    sb.appendChild(updateBtn);
+  }
 }
 
 function renderMetricsStrip(){
