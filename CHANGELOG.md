@@ -13,6 +13,15 @@ _（新条目追加在本节之下、`## [3.7.156]` 之上。中段那个 `## [�
 - **验证**：受影响 e2e 回归（three-state / ui-mode-layout / layout-v2 / visual-polish / chat-drawer-mobile / viewport / topbar-overflow）94/94；`npm run lint` rc=0；`check:source-state` ✓。
 - **探针自证排除假缺陷**：绿色「今日待处理」chip 看似遮挡「向 AI 助手」按钮，实为 toast（`pointer-events:none` + 6s 自动消失 + 按钮命中自身）——瞬时提示非布局缺陷，未改产品。
 
+### 2026-11-25 · **AI 写入撤销覆盖：generate_doc / add_feature_record / remember / forget 全进撤销账**
+
+- **缺口实证**：这四类工具落用户数据却不进撤销账（`note_add` 有撤销、`generate_doc` 没有，同类不同命）——AI 写坏文档/资料记录/记忆后用户无法回滚，属信任底线。
+- **修法**：
+  - `generate_doc` 接入 `note_add` 回执（撤销=删掉这篇笔记）；`add_feature_record` 新增 `feature_add` 回执并带 `bcfg.key`——feature 记录落在 key 存储面（如 `meetings`），不是 `rec_<sc>`，撤销按 key 过滤删除才真生效。
+  - `remember` 新增 `memory_add` 回执（撤销=忘掉它）；`forget` 新增 `memory_del` 回执带 **`r.scope`** 与原文（撤销=把原文记回**它原来所在的 scope**，不是 args.scope 的回退 active——否则 recall 按原 scope 查不到，撤销形同虚设；此缺陷由测试真红抓出）。
+- **钉子**：新增 `tests/ai-write-undo-coverage.test.js` 4 例，逐类验证撤销**真实生效**（笔记删除 / meetings 清空 / 记忆召回消失 / 遗忘原文记回且 global 可召回）。
+- **验证**：新钉 4/4；全量 vitest 2722 例 2720 passed（两红均非本批：mermaid=共享 node_modules 版本差环境项、password-reset 隔离复跑 16/16=时序抖动）；`npm run lint` rc=0；`check:source-state` ✓。
+
 ### 2026-11-25 · **agent loop 步数耗尽可见化：不再静默退出**
 
 - **缺口实证**：`while(guard++<maxLoops)` 打满即静默退出——用户看到的是最后一条工具回执，分不清「模型说完了」还是「被步数掐停」。
@@ -46,6 +55,14 @@ _（新条目追加在本节之下、`## [3.7.156]` 之上。中段那个 `## [�
 - **客户端**：开授权页时从 authorizeUrl 捕获 state 存 `_integrationsAuthSession`，消息处理时校验回调载荷 state 与本次发起一致（第二道相关性校验，与 source/origin 并列）。
 - **钉子**：新增 `tests/integrations-oauth-state.test.js` 7 例（state 生成与绑定、有效 state 成功路径+一次性消费、无效 state、provider 不符、过期+清除、缺 code、not_configured），`server/verify/client-contract-check.cjs` 回调断言改为「无 state 应 400 invalid_state」。
 - **验证**：新钉 7/7；server-audit-fixes 21/21（28/28 合计）；client-contract-check **41/41**；`npm run lint` rc=0；`check:source-state` ✓。
+
+### 2026-11-24 · **应用更新常驻入口：状态栏「更新可用」**
+
+- 从孤儿工作树只迁移仍有效的更新提醒能力，不重放已淘汰的右栏三段、menubar 会话组或今日轨退场；新入口与主流 Agent 的轻量状态栏形态对齐。
+- 新 Service Worker 激活、另一标签页留下 waiting SW、版本哨兵三条路径只触发版本核对，仅线上 `BUILD_TAG` 与页内不同才显示常驻按钮；点击可重新弹出刷新提示，重复渲染、并发核对与同一线上版本重复事件不会重复生成入口，线上回滚会撤销入口及刷新提示。
+- 共享更新状态留在 Core，按钮渲染留在 Render，点击与刷新行为由 UI 层事件委托承接，无新增逆层依赖；版本探针使用唯一查询参数避开旧 SW 离线回退，SW 对 `no-store`/版本探针请求禁止读写 Cache Storage，普通 network-first 缓存行为不变，页面端不再清空缓存。新增 17 条更新行为测试与 5 条 SW 缓存边界测试，覆盖三条更新路径、同版本负例、缓存不可用、并发幂等、回滚（含切语言）、缺失哨兵与离线探针。
+- 窄屏只在更新待处理时把入口抬到固定底栏之上，并为右侧聊天 rail 留位；刷新提示自身也可点击。设计、专注、回收站与抽屉沉浸态按真实 DOM 状态隐藏更新入口。新增真 Chromium 回归以 `elementFromPoint` + 实际点击守住 320/375 可达性，并验证正文末尾不被遮挡，完整 mobile E2E **9/9**。
+- **验证**：最终基线 `4aa53761` 全量 Vitest **252 文件 / 2738 用例通过**（4 workers）；CI 15 步分载体逐项通过（测试步采用同一稳定并发，其余 14 步串行；默认并发两次出现 worker RPC 超时，启动守卫隔离 5/5，未改断言）。完整 Playwright **266 passed / 5 skipped**（271 项，`E2E_GLOBAL_TIMEOUT=900000`；默认 600 秒曾在第 263 项触发总超时，无断言失败）。真实 HTTP + Service Worker 复核确认页面受控、版本探针零缓存、离线探针返回 504 且保持 pending、按钮与 toast 点击刷新均通过。
 
 ### 2026-11-24 · **nexusloom MCP 接入指南（α）**
 

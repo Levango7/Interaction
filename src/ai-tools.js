@@ -124,6 +124,9 @@ function execTool(name, args, force){
       const arr = load(PREFIX + bcfg.key, []);
       arr.unshift(rec);
       save(PREFIX + bcfg.key, arr);
+      /* 撤销回执（v3.7.157 起）：此前只写账、不入回执，用户改错了也没法回滚。
+         feature 记录落在 bcfg.key（不是 rec_<sc>），故用 feature_add 类并带 key。 */
+      _aiUndoPush({ kind:"feature_add", recId:rec.id, key:bcfg.key, sc:(typeof active === "string" ? active : ""), title:(rec.title || rec.name || "") });
       return JSON.stringify({ok:true, msg:t("tool.featureAddedPrefix", "已添加到")+fid+t("tool.featureAddedInfix", "功能")});
     }
     // ===== AI 能力增强：新工具分发（同步工具直接执行；异步工具经 agentExecAsync 分发） =====
@@ -178,6 +181,9 @@ function execTool(name, args, force){
     if(name==="generate_doc"){
       const ttl = String(args.title||t("tool.unnamed","未命名"));
       const r = createNote(ttl, String(args.content||""), [], String(args.category||t("doc.categoryDefault","AI 文档")));
+      /* 撤销回执（v3.7.157 起）：此前只入产物账、无撤销回执 —— note_add 有而 generate_doc 没有，
+         同类不同命。AI 生成的文档写坏了也能一键回滚（撤销 = 删这篇笔记）。 */
+      _aiUndoPush({ kind:"note_add", noteId:r.id, title:ttl });
       _aiArtifactPush({ kind:"note", refId:r.id, title:ttl, sc:(typeof active === "string" ? active : ""), tool:"generate_doc" });
       return JSON.stringify({ok:true, id:r.id, msg:t("tool.docSaved","文档已保存到笔记：")+ttl});
     }
@@ -243,6 +249,14 @@ function undoAiAction(id){
     setRec(e.sc, arr.filter(x => x.id !== e.recId));
   } else if(e.kind === "note_add"){
     saveNotes(getNotes().filter(n => n.id !== e.noteId));
+  } else if(e.kind === "feature_add"){
+    // feature 记录落在 bcfg.key（不是 rec_<sc>）：按 key 直接删，撤销才真正生效
+    const arr = load(PREFIX + e.key, []);
+    save(PREFIX + e.key, arr.filter(x => x.id !== e.recId));
+  } else if(e.kind === "memory_add"){
+    forgetMemory(e.memId); // 撤销「记住」= 忘掉它
+  } else if(e.kind === "memory_del"){
+    addMemory(e.scope, e.beforeText); // 撤销「遗忘」= 把原文记回来
   } else {
     return { ok:false, msg:t("ai.undo.unsupported", "这类改动暂不支持撤销") };
   }
@@ -1100,6 +1114,7 @@ function agentExec(name, args){
   if(name==="remember"){
     const scope = (args.scope && (args.scope==="global" || ORDER.includes(args.scope)))? args.scope : active;
     const r=addMemory(scope, args.text);
+    if(r) _aiUndoPush({ kind:"memory_add", memId:r.id, scope:scope, text:r.text });
     return r? JSON.stringify({ok:true, id:r.id, msg:t("agent.rememberPrefix", "已记住[")+(scope==="global"?t("agent.scope.global", "全局"):SCENARIOS[scope].name)+t("agent.rememberInfix", "]：")+r.text})
             : JSON.stringify({ok:false,msg:t("agent.memEmptyMsg", "记忆内容为空")});
   }
@@ -1110,6 +1125,9 @@ function agentExec(name, args){
   }
   if(name==="forget"){
     const r=forgetMemory(args.id);
+    /* 撤销「遗忘」要把原文记回**它原来所在的 scope**（r.scope，不是 args.scope 的回退 active），
+       否则 recall 按原 scope 查不到——撤销形同虚设。 */
+    if(r) _aiUndoPush({ kind:"memory_del", memId:args.id, scope:r.scope, beforeText:r.text });
     return r? JSON.stringify({ok:true,msg:t("agent.forgetPrefix", "已遗忘：")+r.text}) : JSON.stringify({ok:false,msg:t("agent.memNotFoundMsg", "未找到该记忆")});
   }
   if(name==="plan"){

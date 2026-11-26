@@ -374,9 +374,10 @@ self.addEventListener("fetch", function (event) {
   }
 
   // (3) 其他请求：network-first（失败回退缓存）
+  var bypassCache = req.cache === "no-store" || url.searchParams.has("wb_update_check");
   event.respondWith(
     fetch(req).then(function (resp) {
-      if (resp && resp.status === 200 && (resp.type === "basic" || resp.type === "cors")) {
+      if (!bypassCache && resp && resp.status === 200 && (resp.type === "basic" || resp.type === "cors")) {
         var copy = resp.clone();
         caches.open(CACHE_NAME).then(function (cache) {
           _putWithTimestamp(cache, req, copy).then(function () {
@@ -387,6 +388,7 @@ self.addEventListener("fetch", function (event) {
       }
       return resp;
     }).catch(function () {
+      if (bypassCache) return new Response("", { status: 504, statusText: "Offline" });
       return caches.match(req).then(function (cached) {
         return cached || new Response("", { status: 504, statusText: "Offline" });
       });

@@ -2560,17 +2560,29 @@ if (typeof document !== "undefined") {
 // ===== Bootstrap (启动) =====
 /* ---------- 启动 ---------- */
 // PWA Service Worker 注册 + 更新检测（失败静默；jsdom/Electron 无 serviceWorker 时自动跳过）
-// v1.9.3g：主动 reg.update() + updatefound/statechange 监听，新 SW 就绪后 toast「点击刷新」，
-// 解决「改了但用户一直看旧缓存」的交付缺口（页脚 b{BUILD_TAG} 可自证版本）。
+// SW 字节变化不等于应用版本变化；所有更新信号统一以线上 BUILD_TAG 为准。
+document.addEventListener("click", function(e){
+  if(e.target && e.target.closest && e.target.closest("#swUpdateReadyBtn")) _promptSwReload(true);
+});
 let _swReloadPrompted = false;
-function _promptSwReload(){
-  if(_swReloadPrompted) return;
+function _promptSwReload(force, emphatic){
+  if(_swReloadPrompted && !force) return;
   _swReloadPrompted = true;
   const toastEl = toast(t("msg.newVersionReady", "新版本已就绪，点击刷新"), "ok");
   if(toastEl){
+    toastEl.dataset.wbSwUpdate = "1";
     toastEl.style.cursor = "pointer";
+    if(emphatic) toastEl.style.fontWeight = "700";
     toastEl.addEventListener("click", function(){ try{ location.reload(); }catch(e){ /* noop */ } });
   }
+}
+function _swMarkUpdateReady(emphatic){
+  const first = swUpdateState() !== "pending";
+  _swSetUpdatePending(true);
+  if(first){
+    appendFoot();
+  }
+  _promptSwReload(false, emphatic);
 }
 if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
   // v3.6.4：updateViaCache:'none' —— SW 脚本自身也绕过 HTTP 缓存，让每次导航都真实比对字节，
@@ -2581,45 +2593,51 @@ if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
     reg.addEventListener("updatefound", function(){
       const nw = reg.installing; if(!nw) return;
       nw.addEventListener("statechange", function(){
-        // skipWaiting 后新 SW 会直接 activated；此时刷新即可命中新缓存
-        if(nw.state === "activated") _promptSwReload();
+        if(nw.state === "activated") _swCheckForUpdate();
       });
     });
     // 多标签页场景：另一标签已触发更新且新 SW 已就绪
-    if(reg.waiting) _promptSwReload();
+    if(reg.waiting) _swCheckForUpdate();
   }).catch(function () { /* 静默失败 */ });
 
-  /* v3.6.2 版本哨兵：SW 死锁自救——cache-first 下旧 SW 可能一直拿旧 HTML 应答，
-   * updatefound 事件被节流/错过时用户永远看不到新版（09-05~09-12 多次"改了不生效"事故根因）。
-   * 启动时用 cache:'no-store' 直连网络拉线上 HTML，对比页内 BUILD_TAG；
-   * 不一致 => 清空全部 Cache Storage + reg.update() + toast 提示刷新。绕过 SW，必然拿到真版本。 */
-  (function versionSentinel(){
-    try{
-      fetch("./agent-workbench.html", { cache: "no-store", credentials: "omit" })
-        .then(function(r){ return r.ok ? r.text() : null; })
-        .then(function(txt){
-          if(!txt) return;
-          var mLive = txt.match(/BUILD_TAG\s*=\s*"([^"]+)"/);
-          var mMine = String(BUILD_TAG || "");
-          if(!mLive || !mLive[1] || mLive[1] === mMine) return;
-          // 线上有新版本但本页还是旧的——强制清缓存并促 SW 立即更新
-          if(caches && caches.keys){
-            caches.keys().then(function(ks){
-              return Promise.all(ks.map(function(k){ return caches.delete(k); }));
-            }).then(function(){
-              try{ navigator.serviceWorker.getRegistration().then(function(rg){ if(rg) rg.update(); }); }catch(e){}
-              var el = toast(t("msg.newVersionReady", "新版本已就绪，点击刷新"), "ok");
-              if(el){
-                el.style.cursor = "pointer";
-                el.style.fontWeight = "700";
-                el.addEventListener("click", function(){ try{ location.reload(); }catch(e){} });
-              }
-            }).catch(function(){});
+  /* 唯一查询参数避开旧 SW 的离线缓存回退；no-store 同时阻止 HTTP 与 Cache Storage。 */
+  let _swVersionCheck = null;
+  let _swHandledLiveVersion = "";
+  const _swCheckForUpdate = function(emphatic){
+    if(_swVersionCheck) return _swVersionCheck;
+    _swVersionCheck = Promise.resolve().then(function(){
+      return fetch("./agent-workbench.html?wb_update_check=" + Date.now(), { cache: "no-store", credentials: "omit" });
+    })
+      .then(function(r){ return r.ok ? r.text() : null; })
+      .then(function(txt){
+        if(!txt) return;
+        var mLive = txt.match(/BUILD_TAG\s*=\s*"([^"]+)"/);
+        var mMine = String(BUILD_TAG || "");
+        if(!mLive || !mLive[1]) return;
+        if(mLive[1] === mMine){
+          _swHandledLiveVersion = "";
+          if(swUpdateState() === "pending"){
+            _swSetUpdatePending(false);
+            _swReloadPrompted = false;
+            appendFoot();
+            Array.from(document.querySelectorAll("#toasts .toast[data-wb-sw-update]")).forEach(function(el){
+              el.remove();
+            });
           }
-        })
-        .catch(function(){ /* 离线/网络错误：静默，下次再查 */ });
-    }catch(e){ /* 环境不支持：静默 */ }
-  })();
+          return;
+        }
+        if(_swHandledLiveVersion === mLive[1]) return;
+        _swHandledLiveVersion = mLive[1];
+        _swMarkUpdateReady(!!emphatic);
+        Promise.resolve().then(function(){ return navigator.serviceWorker.getRegistration(); })
+          .then(function(rg){ if(rg) rg.update(); })
+          .catch(function(){ return null; });
+      })
+      .catch(function(){ return null; })
+      .finally(function(){ _swVersionCheck = null; });
+    return _swVersionCheck;
+  };
+  _swCheckForUpdate(true);
 }
 /* v3.7.148：带模式版本门控 —— 旧版本打开新数据时只读告警、不跑迁移（见 data-migrate 的 migrateWithSchema） */
 migrateWithSchema();
