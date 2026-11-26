@@ -1,39 +1,48 @@
 #!/usr/bin/env node
 /**
- * vendor-pdfjs.mjs —— 把 pdfjs-dist 的浏览器产物复制到 vendor/pdfjs/（随仓库交付）。
+ * vendor-pdfjs.mjs —— 把 pdfjs-dist 6.x 的 legacy ESM 打成经典 IIFE，随仓库交付。
  *
- * 为什么 vendor 而不是运行时从 CDN 拉：
- *   · 应用是本地优先/离线可用，PDF 解析不能依赖外网；
- *   · CSP 只放行 'self'，CDN 也过不了；
- *   · Electron/file:// 形态下 ESM 会被 CORS 拦，故固定用 pdfjs-dist 3.11 的 **UMD 经典脚本**
- *     （4.x 起只发 ESM；动态 import 在 file:// 下不可用）。
+ * pdf.js 6.x 不再提供 UMD；应用既要 file:// 单文件形态，也要离线可用，因此在构建期
+ * 用 esbuild 生成无 import/export 的经典脚本。file:// 先预载 worker 注册 fake worker，
+ * http(s) 仍由 pdf.js 创建同源模块 Worker。
  *
- * 用法：node scripts/vendor-pdfjs.mjs            # 复制（刷新 vendor）
- *       node scripts/vendor-pdfjs.mjs --check    # 只校验 vendor 与 node_modules 一致
+ * 用法：node scripts/vendor-pdfjs.mjs            # 重建 vendor
+ *       node scripts/vendor-pdfjs.mjs --check    # 重建并逐字节校验，不写文件
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { build } from "esbuild";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const PKG = "pdfjs-dist";
-const FILES = [
-  ["build/pdf.min.js", "pdf.min.js"],
-  ["build/pdf.worker.min.js", "pdf.worker.min.js"],
-  ["LICENSE", "LICENSE"],
-];
+const pkgDir = join(root, "node_modules", "pdfjs-dist");
 const outDir = join(root, "vendor", "pdfjs");
 const check = process.argv.includes("--check");
+const bundles = [
+  { entry: "legacy/build/pdf.mjs", dest: "pdf.min.js", globalName: "pdfjsLib" },
+  { entry: "legacy/build/pdf.worker.mjs", dest: "pdf.worker.min.js", globalName: "pdfjsWorker" },
+];
+const common = {
+  bundle: true,
+  platform: "browser",
+  format: "iife",
+  target: "es2020",
+  minify: true,
+  legalComments: "inline",
+  define: { "import.meta.url": "self.location.href" },
+  write: false,
+  logLevel: "silent",
+};
 let bad = 0;
 
-for (const [srcRel, destName] of FILES) {
-  const src = join(root, "node_modules", PKG, srcRel);
-  const dest = join(outDir, destName);
-  if (!existsSync(src)) {
-    console.error(`[vendor-pdfjs] 缺少 ${src}（先 npm ci / npm install）`);
-    process.exit(1);
-  }
-  const want = readFileSync(src);
+for (const item of bundles) {
+  const result = await build({
+    ...common,
+    entryPoints: [join(pkgDir, item.entry)],
+    globalName: item.globalName,
+  });
+  const want = result.outputFiles[0].contents;
+  const dest = join(outDir, item.dest);
   if (check) {
     const got = existsSync(dest) ? readFileSync(dest) : null;
     if (!got || !got.equals(want)) {
@@ -43,10 +52,30 @@ for (const [srcRel, destName] of FILES) {
   } else {
     mkdirSync(outDir, { recursive: true });
     writeFileSync(dest, want);
-    console.log(`[vendor-pdfjs] ${destName} ← ${srcRel} (${want.length} bytes)`);
+    console.log(`[vendor-pdfjs] ${item.dest} ← ${item.entry} (${want.length} bytes)`);
   }
 }
+
+const licenseSrc = join(pkgDir, "LICENSE");
+const licenseDest = join(outDir, "LICENSE");
+if (!existsSync(licenseSrc)) {
+  console.error(`[vendor-pdfjs] 缺少 ${licenseSrc}`);
+  process.exit(1);
+}
+const license = readFileSync(licenseSrc);
 if (check) {
-  console.log(bad ? `[vendor-pdfjs] check ✗ ${bad} 处不同步（跑 npm run vendor:pdfjs）` : "[vendor-pdfjs] check ✓ 与 node_modules 一致");
+  const got = existsSync(licenseDest) ? readFileSync(licenseDest) : null;
+  if (!got || !got.equals(license)) {
+    console.error(`[vendor-pdfjs] 不同步: ${licenseDest}`);
+    bad++;
+  }
+} else {
+  mkdirSync(outDir, { recursive: true });
+  writeFileSync(licenseDest, license);
+  console.log(`[vendor-pdfjs] LICENSE ← node_modules/pdfjs-dist (${license.length} bytes)`);
+}
+
+if (check) {
+  console.log(bad ? `[vendor-pdfjs] check ✗ ${bad} 处不同步（跑 npm run vendor:pdfjs）` : "[vendor-pdfjs] check ✓ 与当前依赖重建结果一致");
   process.exit(bad ? 1 : 0);
 }
