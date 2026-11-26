@@ -35,6 +35,15 @@ _（新条目追加在本节之下、`## [3.7.156]` 之上。中段那个 `## [�
 - **验证**：受影响 e2e 回归（three-state / ui-mode-layout / layout-v2 / visual-polish / chat-drawer-mobile / viewport / topbar-overflow）94/94；`npm run lint` rc=0；`check:source-state` ✓。
 - **探针自证排除假缺陷**：绿色「今日待处理」chip 看似遮挡「向 AI 助手」按钮，实为 toast（`pointer-events:none` + 6s 自动消失 + 按钮命中自身）——瞬时提示非布局缺陷，未改产品。
 
+### 2026-11-26 · **PDF.js 3.11.174 → 6.5.438：修复 CVE-2024-4367，保留 file:// 与 HTTP 双形态**
+
+- **动因**：Issue #12 的 `pdfjs-dist@3.11.174` 带 high 告警，恶意 PDF 可执行任意 JavaScript（CVE-2024-4367，影响 `<=4.1.392`）；本批升到修复版 `6.5.438`，不夹带修复仓库其余继承告警。
+- **vendor 与依赖**：6.x 只发 ESM，改用精确钉住的 `esbuild@0.28.2` 把 `legacy/build/pdf.mjs` 与 `pdf.worker.mjs` 打成经典 IIFE，沿用 `pdfjsLib` / `pdfjsWorker` 全局名和原文件名。主库 320,004 → 544,437 B，Worker 1,087,212 → 1,281,069 B；`LICENSE` 逐字节不变。`package-lock.json` 补齐 canvas 平台可选包并把本批 63 条镜像 URL 归一到 npm 官方源，根 Node engines 与包实际要求对齐为 `>=22.13.0 || >=24`。
+- **API 与清理**：`PDFDocumentProxy.destroy()` 已移除，改为在 `finally` 调用 `PDFDocumentLoadingTask.destroy()`，loading 失败也清理；清理失败保留正文并写诊断，不再静默吞错。删除 6.5.438 已不消费的 `isEvalSupported`，保留 `useSystemFonts:true`，只抽文本、不渲染页面。
+- **Worker 两路**：`file://` 先经典脚本预载 worker 并注册 `WorkerMessageHandler`，由 pdf.js 走 fake worker；`http(s)` 不预载，按同源 `workerSrc` 创建真实模块 Worker。E2E 同时断言 `file://` 零真实 Worker、恰好一条 fake-worker 提示，HTTP 真实 module Worker、零 fake-worker 回落；把日志级别从错误的 `warn` 改为 Playwright 实际的 `warning` 后，窄变异在两档各精确红 1 条，还原复绿。
+- **验证（最终净副本，Node v26.8.2 / npm 12.2.0）**：根与 server `npm ci --allow-remote=all` 均通过；低并发 `test:local -- --exclude tests/claim-check-ci.test.js --maxWorkers=2 --minWorkers=2` 为 **253 文件 / 2744 用例全过、未处理错误 0**（888.80s）；PDF 定向单测 **13/13**；完整 Playwright **268 passed / 5 skipped**（273 项，4.8m），其中 PDF 双协议 × 桌面/平板 **4/4**；服务端 11 个自足脚本 **316/316**。真实边界样本在 file:// 与 HTTP 均通过多页、300 页上限、嵌入中文字体、加密 PDF 拒绝，且无 pageerror。
+- **审计与交付边界**：官方源同口径审计 19 → 16，本批新增 0，`pdfjs-dist` high 已消失；剩余 16 条（3 critical / 4 high / 7 moderate / 2 low）均为继承的开发链告警，未在本批处理。Electron `prebuild` 已把 HTML、两个 bundle 与 LICENSE 原样复制到外壳目录并逐字节比对一致；本机受 GitHub helper 下载网络限制未生成 portable exe，CI 尚未运行（本轮不提交、不推送、不建 PR、不合并、不发版）。
+
 ### 2026-11-25 · **AI 写入撤销覆盖：generate_doc / add_feature_record / remember / forget 全进撤销账**
 
 - **缺口实证**：这四类工具落用户数据却不进撤销账（`note_add` 有撤销、`generate_doc` 没有，同类不同命）——AI 写坏文档/资料记录/记忆后用户无法回滚，属信任底线。
