@@ -3,6 +3,14 @@
 _（新条目追加在本节之下、`## [3.7.156]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-27 · **推送订阅轮换：页面端接上 SW 广播（提醒推送不再静默中断）**
+
+- **缺口实证**：`service-worker.js` 在 `pushsubscriptionchange` 时已广播 `{type:"PUSH_SUBSCRIPTION_CHANGE"}`，但**页面端零消费者**——浏览器轮换订阅后推送静默中断，定时提醒收不到且用户不知情。
+- **修法**：页面注册 SW `message` 监听，收到该消息且本机确实订阅过（有 `push_subscription` 记录）才走 `subscribePush()` 重订阅（新 endpoint 经既有链路上报服务端 + 落盘更新）；**未开启推送的用户不被静默创建订阅**；后台维护不弹 toast，失败留痕（`pushRotation`）。
+- **钉子**：新增 `tests/push-rotation-resubscribe.test.js` 4 例（有记录→真重订阅+上报+落盘 / 无记录零动作 / subscribe 抛错留痕 / 其他 type 不触发），**先红后绿**。
+- **过程自纠**：① 在 `beforeParse` 里 mock `window.apiFetch`/`apiPushSubscribe` 会被应用启动覆盖回真实现（首版 `subscribeCalls=0` 的根因）——改 mock 底层 `fetch`；② `pushDiag` 同在启动时被覆盖，探针改到 loadApp 返回后再包装。
+- **验证**：新钉 4/4 + pwa-metadata / sw-update-ready / linear-push / notion-push / probe-binding 共 **43/43**；`npm run lint` rc=0；`check:source-state` ✓。
+- **边界**：SW 侧广播为既有代码未动；浏览器真事件投递不在 jsdom 射程内（本批钉的是「消息到页面会重订阅」这一段）。
 ### 2026-11-27 · **增量同步默认开启（行为变更 · 用户拍板 C 路线 A 项）**
 
 - **背景**：增量同步（键级 delta + 服务端权威水位 + 冲突自动合并/面板）自 v3.7.106/109 已建好并有全套守护，但 `cfg.syncIncremental === true` 才启用——**默认关**，普通用户实际走全量快照「谁新谁赢」，多设备/多窗口同时改会静默覆盖。
