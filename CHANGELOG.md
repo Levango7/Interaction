@@ -3,6 +3,15 @@
 _（新条目追加在本节之下、`## [3.7.156]` 之上。中段那个 `## [详细条目存档 …]` 是**只读历史**，
 不要再往里加东西 —— 那是 #109 刚清掉的错标。）_
 
+### 2026-11-27 · **主题警示色：四套 --danger 越过 4.5:1，并补齐背景与按压态闭环**
+
+- **缺口实证**：Chromium 实测 forest / mist / ocean / elegant 的 `--danger` 对 `--panel` 为 2.19 / 2.11 / 3.93 / 4.15，全部低于 WCAG 正文 4.5:1；警示色还广泛用作背景，单纯调令牌会让白字或深色前景继续失衡。
+- **令牌修法**：forest `#ef6b5e → #ffd0c0`、mist `#f08a60 → #fff0e8`、ocean `#c85a50 → #b03a32`、elegant `#c0605a → #a93a32`；最终实测 4.75 / 4.68 / 5.66 / 6.29。所有 danger 背景前景统一使用既有 `--panel`，不改布局、行为或其他令牌。
+- **遗漏补修**：覆盖 `.addbtn.danger`、`.addbtn[data-sc="danger"]`、`.addbtn[data-sc="danger-muted"]`、`#fallbackBtnClear`、聊天停止键与 `.btn-danger`；双语及默认 fallback HTML 同步显式前景。danger-muted 补 `--on-sc`，六类危险按钮按压态改为仅缩放、不再 `brightness(.92)` 压暗。
+- **回归守护**：`theme-matrix` 同步实测基线并保留 `danger/panel >= 4.5` 硬断言；新增 12 类组件的计算色/真实对比度、附件关闭悬停色与按压滤镜断言。新增守护先在旧实现上精确判红（fallbackClear、data-sc danger、data-sc danger-muted 的按压压暗），修复后定向 **6/6** 通过。
+- **验证（最终基线 `cb37336e`）**：低并发全量 Vitest **256 文件 / 2758 用例通过**，断言失败 0、未处理错误 0（839.61s）；完整 Playwright **271 passed / 5 skipped**（6.2m）；`lint` 0 error（12 条既有 warning）、`lint:layers` 无新增、`build:check` 版本一致、`pet:check` 9 张一致、认领门定向 **4/4**；`check:source-state` 通过，40/40 块回证。此前 src/模块/XSS/令牌/断点/PWA/空 catch/图标/SSRF/IDOR/语法与 diff whitespace 门禁亦通过。
+- **边界**：低对比度非阻断清单现在只保留 `accent/panel` 设计参考；本批未提交、未推送、未建 PR、未合并。
+
 ### 2026-11-26 · **定时提醒：编辑 cron（提醒面板闭环：建/暂停/恢复/编辑/删全齐）**
 
 - **缺口实证**：提醒能建/暂停/删除，但改一个触发时间只能删了重建。本批复用创建表单做编辑态，不再新增表单面。
