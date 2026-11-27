@@ -93,12 +93,12 @@ test.describe("10 套主题渲染层不变量", () => {
       light:  { "text/panel": 18.88, "text/bg": 14.34, "muted/panel": 6.19, "on-accent/accent": 5.23, "danger/panel": 4.56, "accent/panel": 5.23 },
       dark:   { "text/panel": 12.47, "text/bg": 15.22, "muted/panel": 5.28, "on-accent/accent": 4.68, "danger/panel": 5.02, "accent/panel": 4.95 },
       sepia:  { "text/panel": 7.94,  "text/bg": 7.52,  "muted/panel": 5.39, "on-accent/accent": 4.61, "danger/panel": 4.88, "accent/panel": 2.28 },
-      elegant:{ "text/panel": 13.00, "text/bg": 10.90, "muted/panel": 5.49, "on-accent/accent": 4.66, "danger/panel": 4.15, "accent/panel": 4.02 },
+      elegant:{ "text/panel": 13.00, "text/bg": 10.90, "muted/panel": 5.49, "on-accent/accent": 4.66, "danger/panel": 6.29, "accent/panel": 4.02 },
       aurora: { "text/panel": 17.70, "text/bg": 15.42, "muted/panel": 6.76, "on-accent/accent": 5.58, "danger/panel": 4.56, "accent/panel": 5.58 },
       matrix: { "text/panel": 13.34, "text/bg": 14.30, "muted/panel": 6.71, "on-accent/accent": 11.04, "danger/panel": 4.77, "accent/panel": 10.30 },
-      forest: { "text/panel": 5.61,  "text/bg": 8.58,  "muted/panel": 4.64, "on-accent/accent": 10.12, "danger/panel": 2.19, "accent/panel": 3.89 },
-      ocean:  { "text/panel": 14.17, "text/bg": 11.42, "muted/panel": 6.33, "on-accent/accent": 8.75, "danger/panel": 3.93, "accent/panel": 8.25 },
-      mist:   { "text/panel": 4.80,  "text/bg": 7.36,  "muted/panel": 4.63, "on-accent/accent": 7.88, "danger/panel": 2.11, "accent/panel": 3.08 },
+      forest: { "text/panel": 5.61,  "text/bg": 8.58,  "muted/panel": 4.64, "on-accent/accent": 10.12, "danger/panel": 4.75, "accent/panel": 3.89 },
+      ocean:  { "text/panel": 14.17, "text/bg": 11.42, "muted/panel": 6.33, "on-accent/accent": 8.75, "danger/panel": 5.66, "accent/panel": 8.25 },
+      mist:   { "text/panel": 4.80,  "text/bg": 7.36,  "muted/panel": 4.63, "on-accent/accent": 7.88, "danger/panel": 4.68, "accent/panel": 3.08 },
       ink:    { "text/panel": 14.80, "text/bg": 15.79, "muted/panel": 6.08, "on-accent/accent": 8.73, "danger/panel": 5.42, "accent/panel": 8.81 }
     };
     /* 绝对硬底线：任何主题、任何配对都不得低于此值（低于就完全读不清了） */
@@ -152,6 +152,7 @@ test.describe("10 套主题渲染层不变量", () => {
            四组统一走 SEM 同一份清单：此前 --ok-soft 全仓未定义，这里被写成只有三组的硬编码，
            ok 语义色因此长期没有「浅底配对」的守护（--ok-soft 补齐后接上，漏配一处即红）。 */
         for (const k of SEM) out.push({ name: "--" + k + "-text/" + k + "-soft", fg: g("--" + k + "-text"), bg: g("--" + k + "-soft") });
+        out.push({ name: "--danger/panel", fg: g("--danger"), bg: g("--panel") });
         return out.map((x) => Object.assign(x, { c: window.__vk.contrast(x.fg, x.bg) }));
       }, { SCENES, SEM });
       for (const r of rows) {
@@ -162,9 +163,86 @@ test.describe("10 套主题渲染层不变量", () => {
     expect(fails, "以下令牌对比度低于 4.5:1：\n" + fails.join("\n")).toEqual([]);
   });
 
+  test("danger 背景组件使用 panel 前景，按下态不压暗对比度", async ({ page }) => {
+    const specs = [
+      { name: "toolbar badge", selector: '[data-probe="toolbar-badge"]', html: '<span class="tbtn"><span class="badge" data-probe="toolbar-badge">!</span></span>' },
+      { name: "overview badge", selector: '[data-probe="overview-badge"]', html: '<span class="ov4-badge" data-probe="overview-badge">!</span>' },
+      { name: "chat stop", selector: '[data-probe="chat-stop"]', html: '<button class="chat-send-btn" data-mode="stop" data-probe="chat-stop"> stop </button>', active: true },
+      { name: "danger button", selector: '[data-probe="danger-button"]', html: '<button class="btn-danger" data-probe="danger-button">Danger</button>', active: true },
+      { name: "error toast", selector: '[data-probe="error-toast"]', html: '<div class="toast error" data-probe="error-toast">Error</div>' },
+      { name: "P0 badge", selector: '[data-probe="p0-badge"]', html: '<div class="share-meta-val"><span class="pri P0" data-probe="p0-badge">P0</span></div>' },
+      { name: "alarm stop", selector: '[data-probe="alarm-stop"]', html: '<div class="alarm-item"><div class="ai-act"><button class="stop" data-probe="alarm-stop">Stop</button></div></div>' },
+      { name: "pet close", selector: '[data-probe="pet-close"]', html: '<div class="pet"><button class="pet-close" data-probe="pet-close">×</button></div>' },
+      { name: "add danger", selector: '[data-probe="add-danger"]', html: '<button class="addbtn danger" data-probe="add-danger">Add</button>', active: true },
+      { name: "add danger token", selector: '[data-probe="add-danger-token"]', html: '<button class="addbtn" data-sc="danger" data-probe="add-danger-token">Add</button>', active: true },
+      { name: "add danger muted token", selector: '[data-probe="add-danger-muted-token"]', html: '<button class="addbtn" data-sc="danger-muted" data-probe="add-danger-muted-token">Add</button>', active: true },
+      { name: "fallback clear", selector: '[data-probe="fallback-clear"]', html: '<button class="mini" id="fallbackBtnClear" data-probe="fallback-clear" style="background:var(--danger);color:var(--panel)">Clear</button>', active: true }
+    ];
+    await page.evaluate((items) => {
+      const host = document.createElement("div");
+      host.id = "dangerContrastProbe";
+      host.style.cssText = "position:fixed;left:8px;top:8px;z-index:2147483647;display:flex;gap:8px;align-items:center;padding:8px;background:var(--panel);--transition-fast:0s";
+      host.innerHTML = items.map((x) => x.html).join("") + '<span data-probe-tokens style="color:var(--panel);background:var(--danger)">tokens</span>';
+      document.body.appendChild(host);
+    }, specs);
+
+    for (const th of THEMES) {
+      await applyTheme(page, th);
+      const tokens = await page.locator('[data-probe-tokens]').evaluate((el) => {
+        const cs = getComputedStyle(el);
+        return { color: cs.color, background: cs.backgroundColor };
+      });
+      for (const spec of specs) {
+        const loc = page.locator("#dangerContrastProbe " + spec.selector);
+        const style = await loc.evaluate((el) => {
+          const cs = getComputedStyle(el);
+          return { color: cs.color, background: cs.backgroundColor };
+        });
+        expect(style.color, th + " " + spec.name + " 前景不是 --panel").toBe(tokens.color);
+        expect(style.background, th + " " + spec.name + " 背景不是 --danger").toBe(tokens.background);
+        const contrast = await page.evaluate((pair) => window.__vk.contrast(pair.color, pair.background), style);
+        expect(contrast, th + " " + spec.name + " 对比度 " + contrast).toBeGreaterThanOrEqual(4.5);
+      }
+
+      for (const spec of specs.filter((x) => x.active)) {
+        const loc = page.locator("#dangerContrastProbe " + spec.selector);
+        await loc.hover();
+        await page.mouse.down();
+        try {
+          await expect.poll(() => loc.evaluate((el) => getComputedStyle(el).filter), th + " " + spec.name + " 按下态仍在压暗").toBe("none");
+          const style = await loc.evaluate((el) => {
+            const cs = getComputedStyle(el);
+            return { color: cs.color, background: cs.backgroundColor };
+          });
+          const contrast = await page.evaluate((pair) => window.__vk.contrast(pair.color, pair.background), style);
+          expect(contrast, th + " " + spec.name + " 按下态对比度 " + contrast).toBeGreaterThanOrEqual(4.5);
+        } finally {
+          await page.mouse.up();
+        }
+      }
+
+      const attach = page.locator('[data-probe="attach-close"]');
+      await page.evaluate(() => {
+        const host = document.getElementById("dangerContrastProbe");
+        host.insertAdjacentHTML("beforeend", '<span class="attach-chip"><button class="attach-chip-x" data-probe="attach-close">×</button></span>');
+      });
+      await attach.hover();
+      const attachStyle = await attach.evaluate((el) => {
+        const cs = getComputedStyle(el);
+        return { color: cs.color, background: cs.backgroundColor };
+      });
+      expect(attachStyle.color, th + " attachment close 前景不是 --panel").toBe(tokens.color);
+      expect(attachStyle.background, th + " attachment close 悬停背景不是 --danger").toBe(tokens.background);
+      const attachContrast = await page.evaluate((pair) => window.__vk.contrast(pair.color, pair.background), attachStyle);
+      expect(attachContrast, th + " attachment close 悬停对比度 " + attachContrast).toBeGreaterThanOrEqual(4.5);
+      await attach.evaluate((el) => el.remove());
+      await page.mouse.move(0, 0);
+    }
+  });
+
   /* 单独一条：低对比度**清单**（不失败，只记录）
-     实测发现若干主题的 on-accent/accent 或 danger/panel 低于 WCAG 正文 4.5:1，
-     属既有设计取舍（暖色主色 + 白字天然偏低）。这里把它们**列出来**供设计侧决策，
+     实测发现若干主题的 accent/panel 低于 WCAG 正文 4.5:1，
+     属既有设计取舍（暖色主色 + 白底天然偏低）。这里把它们**列出来**供设计侧决策，
      不用断言卡死 —— 否则要么基线红、要么被迫把阈值降到无意义。 */
   test("低对比度清单（仅记录，不阻断）", async ({ page }) => {
     const WCAG_BODY = 4.5;
