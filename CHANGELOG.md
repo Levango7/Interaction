@@ -11,6 +11,14 @@ _（新条目追加在本节之下、`## [3.7.156]` 之上。中段那个 `## [�
 - **过程自纠**：① 在 `beforeParse` 里 mock `window.apiFetch`/`apiPushSubscribe` 会被应用启动覆盖回真实现（首版 `subscribeCalls=0` 的根因）——改 mock 底层 `fetch`；② `pushDiag` 同在启动时被覆盖，探针改到 loadApp 返回后再包装。
 - **验证**：新钉 4/4 + pwa-metadata / sw-update-ready / linear-push / notion-push / probe-binding 共 **43/43**；`npm run lint` rc=0；`check:source-state` ✓。
 - **边界**：SW 侧广播为既有代码未动；浏览器真事件投递不在 jsdom 射程内（本批钉的是「消息到页面会重订阅」这一段）。
+### 2026-11-27 · **增量同步默认开启（行为变更 · 用户拍板 C 路线 A 项）**
+
+- **背景**：增量同步（键级 delta + 服务端权威水位 + 冲突自动合并/面板）自 v3.7.106/109 已建好并有全套守护，但 `cfg.syncIncremental === true` 才启用——**默认关**，普通用户实际走全量快照「谁新谁赢」，多设备/多窗口同时改会静默覆盖。
+- **修法（三形态，可关回）**：`_syncIncrementalEnabled()` 改 `c.syncIncremental !== false`——缺省（从未配过该键）= 增量；显式 `false` = 逐位全量（想关的部署关得掉）；`getCfg()` 不可用（null）= 无从判断 → 保守全量。
+- **配套同口径**：设置复选框勾选显示改 `!== false`（缺省用户看到的「开」就是真实路径）；开关文案改「默认开启」（中英）。
+- **基线对齐（判据零放宽）**：4 处「缺省=关」旧前提改显式播种 `syncIncremental:false`（stage1×2 / stage2×2）；gate ③ 重写为三形态（含 null 保守回退），新增 ④「缺省用户 syncRound 真打增量端点」；ai-interaction-fixes ⑨ 的 2xx mock 补增量契约体（形状不对按失败处理是正确防御），并加全量 PUT 变体；e2e `sync-real-backend` 的「增量关（对照）」用例同样显式播种 false（CI e2e 腿抓到，本机复现后修复）。
+- **安全护栏（既有，逐条核过）**：旧部署无增量端点（404/405）→ 自动回退全量；水位太旧（needsFull）→ 回退全量；响应形状不对 → 按失败处理不猜；冲突策略由服务端下发（lww 下清单恒空，行为=键级 LWW）。
+- **验证**：受影响 gate/stage1/stage2/chlog/settings-entry/ai-interaction-fixes 全绿；`npm run lint` rc=0；`check:source-state` ✓。
 
 ### 2026-11-26 · **定时提醒：编辑 cron（提醒面板闭环：建/暂停/恢复/编辑/删全齐）**
 

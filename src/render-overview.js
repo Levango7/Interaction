@@ -1959,11 +1959,14 @@ async function _syncIncrementalRound(){
   return true;
 }
 
-/** C4 开关（与 C1 同一字段）：cfg.syncIncremental === true。关闭 = 逐位全量路径（零行为变化）。 */
+/** C4 开关（与 C1 同一字段）：cfg.syncIncremental。**2026-11-27 起默认开**（用户拍板）：
+    缺省（从未配过该键）= 增量；显式 false = 逐位全量路径（想关的部署关得掉）。
+    三分化：true=开 / false=关 / 缺省=开——不把「没配过」与「显式关掉」混为一谈。
+    getCfg 不可用（返回 null）= 无从判断 → 保守全量（同「无从判断≠满载」的分流原则）。 */
 function _syncIncrementalEnabled(){
   try {
     const c = (typeof getCfg === "function") ? getCfg() : null;
-    return !!(c && c.syncIncremental === true);
+    return !!(c && c.syncIncremental !== false);
   } catch (e) { return false; }
 }
 /* 阶段3（v3.7.108 下行也切增量）：本会话是否仍可用增量路径。一旦发生过"服务端不支持 /
