@@ -195,7 +195,8 @@ function openDrawer(){ const cfg=getCfg();
   const acInp=$("#cfgAgentAutoConfirm"); if(acInp) acInp.checked = cfg.agentAutoConfirm!==false;
   /* 2026-10-31：自建后端地址 / 增量同步回填。此前这两个字段只有读取方（ui-ge-api / data-rw），没有写入入口 */
   const abInp=$("#cfgApiBase"); if(abInp) abInp.value = (typeof cfg.apiBase==="string") ? cfg.apiBase : "";
-  const siChk=$("#cfgSyncIncremental"); if(siChk) siChk.checked = cfg.syncIncremental === true;
+  /* 2026-11-27 默认开：勾选显示与实际行为同口径（!== false），缺省用户看到的「开」就是真实路径 */
+  const siChk=$("#cfgSyncIncremental"); if(siChk) siChk.checked = cfg.syncIncremental !== false;
   // v1.15：场景 sysprompt 编辑器回填（选择器填充 + 当前场景文本加载）
   const spSel=$("#cfgSyspromptScene");
   if(spSel){
