@@ -8589,7 +8589,7 @@ const MESSAGES = {
     "cloud.apiBase": "后端地址（apiBase）",
     "cloud.apiBasePh": "http://localhost:3001",
     "cloud.incrementalLabel": "增量同步（只传变更）",
-    "cloud.incrementalSub": "开启后按变更日志增量上传；关闭时走全量快照，行为与从前一致。",
+    "cloud.incrementalSub": "默认开启：按变更日志增量上传，冲突按键级处理；关闭时走全量快照，行为与从前一致。",
     "cloud.incrementalAria": "增量同步（只传变更）",
     "a11y.cloudSync": "自建后端与云同步",
     "chat.cancel": "取消",
@@ -12848,7 +12848,7 @@ const MESSAGES = {
     "cloud.apiBase": "Backend base URL (apiBase)",
     "cloud.apiBasePh": "http://localhost:3001",
     "cloud.incrementalLabel": "Incremental sync (changes only)",
-    "cloud.incrementalSub": "When on, only the change log is uploaded; when off, a full snapshot is sent — same as before.",
+    "cloud.incrementalSub": "On by default: only the change log is uploaded and conflicts are handled per key; turn off to send a full snapshot instead — same as before.",
     "cloud.incrementalAria": "Incremental sync (changes only)",
     "a11y.cloudSync": "Backend and cloud sync",
     "chat.cancel": "Cancel",
@@ -33128,11 +33128,14 @@ async function _syncIncrementalRound(){
   return true;
 }
 
-/** C4 开关（与 C1 同一字段）：cfg.syncIncremental === true。关闭 = 逐位全量路径（零行为变化）。 */
+/** C4 开关（与 C1 同一字段）：cfg.syncIncremental。**2026-11-27 起默认开**（用户拍板）：
+    缺省（从未配过该键）= 增量；显式 false = 逐位全量路径（想关的部署关得掉）。
+    三分化：true=开 / false=关 / 缺省=开——不把「没配过」与「显式关掉」混为一谈。
+    getCfg 不可用（返回 null）= 无从判断 → 保守全量（同「无从判断≠满载」的分流原则）。 */
 function _syncIncrementalEnabled(){
   try {
     const c = (typeof getCfg === "function") ? getCfg() : null;
-    return !!(c && c.syncIncremental === true);
+    return !!(c && c.syncIncremental !== false);
   } catch (e) { return false; }
 }
 /* 阶段3（v3.7.108 下行也切增量）：本会话是否仍可用增量路径。一旦发生过"服务端不支持 /
@@ -45251,7 +45254,8 @@ function openDrawer(){ const cfg=getCfg();
   const acInp=$("#cfgAgentAutoConfirm"); if(acInp) acInp.checked = cfg.agentAutoConfirm!==false;
   /* 2026-10-31：自建后端地址 / 增量同步回填。此前这两个字段只有读取方（ui-ge-api / data-rw），没有写入入口 */
   const abInp=$("#cfgApiBase"); if(abInp) abInp.value = (typeof cfg.apiBase==="string") ? cfg.apiBase : "";
-  const siChk=$("#cfgSyncIncremental"); if(siChk) siChk.checked = cfg.syncIncremental === true;
+  /* 2026-11-27 默认开：勾选显示与实际行为同口径（!== false），缺省用户看到的「开」就是真实路径 */
+  const siChk=$("#cfgSyncIncremental"); if(siChk) siChk.checked = cfg.syncIncremental !== false;
   // v1.15：场景 sysprompt 编辑器回填（选择器填充 + 当前场景文本加载）
   const spSel=$("#cfgSyspromptScene");
   if(spSel){
