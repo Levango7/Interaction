@@ -203,7 +203,7 @@ function render(){
         t("p3.html.dataError","<h2>⚠️ 数据异常</h2>")+
         t("p3.html.dataErrorSub","<p style=\"color:var(--muted);margin:var(--space-4) 0\">渲染时发生错误，建议导出备份后清空数据。</p>")+
         t("p3.html.fallbackExport","<button type=\"button\" class=\"mini\" id=\"fallbackBtnExport\" style=\"margin:var(--space-2)\">导出备份</button>")+
-        t("p3.html.fallbackClear","<button type=\"button\" class=\"mini\" id=\"fallbackBtnClear\" style=\"margin:var(--space-2);background:var(--danger)\">清空数据</button>")+
+        t("p3.html.fallbackClear","<button type=\"button\" class=\"mini\" id=\"fallbackBtnClear\" style=\"margin:var(--space-2);background:var(--danger);color:var(--panel)\">清空数据</button>")+
         '</div>');
       // P0 修复：sanitizeHtml 会移除内联 on* 事件属性，改为渲染后用 addEventListener 绑定
       const _fbExportBtn = document.getElementById("fallbackBtnExport");
