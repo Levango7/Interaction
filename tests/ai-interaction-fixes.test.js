@@ -271,10 +271,29 @@ describe("⑨ 云同步状态如实显示", () => {
     const seen = [];
     setFetch(win, (url, opts) => {
       seen.push((opts && opts.method) || "GET");
+      /* 2026-11-27 默认开：默认走增量，/changes 必须给增量契约体（token/changed/removed）——
+         形状不对时客户端按失败处理是**正确的防御**，不是本批要躲的红。 */
+      if (String(url).indexOf("/api/sync/changes") >= 0) {
+        return Promise.resolve({ ok: true, status: 200, json: async () => ({ token: 1, changed: [], removed: [] }) });
+      }
       return Promise.resolve({ ok: true, status: 200, json: async () => ({ ok: true }) });
     });
     await win.doSync();
-    expect(seen).toContain("PUT");
+    expect(seen, "默认增量路径：发生上传（POST /changes）").toContain("POST");
+    expect(win.getSyncStatus()).toBe("idle");
+  });
+
+  it("服务端 2xx → idle（显式关走全量：PUT 同样成立）", async () => {
+    const win = await boot();
+    win.getCfg = () => ({ syncIncremental: false });
+    win.apiSetTokens("test-token", "test-refresh", Date.now() + 3600 * 1000);
+    const seen = [];
+    setFetch(win, (url, opts) => {
+      seen.push((opts && opts.method) || "GET");
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({ ok: true }) });
+    });
+    await win.doSync();
+    expect(seen, "显式关 = 全量快照上传").toContain("PUT");
     expect(win.getSyncStatus()).toBe("idle");
   });
 

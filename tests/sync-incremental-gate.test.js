@@ -49,12 +49,21 @@ describe("增量同步开关 ⇒ 真的切了路径（不是只存进 cfg）", (
     expect(calls.some(c => c.path === "/api/sync/changes"), "开关关闭仍在打增量端点 —— 分流失效").toBe(false);
   });
 
-  it("③ 闸门读的就是 cfg.syncIncremental 字段本身", () => {
+  it("③ 闸门读的就是 cfg.syncIncremental 字段本身（2026-11-27 默认开三形态）", () => {
     win.getCfg = () => ({ syncIncremental: true });
     expect(win._syncIncrementalEnabled(), "闸门没认 cfg.syncIncremental").toBe(true);
     win.getCfg = () => ({ syncIncremental: false });
-    expect(win._syncIncrementalEnabled(), "闸门在 false 时仍判真").toBe(false);
+    expect(win._syncIncrementalEnabled(), "显式关必须关——想关的部署关得掉").toBe(false);
     win.getCfg = () => ({});
-    expect(win._syncIncrementalEnabled(), "字段缺省时必须是关（旧档逐位不变）").toBe(false);
+    expect(win._syncIncrementalEnabled(), "默认开：缺省（从未配过该键）= 增量").toBe(true);
+    win.getCfg = () => null;
+    expect(win._syncIncrementalEnabled(), "getCfg 不可用 = 无从判断 → 保守全量（不是「缺省也开」的漏洞）").toBe(false);
+  });
+
+  it("④ 缺省（从未配过该键）⇒ syncRound 默认走增量（默认开真接线，不只是判定翻转）", async () => {
+    const calls = stubApi(win);
+    win.getCfg = () => ({});
+    try { await win.syncRound(); } catch (e) { /* 同上 */ }
+    expect(calls.some(c => c.path === "/api/sync/changes"), "缺省用户仍被留在全量快照 —— 默认开没接到真实路径").toBe(true);
   });
 });
