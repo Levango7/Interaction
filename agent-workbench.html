@@ -242,7 +242,7 @@
   --surface-hover:#1e4028; --surface-muted:#132e1f;
   --on-accent:#0a1f10; --on-accent-soft:rgba(80,224,128,.25);
   --text-dim:#c6ddcc; --text-dim-2:#cedbd4; --text-dim-3:#cbdbcf; --text-faint:#d0dbd4;
-  --danger:#ef6b5e; --danger-soft:#3a1f1a; --danger-border:#5a3028;
+  --danger:#ffd0c0; --danger-soft:#3a1f1a; --danger-border:#5a3028;
   --danger-overdue-bg:#3a201a; --danger-overdue-border:#5a3028;
   --warn:#f0b048; --warn-soft:#3a2e14;
 --ok:#50e080; --ok-soft:#1f3a26; --sc-office:#b6dcfb; --sc-design:#f3cce4; --sc-study:#fcd19f; --sc-data:#46efe0; --sc-code:#aae5ba; --sc-life:#d9d6de; --sc-health:#58f1be; --sc-finance:#ebd799; --accent-text:#8debac; --danger-text:#facdc9; --warn-text:#f7d398; --ok-text:#8debac;
@@ -279,7 +279,7 @@
   --surface-hover:#7a8058; --surface-muted:#6b7048;
   --on-accent:#3a2e0a; --on-accent-soft:rgba(240,192,96,.22);
   --text-dim:#f7f1e0; --text-dim-2:#f3f2e8; --text-dim-3:#f3f1ea; --text-faint:#f2f1ed;
-  --danger:#f08a60; --danger-soft:#4a2820; --danger-border:#7a4a3a;
+  --danger:#fff0e8; --danger-soft:#4a2820; --danger-border:#7a4a3a;
   --danger-overdue-bg:#4a2820; --danger-overdue-border:#7a4a3a;
   --warn:#ffc060; --warn-soft:#4a3a20;
 --ok:#a8d870; --ok-soft:#2a3a20; --sc-office:#e7f3fd; --sc-design:#f9eef5; --sc-study:#fef0e0; --sc-data:#cffaf6; --sc-code:#e4f7e9; --sc-life:#f2f0f7; --sc-health:#cdfbec; --sc-finance:#f8f2dd; --accent-text:#fbf0d9; --danger-text:#faefea; --warn-text:#fff0da; --ok-text:#eaf6dc;
@@ -339,7 +339,7 @@
   --surface-hover:#cfe0e8; --surface-muted:#dee9ef;
   --on-accent:#fff; --on-accent-soft:rgba(255,255,255,.4);
   --text-dim:#33525e; --text-dim-2:#55656b; --text-dim-3:#4a6670; --text-faint:#54656c;
-  --danger:#c85a50; --danger-soft:#f8ebe9; --danger-border:#e0c4c0;
+  --danger:#b03a32; --danger-soft:#f8ebe9; --danger-border:#e0c4c0;
   --danger-overdue-bg:#faefec; --danger-overdue-border:#e0c4c0;
   --warn:#c08a3a; --warn-soft:#f8f0e0;
 --ok:#2a8a6a; --ok-soft:#e6f4ef; --sc-office:#0966b3; --sc-design:#b42f83; --sc-study:#985404; --sc-data:#0a736a; --sc-code:#327243; --sc-life:#7351bb; --sc-health:#0d7552; --sc-finance:#7c6418; --accent-text:#0a5263; --danger-text:#a1433a; --warn-text:#7d5c2c; --ok-text:#2e6c58;
@@ -1076,7 +1076,7 @@ body:has(.main.page-recycle) .statusbar #swUpdateReadyBtn{display:none}
   .toolbar-row .tbtn{min-height:40px}
 }
 .tbtn .badge{position:absolute;top:-2px;right:-2px;min-width:16px;height:16px;
-  padding:0 var(--space-1);border-radius:var(--radius-md);background:var(--danger);color:var(--on-accent);
+  padding:0 var(--space-1);border-radius:var(--radius-md);background:var(--danger);color:var(--panel);
   font-size:var(--fs-3xs);font-weight:600;line-height:16px;text-align:center;pointer-events:none}
 
 /* ===== 系统级消息中心：下拉面板 ===== */
@@ -1408,6 +1408,7 @@ body:has(.main.page-recycle) .statusbar #swUpdateReadyBtn{display:none}
   transition:filter var(--transition-fast),box-shadow var(--transition-fast)}
 .mini:hover{filter:brightness(.96);box-shadow:var(--shadow-1)}
 .mini:active{filter:brightness(.92)}
+#fallbackBtnClear:active{filter:none}
 /* 空态统一对外配方：.empty-state 为推荐组件类（新增处推荐用它）
    .empty / .empty-hint 为兼容别名，与推荐配方视觉对齐（居中、虚线边框、统一表面色） */
 .empty{color:var(--muted);font-size:var(--fs-base);padding:var(--space-5) var(--space-4);text-align:center;
@@ -1654,7 +1655,8 @@ select[name="priority"]{max-width:120px}
 .addbtn.add-round,.addbtn.sm.add-round,.addbtn.xs.add-round,.addbtn.min.add-round{
   width:var(--control-h);height:var(--control-h);min-width:0;flex:0 0 auto;padding:0;
   font-size:var(--fs-base);line-height:1;border-radius:var(--control-r)}
-.addbtn.danger{background:var(--danger,var(--muted));color:var(--on-accent)}
+.addbtn.danger{background:var(--danger,var(--muted));color:var(--panel)}
+.addbtn.danger:active,.addbtn[data-sc="danger"]:active,.addbtn[data-sc="danger-muted"]:active{filter:none;transform:scale(.97)}
 /* ===== v3.2 阶段四：data-sc 属性选择器映射（替代内联 style="--sc:..."，规避 lint-colors 硬编码门禁）
    语义：data-sc="accent" 等价于 data-sc="accent"，由属性选择器注入 CSS 自定义属性。
    支持值：accent / muted / danger / danger-muted（对应原 --sc 的 4 种静态取值）。
@@ -1662,7 +1664,7 @@ select[name="priority"]{max-width:120px}
 [data-sc="accent"]{--sc:var(--accent);--on-sc:var(--on-accent)}
 [data-sc="muted"]{--sc:var(--muted);--on-sc:var(--panel)}
 [data-sc="danger"]{--sc:var(--danger);--on-sc:var(--panel)}
-[data-sc="danger-muted"]{--sc:var(--danger,var(--muted))}
+[data-sc="danger-muted"]{--sc:var(--danger,var(--muted));--on-sc:var(--panel)}
 /* ===== v3.2 阶段四：布局工具类（替代高频内联 style="flex:1/width:100%/display:none" 等） ===== */
 .u-flex-1{flex:1}
 .u-flex-auto{flex:0 0 auto}
@@ -1860,7 +1862,7 @@ select[name="priority"]{max-width:120px}
      .set-nav-btn   ≈ .btn-ghost.btn-sm   （设置导航胶囊，已用 var(--accent)）
    旧类已与新体系视觉协调（同为 var(--accent)/var(--sc)/var(--surface-hover) 令牌驱动），
    不强行合并特异性以避免破版；新代码请优先用 .btn-primary/.btn-ghost/.btn-danger 三主类。 ===== */
-/* .addbtn.danger 已补 color:var(--on-accent) 确保白字（与 .btn-danger 一致） */
+/* .addbtn.danger 与 .btn-danger 统一使用 --panel 前景，按下不压暗以免破坏 4.5:1 对比度。 */
 /* .tbtn 已与新体系协调（transparent + border + var(--surface-hover) hover），无需调整 */
 /* .set-nav-btn 已与新体系协调（var(--panel2) + var(--accent) hover），无需调整 */
 /* v1.15 P2：代码/JSON 输入框工具类（monospace + 12px，替代重复内联） */
@@ -2174,7 +2176,7 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .overview-card.ov4-clickable:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .overview-card.ov4-alert{border-color:var(--danger-border)}
 .overview-card.ov4-alert .v{color:var(--danger-text,var(--danger))}
-.ov4-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:var(--space-1);padding:0 5px;border-radius:var(--radius-full);background:var(--danger);color:#fff;font-size:var(--fs-2xs);font-weight:600;vertical-align:middle}
+.ov4-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;margin-left:var(--space-1);padding:0 5px;border-radius:var(--radius-full);background:var(--danger);color:var(--panel);font-size:var(--fs-2xs);font-weight:600;vertical-align:middle}
 .overview-4cards{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-3);margin-bottom:var(--space-2)}
 /* v3.7.44：指标项也做成圆角矩形卡片（与记录表格容器同一套"卡片"语言） */
 .overview-4cards>*{background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-2) var(--space-3)}
@@ -2563,7 +2565,7 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .attach-chip-x{position:absolute;top:2px;right:2px;width:20px;height:20px;padding:0;border:0;border-radius:var(--radius-full);
   background:color-mix(in srgb,var(--panel) 78%,transparent);color:var(--text);font-size:var(--fs-xs);
   line-height:1;cursor:pointer}
-.attach-chip-x:hover{background:var(--danger);color:#fff}
+.attach-chip-x:hover{background:var(--danger);color:var(--panel)}
 .msg-imgs{display:flex;gap:var(--space-1);flex-wrap:wrap;margin-bottom:var(--space-1)}
 .msg-img{max-width:160px;max-height:160px;border-radius:var(--radius-sm);border:1px solid var(--line);display:block}
 /* v1.15：textarea 融入输入框内部（无自身边框，由 .chat-input-area 统一包裹）
@@ -2661,8 +2663,9 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .chat-send-btn:hover{filter:brightness(.96);box-shadow:var(--shadow-1)}
 .chat-send-btn:active{filter:brightness(.92)}
 .chat-send-btn svg{width:16px;height:16px}
-.chat-send-btn[data-mode="stop"]{background:var(--danger)}
+.chat-send-btn[data-mode="stop"]{background:var(--danger);color:var(--panel)}
 .chat-send-btn[data-mode="stop"]:hover{filter:brightness(.96);background:var(--danger)}
+.chat-send-btn[data-mode="stop"]:active{filter:none;transform:scale(.96)}
 /* 折叠后的侧边条（窄屏浮动按钮的替代：折叠时显示一条窄轨道，点击展开） */
 /* v3.5.4：折叠 rail 的按钮态——与左侧导航一致的圆角背景 */
 .chat-panel-rail .rail-btn{display:flex;align-items:center;justify-content:center;width:36px;min-height:28px;height:auto;border-radius:var(--radius-md);background:transparent;border:none;color:var(--text-dim);cursor:pointer;transition:background var(--transition-fast),color var(--transition-fast)}
@@ -3516,11 +3519,11 @@ main > .tool-form-box{background:var(--panel);border:1px solid var(--line);borde
 .btn-ghost:active{transform:scale(.97)}
 .btn-danger{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-1h);
   padding:0 var(--space-4);border-radius:var(--control-r);border:none;
-  background:var(--danger);color:var(--on-accent);font-size:var(--fs-sm);font-weight:600;
+  background:var(--danger);color:var(--panel);font-size:var(--fs-sm);font-weight:600;
   height:var(--control-h);line-height:1;white-space:nowrap;cursor:pointer;
   transition:filter var(--transition-fast),box-shadow var(--transition-fast),transform var(--transition-fast)}
 .btn-danger:hover{filter:brightness(.96);box-shadow:var(--shadow-1)}
-.btn-danger:active{filter:brightness(.92);transform:scale(.97)}
+.btn-danger:active{filter:none;transform:scale(.97)}
 /* ===== 三尺寸修饰（28/36/44px 触摸目标阶梯；WCAG 2.5.5） ===== */
 .btn-sm{min-height:28px;font-size:var(--fs-sm);padding:var(--space-1) var(--space-2h);font-weight:500}
 .btn-md{min-height:36px;font-size:var(--fs-sm);padding:var(--space-1h) var(--space-3)}
@@ -3605,7 +3608,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 .toast.ok{background:var(--ok)}
 /* 2026-10-20：error / info 两类此前没有独立视觉（29 处 error、12 处 info 调用都显示成普通 toast，
    用户分不出"出错了"和"知道了"）。补语义色，其余样式沿用 .toast。 */
-.toast.error{background:var(--danger)}
+.toast.error{background:var(--danger);color:var(--panel)}
 .toast.info{background:var(--accent)}
 
 /* ===== 使用指南 modal ===== */
@@ -4348,7 +4351,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
 .share-meta-label{color:var(--text-dim);font-weight:500}
 .share-meta-val{color:var(--text);display:flex;align-items:center;gap:var(--space-1)}
 .share-meta-val .pri{padding:1px 6px;border-radius:var(--radius-sm);font-size:var(--fs-2xs);font-weight:700}
-.share-meta-val .pri.P0{background:var(--danger);color:var(--on-accent)}
+.share-meta-val .pri.P0{background:var(--danger);color:var(--panel)}
 .share-meta-val .pri.P1{background:var(--warn);color:var(--on-accent)}
 .share-meta-val .pri.P2{background:var(--accent);color:var(--on-accent)}
 .share-meta-val .due{color:var(--text)}
@@ -4459,7 +4462,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   --surface-hover:#d6e8dc; --surface-muted:#e6f0e9;
   --on-accent:#121212; --on-accent-soft:rgba(255,255,255,.5);
   --text-dim:#53605a; --text-dim-2:#666a68; --text-dim-3:#5f6b64; --text-faint:#666967;
-  --danger:#c0605a; --danger-soft:#f5eceb; --danger-border:#e0c4c0;
+  --danger:#a93a32; --danger-soft:#f5eceb; --danger-border:#e0c4c0;
   --danger-overdue-bg:#f8eceb; --danger-overdue-border:#e0c4c0;
   --warn:#c89040; --warn-soft:#f5efe5;
   --ok:#4a9662; --ok-soft:#eaf3ee; --accent-soft:#d8ece6;
@@ -4858,7 +4861,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   background:var(--panel);color:var(--text-dim);font-size:var(--fs-xs);border-radius:var(--radius-sm);
   cursor:pointer}
 .alarm-item .ai-act button:hover{background:var(--surface-hover);color:var(--text)}
-.alarm-item .ai-act .stop{background:var(--danger);color:var(--on-accent);border-color:var(--danger)}
+.alarm-item .ai-act .stop{background:var(--danger);color:var(--panel);border-color:var(--danger)}
 .alarm-empty{text-align:center;padding:var(--space-6);color:var(--muted);font-size:var(--fs-sm)}
 @keyframes alarmShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
 
@@ -4891,7 +4894,7 @@ button.is-loading::after{content:"";position:absolute;top:50%;left:50%;width:14p
   padding:var(--space-1) var(--space-2h);font-size:var(--fs-xs);color:var(--text);box-shadow:var(--shadow-1);
   white-space:nowrap;animation:petBubble 1.2s ease-out forwards;pointer-events:none}
 .pet .pet-close{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;
-  background:var(--danger);color:var(--on-accent);font-size:var(--fs-2xs);line-height:18px;
+  background:var(--danger);color:var(--panel);font-size:var(--fs-2xs);line-height:18px;
   text-align:center;cursor:pointer;opacity:0;transition:opacity .2s;pointer-events:auto;
   border:0;padding:0}
 .pet:hover .pet-close{opacity:1}
@@ -10388,7 +10391,7 @@ const MESSAGES = {
     "p3.html.epRow2": "<div class=\"ep-row u-ep-row\"><span>记录数</span><b>",
     "p3.html.epRow3": "<div class=\"ep-row u-ep-row\"><span>配置</span><b>",
     "p3.html.epTotalCount": "<div class=\"ep-row\"><span>总条数</span><b>",
-    "p3.html.fallbackClear": "<button type=\"button\" class=\"mini\" id=\"fallbackBtnClear\" style=\"margin:var(--space-2);background:var(--danger)\">清空数据</button>",
+    "p3.html.fallbackClear": "<button type=\"button\" class=\"mini\" id=\"fallbackBtnClear\" style=\"margin:var(--space-2);background:var(--danger);color:var(--panel)\">清空数据</button>",
     "p3.html.fallbackExport": "<button type=\"button\" class=\"mini\" id=\"fallbackBtnExport\" style=\"margin:var(--space-2)\">导出备份</button>",
     "p3.html.footTodo": "<span class=\"foot-stat\">待办 ",
     "p3.html.meetingOpened": "<span class=\"u-text-ok\">已开</span>",
@@ -14645,7 +14648,7 @@ const MESSAGES = {
     "p3.html.epRow2": "<div class=\"ep-row u-ep-row\"><span>Records</span><b>",
     "p3.html.epRow3": "<div class=\"ep-row u-ep-row\"><span>Config</span><b>",
     "p3.html.epTotalCount": "<div class=\"ep-row\"><span>Total entries</span><b>",
-    "p3.html.fallbackClear": "<button type=\"button\" class=\"mini\" id=\"fallbackBtnClear\" style=\"margin:var(--space-2);background:var(--danger)\">Clear data</button>",
+    "p3.html.fallbackClear": "<button type=\"button\" class=\"mini\" id=\"fallbackBtnClear\" style=\"margin:var(--space-2);background:var(--danger);color:var(--panel)\">Clear data</button>",
     "p3.html.fallbackExport": "<button type=\"button\" class=\"mini\" id=\"fallbackBtnExport\" style=\"margin:var(--space-2)\">Export backup</button>",
     "p3.html.footTodo": "<span class=\"foot-stat\">To do  ",
     "p3.html.meetingOpened": "<span class=\"u-text-ok\">Held</span>",
@@ -41922,7 +41925,7 @@ function render(){
         t("p3.html.dataError","<h2>⚠️ 数据异常</h2>")+
         t("p3.html.dataErrorSub","<p style=\"color:var(--muted);margin:var(--space-4) 0\">渲染时发生错误，建议导出备份后清空数据。</p>")+
         t("p3.html.fallbackExport","<button type=\"button\" class=\"mini\" id=\"fallbackBtnExport\" style=\"margin:var(--space-2)\">导出备份</button>")+
-        t("p3.html.fallbackClear","<button type=\"button\" class=\"mini\" id=\"fallbackBtnClear\" style=\"margin:var(--space-2);background:var(--danger)\">清空数据</button>")+
+        t("p3.html.fallbackClear","<button type=\"button\" class=\"mini\" id=\"fallbackBtnClear\" style=\"margin:var(--space-2);background:var(--danger);color:var(--panel)\">清空数据</button>")+
         '</div>');
       // P0 修复：sanitizeHtml 会移除内联 on* 事件属性，改为渲染后用 addEventListener 绑定
       const _fbExportBtn = document.getElementById("fallbackBtnExport");
