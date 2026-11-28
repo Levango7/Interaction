@@ -212,7 +212,8 @@ test.describe("云同步真后端往返（DL-O01）", () => {
       const seeded = [{ id: "dl-o01-t2", title: "全量对照任务", done: true, updatedAt: new Date().toISOString() }];
 
       await page.addInitScript(({ apiBase }) => {
-        localStorage.setItem("wb_agent_cfg", JSON.stringify({ enabled: false, apiBase: apiBase }));
+        /* 2026-11-27 默认开后：对照组必须显式播种 syncIncremental:false（缺省不再提供关的前提） */
+        localStorage.setItem("wb_agent_cfg", JSON.stringify({ enabled: false, apiBase: apiBase, syncIncremental: false }));
       }, { apiBase: "http://127.0.0.1:" + proxy.port });
       await openApp(page, proxy.port);
 

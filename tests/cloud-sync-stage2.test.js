@@ -17,6 +17,8 @@ const CFG = PREFIX + "cfg";
 const META = PREFIX + "sync_meta";
 const CHLOG = PREFIX + "sync_changelog";
 const on = () => ({ [CFG]: JSON.stringify({ syncIncremental: true }) });
+/* 2026-11-27 默认开后：测「关」的用例必须显式播种，缺省不再提供关的前提 */
+const off = () => ({ [CFG]: JSON.stringify({ syncIncremental: false }) });
 const seedLog = (win, entries) => win.localStorage.setItem(CHLOG, JSON.stringify(entries));
 
 /** 装一个脚本化的 apiFetch：记录调用 + 按 responder 返回 */
@@ -33,8 +35,8 @@ const okChanges = (data) => () => ({ ok: true, status: 200, data: Object.assign(
 const okSnapshot = () => ({ ok: true, status: 200, data: { snapshot: {}, updatedAt: null } });
 
 describe("阶段2/C1 分流与增量上行", () => {
-  it("开关关：doSync 逐位走全量（PUT /snapshot，无 /changes 调用）", async () => {
-    const win = await loadApp({ storage: {} });
+  it("开关关（显式）：doSync 逐位走全量（PUT /snapshot，无 /changes 调用）", async () => {
+    const win = await loadApp({ storage: off() });
     /* 真实登录态用导出的 apiSetTokens 建（同 ai-interaction-fixes 的手法）——
        直接 stub win.isApiLoggedIn 不生效：它是模块内部函数，外部赋值只加了个无用的 window 属性。 */
     win.apiSetTokens("test-token", "test-refresh", Date.now() + 3600 * 1000);
@@ -241,8 +243,8 @@ describe("阶段3 下行按需增量拉取（5 分钟定时，开关制）", () 
     await new Promise((r) => setTimeout(r, 60));   // 等 tick 里 window.doSync 的 async 链跑完
   };
 
-  it("开关关 + 已登录：tick 不产生任何请求（零行为变化）", async () => {
-    const win = await loadApp({ storage: {} });
+  it("开关关（显式）+ 已登录：tick 不产生任何请求（零行为变化）", async () => {
+    const win = await loadApp({ storage: off() });
     win.apiSetTokens("t", "r", Date.now() + 3600 * 1000);
     const calls = mockFetch(win, okSnapshot);
     await tick(win);

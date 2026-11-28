@@ -17,13 +17,15 @@ const CFG = PREFIX + "cfg";
 const META = PREFIX + "sync_meta";
 /** 开态播种：与生产路径同形 —— 开关落在持久化的 cfg 里，由 getCfg() 读出 */
 const on = () => ({ [CFG]: JSON.stringify({ syncIncremental: true }) });
+/** 关态播种（2026-11-27 默认开后）：测「关」的用例必须显式声明，不能再靠缺省提供前提 */
+const off = () => ({ [CFG]: JSON.stringify({ syncIncremental: false }) });
 /** 只看某个键的记录（避免被启动期其他真实变更干扰） */
 const entries = (win, k) => win.getSyncChangelog().filter((e) => e.k === k);
 
 describe("阶段1/C1 本地变更日志（门控）", () => {
-  it("开关关闭（默认）：save() 零行为变化 —— 不产生队列、业务写入照常、删除路径同样零记录", async () => {
-    const win = await loadApp({ storage: {} });
-    expect(win.getCfg().syncIncremental, "前置：默认 cfg 无该字段").toBeUndefined();
+  it("开关关闭（显式）：save() 零行为变化 —— 不产生队列、业务写入照常、删除路径同样零记录", async () => {
+    const win = await loadApp({ storage: off() });
+    expect(win.getCfg().syncIncremental, "前置：显式关已播种（默认开后，关的前提须显式声明）").toBe(false);
     expect(win.save(PREFIX + "probe", { a: 1 })).toBe(true);
     expect(win.localStorage.getItem(CHLOG)).toBeNull();
     expect(win.getSyncChangelog(), "开关关时队列必须为空").toEqual([]);
@@ -84,7 +86,7 @@ describe("阶段1/C1 本地变更日志（门控）", () => {
     const arr = win.getSyncChangelog();
     expect(arr.length, "不得为队列键自身追加递归条目").toBe(1);
     expect(arr[0].k).toBe("x");
-    const win2 = await loadApp({ storage: {} });
+    const win2 = await loadApp({ storage: off() });
     win2._chlogRecord(PREFIX + "k", "set", "1");
     expect(win2.localStorage.getItem(CHLOG)).toBeNull();
   });

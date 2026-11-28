@@ -10,7 +10,23 @@ _（新条目追加在本节之下、`## [3.7.156]` 之上。中段那个 `## [�
 - **遗漏补修**：覆盖 `.addbtn.danger`、`.addbtn[data-sc="danger"]`、`.addbtn[data-sc="danger-muted"]`、`#fallbackBtnClear`、聊天停止键与 `.btn-danger`；双语及默认 fallback HTML 同步显式前景。danger-muted 补 `--on-sc`，六类危险按钮按压态改为仅缩放、不再 `brightness(.92)` 压暗。
 - **回归守护**：`theme-matrix` 同步实测基线并保留 `danger/panel >= 4.5` 硬断言；新增 12 类组件的计算色/真实对比度、附件关闭悬停色与按压滤镜断言。新增守护先在旧实现上精确判红（fallbackClear、data-sc danger、data-sc danger-muted 的按压压暗），修复后定向 **6/6** 通过。
 - **验证（最终基线 `cb37336e`）**：低并发全量 Vitest **256 文件 / 2758 用例通过**，断言失败 0、未处理错误 0（839.61s）；完整 Playwright **271 passed / 5 skipped**（6.2m）；`lint` 0 error（12 条既有 warning）、`lint:layers` 无新增、`build:check` 版本一致、`pet:check` 9 张一致、认领门定向 **4/4**；`check:source-state` 通过，40/40 块回证。此前 src/模块/XSS/令牌/断点/PWA/空 catch/图标/SSRF/IDOR/语法与 diff whitespace 门禁亦通过。
-- **边界**：低对比度非阻断清单现在只保留 `accent/panel` 设计参考；本批未提交、未推送、未建 PR、未合并。
+- **边界**：低对比度非阻断清单现在只保留 `accent/panel` 设计参考；本批已推送至 `fix/theme-danger-contrast` 并创建 PR #27，未合并、未发版。
+### 2026-11-27 · **推送订阅轮换：页面端接上 SW 广播（提醒推送不再静默中断）**
+
+- **缺口实证**：`service-worker.js` 在 `pushsubscriptionchange` 时已广播 `{type:"PUSH_SUBSCRIPTION_CHANGE"}`，但**页面端零消费者**——浏览器轮换订阅后推送静默中断，定时提醒收不到且用户不知情。
+- **修法**：页面注册 SW `message` 监听，收到该消息且本机确实订阅过（有 `push_subscription` 记录）才走 `subscribePush()` 重订阅（新 endpoint 经既有链路上报服务端 + 落盘更新）；**未开启推送的用户不被静默创建订阅**；后台维护不弹 toast，失败留痕（`pushRotation`）。
+- **钉子**：新增 `tests/push-rotation-resubscribe.test.js` 4 例（有记录→真重订阅+上报+落盘 / 无记录零动作 / subscribe 抛错留痕 / 其他 type 不触发），**先红后绿**。
+- **过程自纠**：① 在 `beforeParse` 里 mock `window.apiFetch`/`apiPushSubscribe` 会被应用启动覆盖回真实现（首版 `subscribeCalls=0` 的根因）——改 mock 底层 `fetch`；② `pushDiag` 同在启动时被覆盖，探针改到 loadApp 返回后再包装。
+- **验证**：新钉 4/4 + pwa-metadata / sw-update-ready / linear-push / notion-push / probe-binding 共 **43/43**；`npm run lint` rc=0；`check:source-state` ✓。
+- **边界**：SW 侧广播为既有代码未动；浏览器真事件投递不在 jsdom 射程内（本批钉的是「消息到页面会重订阅」这一段）。
+### 2026-11-27 · **增量同步默认开启（行为变更 · 用户拍板 C 路线 A 项）**
+
+- **背景**：增量同步（键级 delta + 服务端权威水位 + 冲突自动合并/面板）自 v3.7.106/109 已建好并有全套守护，但 `cfg.syncIncremental === true` 才启用——**默认关**，普通用户实际走全量快照「谁新谁赢」，多设备/多窗口同时改会静默覆盖。
+- **修法（三形态，可关回）**：`_syncIncrementalEnabled()` 改 `c.syncIncremental !== false`——缺省（从未配过该键）= 增量；显式 `false` = 逐位全量（想关的部署关得掉）；`getCfg()` 不可用（null）= 无从判断 → 保守全量。
+- **配套同口径**：设置复选框勾选显示改 `!== false`（缺省用户看到的「开」就是真实路径）；开关文案改「默认开启」（中英）。
+- **基线对齐（判据零放宽）**：4 处「缺省=关」旧前提改显式播种 `syncIncremental:false`（stage1×2 / stage2×2）；gate ③ 重写为三形态（含 null 保守回退），新增 ④「缺省用户 syncRound 真打增量端点」；ai-interaction-fixes ⑨ 的 2xx mock 补增量契约体（形状不对按失败处理是正确防御），并加全量 PUT 变体；e2e `sync-real-backend` 的「增量关（对照）」用例同样显式播种 false（CI e2e 腿抓到，本机复现后修复）。
+- **安全护栏（既有，逐条核过）**：旧部署无增量端点（404/405）→ 自动回退全量；水位太旧（needsFull）→ 回退全量；响应形状不对 → 按失败处理不猜；冲突策略由服务端下发（lww 下清单恒空，行为=键级 LWW）。
+- **验证**：受影响 gate/stage1/stage2/chlog/settings-entry/ai-interaction-fixes 全绿；`npm run lint` rc=0；`check:source-state` ✓。
 
 ### 2026-11-26 · **定时提醒：编辑 cron（提醒面板闭环：建/暂停/恢复/编辑/删全齐）**
 
